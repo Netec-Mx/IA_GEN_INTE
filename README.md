@@ -1,12 +1,16 @@
+<img src="images/neteclogo (2).png" alt="logo" width="300"/>
+
 # Inteligencia Artificial Generativa Intermediate
+
+## Plataforma de laboratorios
+
+Te damos la bienvenida a la **plataforma de laboratorios** del curso **Inteligencia Artificial Generativa Intermediate**. Aquí podrás explorar diferentes tecnologías a través de prácticas guiadas. ¡Desarrolla tus habilidades y lleva tus conocimientos al siguiente nivel!
 
 Curso diseñado para desarrolladores. Se aborda el uso de interfaces de chat a la arquitectura de sistemas, consumo de APIs, implementación de RAG, orquestación de agentes y despliegue escalable de soluciones en producción.
 
-## Estructura
-
-- `CapituloXX/README.md`: guía de laboratorio por capítulo.
-
 ## Lista de laboratorios
+
+Cada uno de estos laboratorios está diseñado para ofrecerte una experiencia práctica. Haz clic en los enlaces para comenzar.
 
 ### Capítulo 1
 
@@ -86,8 +90,12 @@ Curso diseñado para desarrolladores. Se aborda el uso de interfaces de chat a l
   - Descripción: Actividad práctica guiada basada estrictamente en el contenido del módulo.
   - Duración estimada: 179 min
 
-## Flujo de colaboración
 
-- Trabajar en `changes_course`.
-- Crear Pull Request hacia `main`.
-- Merge por `Squash and merge`.
+## 📬 **Contacto y más información**
+
+Si tienes alguna pregunta o necesitas más detalles, no dudes en [contactarnos](mailto:soporte@netec.com). También puedes encontrar más recursos en nuestra [página](https://netec.com).
+
+---
+
+¡Gracias por visitar nuestra plataforma! No olvides revisar todos los laboratorios y comenzar tu viaje de aprendizaje hoy mismo.
+
