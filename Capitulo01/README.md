@@ -22,7 +22,7 @@
 <table>
 <tr>
 <td width="25%"><strong>🎯 Enfoque</strong><br>Selección técnica de modelos</td>
-<td width="25%"><strong>⏱️ Duración</strong><br>120 a 150 minutos</td>
+<td width="25%"><strong>⏱️ Duración</strong><br>45 minutos</td>
 <td width="25%"><strong>🧠 Bloom</strong><br>Aplicar, analizar y evaluar</td>
 <td width="25%"><strong>📦 Entregable</strong><br>Scripts + CSV + matriz</td>
 </tr>
