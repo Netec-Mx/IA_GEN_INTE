@@ -1,2171 +1,2094 @@
-# Desarrollar un script en Python para evaluar y comparar el costo estimado de procesar un dataset entre OpenAI, Gemini y Anthropic
+<div align="center">
 
-## 1. Metadatos
+# 🧪 Laboratorio 1
 
-| Campo | Detalle |
+## Selección técnica de modelo y estimación de costo, latencia y contexto
+
+**IA Generativa · Nivel Intermedio · Capítulo 1**
+
+![Nivel](https://img.shields.io/badge/Nivel-Intermedio-2563EB?style=flat-square)
+![Sistema](https://img.shields.io/badge/Sistema-Windows-0F766E?style=flat-square)
+![Editor](https://img.shields.io/badge/Editor-VS%20Code-7C3AED?style=flat-square)
+![Terminal](https://img.shields.io/badge/Terminal-Git%20Bash-475569?style=flat-square)
+![Lenguaje](https://img.shields.io/badge/Lenguaje-Python-CA8A04?style=flat-square)
+
+</div>
+
+---
+
+> [!IMPORTANT]
+> En este laboratorio vas a probar **OpenAI**, **Gemini** y **Claude** desde código Python, medir latencia, estimar tokens, calcular costos y construir una matriz técnica de decisión. No uses datos sensibles reales ni compartas tus API keys.
+
+<table>
+<tr>
+<td width="25%"><strong>🎯 Enfoque</strong><br>Selección técnica de modelos</td>
+<td width="25%"><strong>⏱️ Duración</strong><br>120 a 150 minutos</td>
+<td width="25%"><strong>🧠 Bloom</strong><br>Aplicar, analizar y evaluar</td>
+<td width="25%"><strong>📦 Entregable</strong><br>Scripts + CSV + matriz</td>
+</tr>
+</table>
+
+## 🧭 Sección 1. Información general de la práctica
+
+### 📌 Descripción general
+
+En esta práctica vas a comparar de forma técnica tres proveedores de modelos de IA generativa: **OpenAI**, **Google Gemini** y **Anthropic Claude**.
+
+A diferencia de una comparación solamente teórica, en este laboratorio vas a preparar un ambiente local en **Windows**, usando **Visual Studio Code** y **Git Bash**, para ejecutar pruebas reales mediante código Python. Vas a enviar los mismos prompts a cada proveedor, medir latencia, estimar tokens de entrada y salida, calcular costo aproximado mensual y registrar observaciones de calidad, privacidad y operación.
+
+El objetivo es que no elijas un modelo solo por popularidad. Vas a construir evidencia técnica mínima para justificar qué modelo conviene para tres casos de uso:
+
+1. Resumen de contenido.
+2. Soporte técnico asistido.
+3. Análisis documental.
+
+Al finalizar, tendrás una matriz comparativa y scripts funcionales para probar OpenAI, Gemini y Claude desde una terminal local.
+
+---
+
+### 🎯 Objetivos de aprendizaje
+
+Al finalizar esta práctica, tú serás capaz de:
+
+1. Preparar un entorno local en Windows para consumir APIs de IA generativa.
+2. Configurar claves de API mediante variables de entorno.
+3. Ejecutar pruebas básicas contra OpenAI, Gemini y Claude usando Python.
+4. Medir latencia de respuesta por proveedor y caso de uso.
+5. Estimar tokens de entrada y salida por solicitud.
+6. Calcular costo mensual aproximado por modelo y caso de uso.
+7. Comparar modelos con criterios técnicos: costo, latencia, contexto, privacidad y operación.
+8. Recomendar un modelo por caso de uso con argumentos técnicos.
+9. Identificar qué partes del código deben modificarse para cambiar modelo, prompt, volumen o proveedor.
+10. Documentar resultados en una matriz profesional de decisión.
+
+---
+
+### ✅ Prerrequisitos
+
+Antes de iniciar, asegúrate de cumplir con lo siguiente:
+
+1. Tener conocimientos básicos de IA generativa.
+2. Comprender qué son tokens de entrada y tokens de salida.
+3. Conocer el concepto de ventana de contexto.
+4. Tener nociones básicas de uso de terminal.
+5. Tener conocimientos básicos de Python.
+6. Tener cuentas o acceso a API keys de:
+   - OpenAI.
+   - Google Gemini API.
+   - Anthropic Claude API.
+7. Tener acceso a internet.
+8. Conocer cómo abrir una carpeta de proyecto en Visual Studio Code.
+
+---
+
+### 💻 Hardware
+
+| Recurso | Requisito mínimo |
 |---|---|
-| Duración estimada | 60 a 75 minutos |
-| Complejidad | Media |
-| Nivel Bloom | Aplicar |
-| Lab ID | 01-00-01 |
-| Módulo | 1.1 — Modelos Comerciales vs. Open Source |
-| Modalidad | Práctica guiada |
-| Producto final | Script modular en Python + reporte CSV |
+| Equipo | Laptop o PC con Windows |
+| Sistema operativo | Windows 10 o Windows 11 |
+| Procesador | Intel Core i5, AMD Ryzen 5 o equivalente |
+| Memoria RAM | 8 GB mínimo |
+| Almacenamiento libre | 1 GB |
+| GPU | No requerida |
+| Internet | Requerido para consumir las APIs |
 
 ---
 
-## 2. Descripción General
+### 🧰 Software
 
-En este lab vas a construir desde cero un proyecto Python modular para comparar el costo estimado, el consumo de tokens y la latencia de distintos modelos comerciales de IA generativa.
-
-Vas a preparar la estructura del proyecto, crear el dataset de prompts, configurar variables de entorno, instalar dependencias, implementar módulos separados para configuración, tokenización, ejecución de APIs, análisis de costos y generación de reportes.
-
-El script enviará una muestra controlada de prompts a modelos de OpenAI, Google Gemini y Anthropic. Después calculará tokens de entrada, tokens de salida, latencia promedio, costo de la muestra y costo estimado para el dataset completo.
-
-Al finalizar, vas a generar un archivo `cost_comparison_report.csv` con la comparación tabular de los modelos evaluados.
-
----
-
-## 3. Objetivos de Aprendizaje
-
-Al completar esta práctica, tú podrás:
-
-- Implementar un proyecto Python modular para comparar costos entre proveedores comerciales de IA generativa.
-- Preparar archivos de configuración, dataset, variables de entorno y módulos Python desde cero.
-- Calcular tokens de entrada usando estrategias específicas por proveedor.
-- Ejecutar llamadas reales a APIs comerciales controlando el número de tokens de salida.
-- Medir latencia promedio por modelo.
-- Calcular costos de entrada, salida y costo total estimado.
-- Exportar un reporte comparativo en formato CSV.
-- Validar que el proyecto funciona sin exponer credenciales en el código fuente.
-- Interpretar qué modelo es más económico, cuál responde más rápido y cuál conviene según el caso de uso.
-
----
-
-## 4. Cambios aplicados sobre la versión original
-
-| Elemento revisado | Ajuste aplicado |
+| Software | Uso |
 |---|---|
-| Preparación de archivos | Se agregó una sección completa para crear directorio, entorno virtual, `.env`, `.gitignore`, `requirements.txt` y dataset. |
-| Conteo de llamadas | Se corrigió la explicación: si usas 6 modelos y 5 prompts por modelo, haces 30 llamadas reales, no 15. |
-| SDK de Gemini | Se reemplazó `google-generativeai` por `google-genai`. |
-| Conteo de tokens de Claude | Se reemplazó la estimación por caracteres por el conteo oficial de tokens de Anthropic. |
-| Precios de modelos | Se dejaron centralizados en `config.py` con una advertencia explícita de revisión antes de impartir o ejecutar el lab. |
-| Validaciones | Se agregaron validaciones después de cada tarea, no solo al final. |
-| Seguridad | Se reforzó el uso de `.env`, `.gitignore` y revisión de credenciales hardcodeadas. |
-| Rate limits | Se agregó pausa configurable y reintentos básicos con backoff. |
-| Estructura didáctica | Se separó el lab en tareas, pasos y validaciones funcionales. |
-| Lenguaje | Se redactó en segunda persona: “vas a crear”, “ejecuta”, “verifica”, “confirma”. |
+| Visual Studio Code | Edición de código |
+| Git Bash | Ejecución de comandos |
+| Python 3.11 o superior | Ejecución de scripts |
+| pip | Instalación de dependencias |
+| Microsoft Excel, Google Sheets o LibreOffice Calc | Matriz de comparación |
+| Cuenta/API key de OpenAI | Pruebas con modelos OpenAI |
+| Cuenta/API key de Google Gemini | Pruebas con modelos Gemini |
+| Cuenta/API key de Anthropic | Pruebas con modelos Claude |
 
 ---
 
-## 5. Prerrequisitos
+### 📋 Datos generales de la práctica
 
-### 5.1 Conocimientos previos
-
-Antes de iniciar, tú debes tener conocimientos básicos de:
-
-- Python: funciones, módulos, listas, diccionarios, manejo de archivos y excepciones.
-- Uso básico de terminal.
-- Variables de entorno.
-- Conceptos de tokenización.
-- Conceptos básicos de consumo por API.
-- Diferencia entre tokens de entrada y tokens de salida.
-- Diferencia entre costo, latencia y ventana de contexto.
-
-### 5.2 Cuentas y accesos requeridos
-
-| Recurso | Estado requerido |
+| Elemento | Detalle |
 |---|---|
-| Cuenta OpenAI Platform | Activa, con API key disponible |
-| Cuenta Google AI Studio o Google Cloud habilitada para Gemini | Activa, con API key disponible |
-| Cuenta Anthropic Console | Activa, con API key disponible |
-| Acceso a Internet | Requerido |
-| Créditos o límites gratuitos disponibles | Recomendado |
-
-### 5.3 Variables de entorno requeridas
-
-Vas a usar estas variables:
-
-```text
-OPENAI_API_KEY
-GOOGLE_API_KEY
-ANTHROPIC_API_KEY
-```
-
-### 5.4 Control de costos
-
-Este lab realiza llamadas reales a APIs comerciales.
-
-Si configuras 6 modelos y una muestra de 5 prompts por modelo, vas a ejecutar:
-
-```text
-6 modelos × 5 prompts = 30 llamadas reales
-```
-
-Para controlar el costo:
-
-- Limita la salida con `MAX_OUTPUT_TOKENS`.
-- Usa una muestra pequeña.
-- Verifica los precios actuales antes de ejecutar.
-- Configura límites de gasto en cada consola.
-- No ejecutes el lab repetidamente sin revisar el consumo.
+| Duración estimada | 45 minutos |
+| Complejidad | Intermedia |
+| Nivel de Bloom | Aplicar, analizar, evaluar y justificar |
+| Capítulo | Capítulo 1 |
+| Modalidad | Individual o equipos de 2 personas |
+| Sistema operativo | Windows |
+| Editor | Visual Studio Code |
+| Terminal | Git Bash |
+| Lenguaje | Python |
+| Proveedores usados | OpenAI, Gemini y Claude |
+| Entregable principal | Matriz técnica comparativa |
+| Entregable secundario | Scripts de prueba funcionales |
+| Tipo de práctica | Técnica, comparativa y aplicada |
 
 ---
 
-## 6. Entorno del Lab
+## 🛡️ Consideraciones
 
-### 6.1 Hardware mínimo
+Antes de comenzar, toma en cuenta lo siguiente:
 
-| Componente | Mínimo | Recomendado |
+<table>
+<tr>
+<td><strong>🔐 Seguridad</strong><br>No compartas claves ni subas `.env`.</td>
+<td><strong>💸 Costo</strong><br>Cada ejecución puede consumir saldo o cuota.</td>
+<td><strong>📏 Comparación justa</strong><br>Usa los mismos prompts en los tres proveedores.</td>
+</tr>
+</table>
+
+
+1. **No compartas tus API keys.** Las claves son personales o institucionales y deben tratarse como credenciales sensibles.
+2. **No pegues tus API keys dentro del código.** Siempre usa el archivo `.env`.
+3. **No entregues el archivo `.env`.** Este archivo debe quedarse únicamente en tu equipo local.
+4. **Los modelos y precios pueden cambiar.** Antes de ejecutar la práctica, revisa en la documentación oficial que los modelos configurados sigan disponibles y que los precios sean correctos.
+5. **La estimación de tokens es aproximada.** En esta práctica usarás una regla simple para comparar escenarios. La facturación real puede variar según el proveedor.
+6. **Las pruebas consumen cuota o saldo.** Aunque los prompts son pequeños, cada ejecución puede generar costo si tu cuenta no tiene capa gratuita disponible.
+7. **Ejecuta primero una prueba individual.** Antes de correr la comparación completa, valida un proveedor a la vez para identificar errores de configuración.
+8. **Usa los mismos prompts para comparar.** No modifiques los prompts entre proveedores si quieres una comparación justa.
+9. **No envíes información sensible real.** Los textos de esta práctica son simulados. Evita usar datos personales, contraseñas, contratos reales o información confidencial.
+10. **Interpreta los resultados con criterio.** Una sola ejecución no representa el rendimiento definitivo de un modelo. Latencia, calidad y costo pueden variar.
+11. **Documenta tus supuestos.** Si cambias modelos, precios, tokens máximos, prompts o volúmenes mensuales, registra el ajuste en tu matriz.
+12. **Valida la calidad manualmente.** El costo y la latencia no son suficientes; también debes revisar si la respuesta es útil, clara, correcta y adecuada para el caso de uso.
+13. **Cuida el límite de salida.** Mantener `max_output_tokens` o `max_tokens` en valores moderados ayuda a controlar costos.
+14. **Repite solo si es necesario.** Si haces varias ejecuciones para promediar latencia, recuerda que cada corrida puede generar consumo.
+15. **Entrega evidencias sin secretos.** Puedes entregar scripts, resultados y matriz, pero nunca tus claves de API.
+
+---
+
+## 🔗 Fuentes oficiales que debes revisar antes de ejecutar
+
+> [!NOTE]
+> Los modelos, precios, límites y ventanas de contexto cambian con frecuencia. Antes de ejecutar los scripts, confirma que los identificadores de modelo y precios usados en `precios_modelos.py` coincidan con la documentación oficial.
+
+| Proveedor | Qué revisar | Fuente sugerida |
 |---|---|---|
-| RAM | 8 GB | 16 GB |
-| CPU | 4 núcleos | 8 núcleos |
-| Almacenamiento libre | 2 GB | 5 GB |
-| Internet | 10 Mbps | 25 Mbps |
-
-### 6.2 Software requerido
-
-| Software | Versión recomendada |
-|---|---|
-| Python | 3.11 o superior |
-| pip | Versión actualizada |
-| Terminal | PowerShell, Bash, Zsh o Git Bash |
-| Editor | Visual Studio Code o equivalente |
-
-### 6.3 Librerías Python
-
-| Librería | Uso |
-|---|---|
-| openai | Llamadas a modelos OpenAI |
-| google-genai | Llamadas a Gemini usando el SDK actual |
-| anthropic | Llamadas a Claude |
-| tiktoken | Estimación local de tokens para modelos OpenAI |
-| pandas | Generación de tabla y CSV |
-| python-dotenv | Carga de variables desde `.env` |
+| OpenAI | Modelo disponible, precio de entrada, precio de salida y uso de Responses API | OpenAI API Pricing y documentación de Responses API |
+| Google Gemini | Modelo disponible, precio por 1M tokens, límites y modalidad de API | Gemini API Pricing y Gemini API Models |
+| Anthropic Claude | Modelo disponible, precio por MTok, contexto y opciones de residencia | Claude API Pricing y Claude Models |
 
 ---
 
-# 7. Preparación de archivos del proyecto
+## 🚀 Sección 2. Desarrollo de la práctica
 
-## Tarea 1 — Crear el directorio del lab
+---
 
-### Objetivo
+# 🧩 Tarea 1. Preparar el proyecto local en Windows
 
-- Crear una carpeta limpia para guardar todos los archivos de la práctica. Abre Visual Studio Code.
-- Da clic en la opcioón **Terminal** y luego **Nueva terminal**
-- Navega al **Escritorio**
+## 🎯 Objetivo de la tarea
 
-### Paso 1. Crear el directorio
+Crear una carpeta de trabajo en Windows, abrirla en Visual Studio Code y preparar un entorno Python para ejecutar pruebas contra OpenAI, Gemini y Claude.
 
-Ejecuta:
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea la carpeta del laboratorio
+
+**📝 Descripción del paso:**  
+Vas a crear una carpeta local donde guardarás todos los archivos del laboratorio.
+
+**⚙️ Contenido del paso:**  
+Abre **Git Bash** y ejecuta:
 
 ```bash
-cd Desktop
-mkdir lab-01-00-01
-cd lab-01-00-01
+mkdir -p ~/labs-ia-gen/lab-01-modelos
+cd ~/labs-ia-gen/lab-01-modelos
 ```
 
-Qué haces en este paso:
-
-Creas el directorio principal del laboratorio y entras a esa carpeta.
-
-### Validación
-
+**✅ Validación del paso:**  
 Ejecuta:
 
 ```bash
 pwd
 ```
 
-En Windows PowerShell puedes ejecutar:
+Debes estar dentro de una ruta similar a:
 
-```powershell
-Get-Location
+```text
+/c/Users/TU_USUARIO/labs-ia-gen/lab-01-modelos
 ```
 
-Resultado esperado:
-
-Debes estar dentro del directorio `lab-01-00-01`.
+**📌 Resultado esperado:**  
+Tienes una carpeta dedicada para la práctica.
 
 ---
 
-## Tarea 2 — Crear y activar el entorno virtual
+### ✅ Paso 2. Abre la carpeta en Visual Studio Code
 
-### Objetivo
+**📝 Descripción del paso:**  
+Vas a abrir el proyecto en VS Code desde Git Bash.
 
-Aislar las dependencias de este lab para no afectar otros proyectos Python.
-
-### Paso 1. Crear el entorno virtual
-
+**⚙️ Contenido del paso:**  
 Ejecuta:
+
+```bash
+code .
+```
+
+Si el comando `code .` no funciona, abre Visual Studio Code manualmente y selecciona:
+
+```text
+File > Open Folder > labs-ia-gen > lab-01-modelos
+```
+
+**✅ Validación del paso:**  
+Confirma que VS Code muestre la carpeta `lab-01-modelos`.
+
+**📌 Resultado esperado:**  
+El proyecto está abierto en Visual Studio Code.
+
+---
+
+### ✅ Paso 3. Crea el entorno virtual de Python
+
+**📝 Descripción del paso:**  
+Vas a aislar las dependencias de este laboratorio para no afectar otros proyectos.
+
+**⚙️ Contenido del paso:**  
+En Git Bash, dentro de la carpeta del proyecto, ejecuta:
 
 ```bash
 python -m venv .venv
 ```
 
-Qué haces en este paso:
-
-Creas un entorno virtual llamado `.venv`.
-
-### Paso 2. Activar el entorno virtual
-
-En Linux o macOS:
-
-```bash
-source .venv/bin/activate
-```
-
-En Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-En Windows Git Bash:
+Activa el entorno virtual:
 
 ```bash
 source .venv/Scripts/activate
 ```
 
-Qué haces en este paso:
-
-Activas el entorno virtual para que las dependencias se instalen dentro del proyecto.
-
-### Paso 3. Actualizar pip
-
-Ejecuta:
-
-```bash
-python -m pip install --upgrade pip
-```
-
-Qué haces en este paso:
-
-Actualizas el gestor de paquetes para reducir problemas de instalación.
-
-### Validación
-
+**✅ Validación del paso:**  
 Ejecuta:
 
 ```bash
 python --version
-pip --version
+which python
 ```
 
-Resultado esperado:
+Debes ver que Python se ejecuta desde la carpeta `.venv`.
 
-Debes ver la versión de Python y pip. Además, tu terminal debe mostrar el entorno activo, normalmente con `(.venv)` al inicio.
+**📌 Resultado esperado:**  
+Tienes un entorno virtual activo para la práctica.
 
 ---
 
-## Tarea 3 — Crear requirements.txt
+### ✅ Paso 4. Crea el archivo de dependencias
 
-### Objetivo
+**📝 Descripción del paso:**  
+Vas a definir las librerías necesarias para consumir las APIs.
 
-Definir las dependencias del proyecto de forma reproducible.
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
 
-### Paso 1. Crear el archivo `requirements.txt`
+```text
+requirements.txt
+```
 
-Ejecuta:
+Agrega el siguiente contenido:
 
-```bash
-cat > requirements.txt << 'EOF'
+```txt
 openai
 google-genai
 anthropic
-tiktoken
-pandas
 python-dotenv
-EOF
+pandas
+tabulate
 ```
 
-En Windows PowerShell, si `cat << EOF` no funciona, crea el archivo con este contenido:
+**🔧 Qué puedes ajustar:**  
+Puedes agregar otras librerías si necesitas extender la práctica. Por ejemplo, podrías agregar `tiktoken` para conteo más especializado de tokens en modelos OpenAI. En esta práctica se usará una estimación simple para mantener el laboratorio portable entre proveedores.
 
-```powershell
-New-Item -Path "requirements.txt" -ItemType File -Value '
-openai
-google-genai
-anthropic
-tiktoken
-pandas
-python-dotenv
-'
-```
+**✅ Validación del paso:**  
+Confirma que el archivo `requirements.txt` exista en la raíz del proyecto.
 
-Qué haces en este paso:
+**📌 Resultado esperado:**  
+Tienes declaradas las dependencias del laboratorio.
 
-Creas el archivo que lista las librerías necesarias para ejecutar el proyecto.
+---
 
-### Paso 2. Instalar dependencias
+### ✅ Paso 5. Instala las dependencias
 
+**📝 Descripción del paso:**  
+Vas a instalar los SDKs necesarios para trabajar con OpenAI, Gemini y Claude.
+
+**⚙️ Contenido del paso:**  
 Ejecuta:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Qué haces en este paso:
-
-Instalas los SDKs y librerías necesarias para la práctica.
-
-### Validación
-
+**✅ Validación del paso:**  
 Ejecuta:
 
 ```bash
-python -c "import openai, anthropic, pandas, tiktoken; from google import genai; print('Dependencias instaladas correctamente')"
+pip list
 ```
 
-Salida esperada:
+Verifica que aparezcan paquetes relacionados con:
 
 ```text
-Dependencias instaladas correctamente
+openai
+google-genai
+anthropic
+python-dotenv
+pandas
 ```
+
+**📌 Resultado esperado:**  
+El ambiente tiene instaladas las librerías necesarias.
 
 ---
 
-## Tarea 4 — Crear archivo `.env`
+## 💬 Prompt de apoyo para explicar lo realizado
 
-### Objetivo
-
-Guardar las credenciales de forma segura fuera del código fuente.
-
-### Paso 1. Crear `.env`
-
-Ejecuta:
-
-```bash
-cat > .env << 'EOF'
-OPENAI_API_KEY=coloca_tu_api_key_de_openai
-GOOGLE_API_KEY=coloca_tu_api_key_de_google
-ANTHROPIC_API_KEY=coloca_tu_api_key_de_anthropic
-EOF
-```
-
-En Windows PowerShell puedes crear el archivo manualmente o ejecutar:
-
-```powershell
-@"
-OPENAI_API_KEY=coloca_tu_api_key_de_openai
-GOOGLE_API_KEY=coloca_tu_api_key_de_google
-ANTHROPIC_API_KEY=coloca_tu_api_key_de_anthropic
-"@ | Out-File -Encoding utf8 .env
-```
-
-Qué haces en este paso:
-
-Creas el archivo donde vas a colocar tus claves reales de API.
-
-### Paso 2. Sustituir los valores
-
-Abre `.env` y reemplaza los textos de ejemplo por tus claves reales.
-
-Ejemplo:
-
-```text
-OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=AIza...
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Qué haces en este paso:
-
-Configuras las credenciales que el script usará para conectarse a cada proveedor.
-
-### Validación
-
-Ejecuta:
-
-```bash
-python -c "from dotenv import load_dotenv; import os; load_dotenv(); print(bool(os.getenv('OPENAI_API_KEY')), bool(os.getenv('GOOGLE_API_KEY')), bool(os.getenv('ANTHROPIC_API_KEY')))"
-```
-
-Salida esperada:
-
-```text
-True True True
-```
-
-Si ves `False`, revisa que el archivo `.env` exista y que las variables estén bien escritas.
+[Explicar la Tarea 1 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%201%20de%20un%20laboratorio%20de%20IA%20generativa.%20Prepar%C3%A9%20una%20carpeta%20en%20Windows%2C%20abr%C3%AD%20el%20proyecto%20en%20Visual%20Studio%20Code%2C%20cre%C3%A9%20un%20entorno%20virtual%20de%20Python%20desde%20Git%20Bash%20e%20instal%C3%A9%20dependencias%20para%20OpenAI%2C%20Gemini%20y%20Claude.)
 
 ---
 
-## Tarea 5 — Crear archivo `.gitignore`
+# 🧩 Tarea 2. Configurar las claves de API de forma segura
 
-### Objetivo
+## 🎯 Objetivo de la tarea
 
-Evitar que subas credenciales, entornos virtuales y archivos generados a Git.
+Crear un archivo `.env` para guardar claves de API sin escribirlas directamente dentro del código.
 
-### Paso 1. Crear `.gitignore`
+---
 
-Ejecuta:
+## 🛠️ Pasos
 
-```bash
-cat > .gitignore << 'EOF'
+### ✅ Paso 1. Crea el archivo `.env`
+
+**📝 Descripción del paso:**  
+Vas a crear un archivo local para almacenar las claves de acceso a los proveedores.
+
+**⚙️ Contenido del paso:**  
+En la raíz del proyecto, crea un archivo llamado:
+
+```text
+.env
+```
+
+Agrega esta estructura:
+
+```env
+OPENAI_API_KEY=pega_aqui_tu_api_key_de_openai
+GEMINI_API_KEY=pega_aqui_tu_api_key_de_gemini
+ANTHROPIC_API_KEY=pega_aqui_tu_api_key_de_anthropic
+```
+
+**🔧 Qué debes cambiar:**  
+Reemplaza:
+
+```text
+pega_aqui_tu_api_key_de_openai
+pega_aqui_tu_api_key_de_gemini
+pega_aqui_tu_api_key_de_anthropic
+```
+
+por tus claves reales.
+
+**✅ Validación del paso:**  
+Confirma que el archivo `.env` existe y que cada variable tiene un valor.
+
+**📌 Resultado esperado:**  
+Tienes las claves configuradas localmente.
+
+---
+
+### ✅ Paso 2. Crea el archivo `.gitignore`
+
+**📝 Descripción del paso:**  
+Vas a evitar que las claves de API se suban por error a un repositorio.
+
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
+
+```text
+.gitignore
+```
+
+Agrega:
+
+```gitignore
 .env
 .venv/
 __pycache__/
 *.pyc
-cost_comparison_report.csv
-EOF
+resultados_modelos.csv
 ```
 
-En Windows PowerShell:
+**✅ Validación del paso:**  
+Confirma que `.env` está incluido dentro de `.gitignore`.
 
-```powershell
-@"
-.env
-.venv/
-__pycache__/
-*.pyc
-cost_comparison_report.csv
-"@ | Out-File -Encoding utf8 .gitignore
-```
-
-Qué haces en este paso:
-
-Defines archivos y carpetas que no deben ser versionados.
-
-### Validación
-
-Ejecuta:
-
-```bash
-python -c "content=open('.gitignore', encoding='utf-8').read(); assert '.env' in content; assert '.venv/' in content; print('Archivo .gitignore configurado correctamente')"
-```
-
-Salida esperada:
-
-```text
-Archivo .gitignore configurado correctamente
-```
+**📌 Resultado esperado:**  
+El archivo de claves queda protegido contra carga accidental a Git.
 
 ---
 
-# 8. Desarrollo de la práctica
+### ✅ Paso 3. Crea un script para validar variables de entorno
 
-## Tarea 6 — Crear el dataset de prompts
+**📝 Descripción del paso:**  
+Vas a comprobar que Python puede leer las claves desde `.env`.
 
-### Objetivo
-
-Crear el archivo JSON que contiene los 20 prompts que vas a analizar.
-
-### Paso 1. Crear `prompts_dataset.json`
-
-Ejecuta para Linux:
-
-```bash
-cat > prompts_dataset.json << 'EOF'
-{
-  "dataset_name": "cost_analysis_dataset_v1",
-  "description": "20 prompts de complejidad variada para análisis de costo entre proveedores",
-  "prompts": [
-    {
-      "id": 1,
-      "category": "corto",
-      "text": "¿Cuál es la capital de Francia?"
-    },
-    {
-      "id": 2,
-      "category": "corto",
-      "text": "Traduce 'hello world' al español."
-    },
-    {
-      "id": 3,
-      "category": "corto",
-      "text": "¿Cuánto es 15% de 200?"
-    },
-    {
-      "id": 4,
-      "category": "corto",
-      "text": "Dame un sinónimo de 'rápido'."
-    },
-    {
-      "id": 5,
-      "category": "corto",
-      "text": "¿En qué año se fundó OpenAI?"
-    },
-    {
-      "id": 6,
-      "category": "mediano",
-      "text": "Explica en 3 oraciones qué es el machine learning y cómo se diferencia del deep learning."
-    },
-    {
-      "id": 7,
-      "category": "mediano",
-      "text": "Escribe un correo profesional de 100 palabras solicitando una reunión para revisar el avance de un proyecto de software."
-    },
-    {
-      "id": 8,
-      "category": "mediano",
-      "text": "Describe las ventajas y desventajas de usar microservicios versus una arquitectura monolítica en una startup de tecnología."
-    },
-    {
-      "id": 9,
-      "category": "mediano",
-      "text": "Genera 5 ideas de nombres para una aplicación móvil de gestión de tareas orientada a desarrolladores de software."
-    },
-    {
-      "id": 10,
-      "category": "mediano",
-      "text": "Explica el concepto de tokenización en modelos de lenguaje grande y por qué es relevante para el costo de uso de las APIs."
-    },
-    {
-      "id": 11,
-      "category": "mediano",
-      "text": "¿Cuáles son las mejores prácticas para manejar errores en una API REST construida con FastAPI? Menciona al menos 4 prácticas concretas."
-    },
-    {
-      "id": 12,
-      "category": "mediano",
-      "text": "Compara brevemente modelos comerciales de IA generativa en términos de ventana de contexto, costo, latencia y casos de uso recomendados."
-    },
-    {
-      "id": 13,
-      "category": "largo",
-      "text": "Actúa como arquitecto de soluciones de IA. Un cliente del sector salud quiere implementar un chatbot para responder preguntas frecuentes de pacientes sobre sus citas médicas. Los datos son altamente sensibles. Describe una arquitectura completa que incluya selección de modelo, estrategia de almacenamiento de datos, medidas de seguridad y privacidad, estimación de costos mensuales asumiendo 10,000 consultas diarias, y consideraciones de cumplimiento normativo."
-    },
-    {
-      "id": 14,
-      "category": "largo",
-      "text": "Escribe un tutorial paso a paso de 400 palabras explicando cómo implementar Retrieval-Augmented Generation con Python y una base de datos vectorial. Incluye fragmentos de código comentados para cada etapa: carga de documentos, generación de embeddings, almacenamiento, recuperación de contexto relevante y generación de respuesta final."
-    },
-    {
-      "id": 15,
-      "category": "largo",
-      "text": "Analiza el siguiente escenario de negocio y proporciona un plan de implementación detallado: Una empresa de e-commerce con 500,000 productos quiere implementar un sistema de recomendaciones personalizadas usando IA generativa. Incluye arquitectura técnica, stack tecnológico recomendado, fases de implementación, KPIs y riesgos principales."
-    },
-    {
-      "id": 16,
-      "category": "largo",
-      "text": "Genera un documento de especificación técnica para una API REST de análisis de sentimientos. Incluye descripción del servicio, endpoints, métodos HTTP, parámetros de request y response en JSON, códigos de error, ejemplos con curl, autenticación con JWT, rate limiting y SLA de disponibilidad."
-    },
-    {
-      "id": 17,
-      "category": "largo",
-      "text": "Como experto en MLOps, describe el pipeline completo para llevar un modelo de clasificación de texto desde el experimento local hasta producción en Kubernetes. Incluye MLflow, Docker, CI/CD, Kubernetes, monitoreo de drift y rollback."
-    },
-    {
-      "id": 18,
-      "category": "largo",
-      "text": "Escribe un análisis comparativo de estrategias de fine-tuning para modelos de lenguaje grande: full fine-tuning, LoRA, QLoRA y prompt tuning. Para cada estrategia explica fundamento técnico, requisitos de hardware, dataset recomendado, costo estimado, casos de uso y limitaciones."
-    },
-    {
-      "id": 19,
-      "category": "largo",
-      "text": "Desarrolla un plan de seguridad para una aplicación de IA generativa expuesta públicamente. Cubre defensa contra prompt injection, gestión segura de API keys, validación de inputs, límites de tokens por usuario, logging, auditoría y respuesta ante incidentes."
-    },
-    {
-      "id": 20,
-      "category": "largo",
-      "text": "Como consultor de transformación digital, elabora un roadmap de 12 meses para que una empresa de servicios financieros adopte IA generativa de forma responsable. Incluye fases, entregables, roles, presupuesto aproximado y criterios de go/no-go."
-    }
-  ]
-}
-EOF
-```
-
-Ejecuta para Windows:
-
-```powershell
-# Define the content with a here-string
-$jsonContent = @'
-{
-  "dataset_name": "cost_analysis_dataset_v1",
-  "description": "20 prompts de complejidad variada para análisis de costo entre proveedores",
-  "prompts": [
-    {
-      "id": 1,
-      "category": "corto",
-      "text": "¿Cuál es la capital de Francia?"
-    },
-    {
-      "id": 2,
-      "category": "corto",
-      "text": "Traduce 'hello world' al español."
-    },
-    {
-      "id": 3,
-      "category": "corto",
-      "text": "¿Cuánto es 15% de 200?"
-    },
-    {
-      "id": 4,
-      "category": "corto",
-      "text": "Dame un sinónimo de 'rápido'."
-    },
-    {
-      "id": 5,
-      "category": "corto",
-      "text": "¿En qué año se fundó OpenAI?"
-    },
-    {
-      "id": 6,
-      "category": "mediano",
-      "text": "Explica en 3 oraciones qué es el machine learning y cómo se diferencia del deep learning."
-    },
-    {
-      "id": 7,
-      "category": "mediano",
-      "text": "Escribe un correo profesional de 100 palabras solicitando una reunión para revisar el avance de un proyecto de software."
-    },
-    {
-      "id": 8,
-      "category": "mediano",
-      "text": "Describe las ventajas y desventajas de usar microservicios versus una arquitectura monolítica en una startup de tecnología."
-    },
-    {
-      "id": 9,
-      "category": "mediano",
-      "text": "Genera 5 ideas de nombres para una aplicación móvil de gestión de tareas orientada a desarrolladores de software."
-    },
-    {
-      "id": 10,
-      "category": "mediano",
-      "text": "Explica el concepto de tokenización en modelos de lenguaje grande y por qué es relevante para el costo de uso de las APIs."
-    },
-    {
-      "id": 11,
-      "category": "mediano",
-      "text": "¿Cuáles son las mejores prácticas para manejar errores en una API REST construida con FastAPI? Menciona al menos 4 prácticas concretas."
-    },
-    {
-      "id": 12,
-      "category": "mediano",
-      "text": "Compara brevemente modelos comerciales de IA generativa en términos de ventana de contexto, costo, latencia y casos de uso recomendados."
-    },
-    {
-      "id": 13,
-      "category": "largo",
-      "text": "Actúa como arquitecto de soluciones de IA. Un cliente del sector salud quiere implementar un chatbot para responder preguntas frecuentes de pacientes sobre sus citas médicas. Los datos son altamente sensibles. Describe una arquitectura completa que incluya selección de modelo, estrategia de almacenamiento de datos, medidas de seguridad y privacidad, estimación de costos mensuales asumiendo 10,000 consultas diarias, y consideraciones de cumplimiento normativo."
-    },
-    {
-      "id": 14,
-      "category": "largo",
-      "text": "Escribe un tutorial paso a paso de 400 palabras explicando cómo implementar Retrieval-Augmented Generation con Python y una base de datos vectorial. Incluye fragmentos de código comentados para cada etapa: carga de documentos, generación de embeddings, almacenamiento, recuperación de contexto relevante y generación de respuesta final."
-    },
-    {
-      "id": 15,
-      "category": "largo",
-      "text": "Analiza el siguiente escenario de negocio y proporciona un plan de implementación detallado: Una empresa de e-commerce con 500,000 productos quiere implementar un sistema de recomendaciones personalizadas usando IA generativa. Incluye arquitectura técnica, stack tecnológico recomendado, fases de implementación, KPIs y riesgos principales."
-    },
-    {
-      "id": 16,
-      "category": "largo",
-      "text": "Genera un documento de especificación técnica para una API REST de análisis de sentimientos. Incluye descripción del servicio, endpoints, métodos HTTP, parámetros de request y response en JSON, códigos de error, ejemplos con curl, autenticación con JWT, rate limiting y SLA de disponibilidad."
-    },
-    {
-      "id": 17,
-      "category": "largo",
-      "text": "Como experto en MLOps, describe el pipeline completo para llevar un modelo de clasificación de texto desde el experimento local hasta producción en Kubernetes. Incluye MLflow, Docker, CI/CD, Kubernetes, monitoreo de drift y rollback."
-    },
-    {
-      "id": 18,
-      "category": "largo",
-      "text": "Escribe un análisis comparativo de estrategias de fine-tuning para modelos de lenguaje grande: full fine-tuning, LoRA, QLoRA y prompt tuning. Para cada estrategia explica fundamento técnico, requisitos de hardware, dataset recomendado, costo estimado, casos de uso y limitaciones."
-    },
-    {
-      "id": 19,
-      "category": "largo",
-      "text": "Desarrolla un plan de seguridad para una aplicación de IA generativa expuesta públicamente. Cubre defensa contra prompt injection, gestión segura de API keys, validación de inputs, límites de tokens por usuario, logging, auditoría y respuesta ante incidentes."
-    },
-    {
-      "id": 20,
-      "category": "largo",
-      "text": "Como consultor de transformación digital, elabora un roadmap de 12 meses para que una empresa de servicios financieros adopte IA generativa de forma responsable. Incluye fases, entregables, roles, presupuesto aproximado y criterios de go/no-go."
-    }
-  ]
-}
-'@
-
-# Save the content to the JSON file using UTF-8 encoding
-Set-Content -Path ".\prompts_dataset.json" -Value $jsonContent -Encoding UTF8
-
-Write-Host "File 'prompts_dataset.json' created successfully." -ForegroundColor Green
-```
-
-Qué haces en este paso:
-
-Creas un dataset con prompts cortos, medianos y largos para probar diferencias de consumo de tokens.
-
-### Paso 2. Validar que el JSON sea correcto
-
-Ejecuta para Linux:
-
-```bash
-python -c "import json; data=json.load(open('prompts_dataset.json', encoding='utf-8')); print(f'Dataset cargado: {len(data[\"prompts\"])} prompts')"
-```
-
-Ejecuta para Windows:
-
-```powershell
-"Dataset cargado: $(((Get-Content .\prompts_dataset.json -Raw | ConvertFrom-Json).prompts).Count) prompts"
-```
-
-Salida esperada:
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
 
 ```text
-Dataset cargado: 20 prompts
+00_validar_entorno.py
 ```
 
-### Validación funcional
+Agrega el siguiente código:
 
-Ejecuta Linux:
-
-```bash
-python -c "import json; data=json.load(open('prompts_dataset.json', encoding='utf-8')); print(set(p['category'] for p in data['prompts']))"
-```
-
-Ejecuta Windows:
-
-```powershell
-$categories = (Get-Content .\prompts_dataset.json -Raw | ConvertFrom-Json).prompts.category | Select-Object -Unique
-"{'$($categories -join "', '")'}"
-```
-
-Salida esperada:
-
-```text
-{'corto', 'mediano', 'largo'}
-```
-
----
-
-## Tarea 7 — Crear el módulo de configuración
-
-### Objetivo
-
-Centralizar la configuración de modelos, precios, muestra, límites de salida y archivo de reporte.
-
-### Importante sobre precios
-
-Los precios de APIs comerciales cambian. Antes de ejecutar este lab en clase, tú debes revisar las páginas oficiales de precios de cada proveedor y actualizar los valores de `input_price_per_1m` y `output_price_per_1m`.
-
-Los valores incluidos en este archivo son de referencia didáctica y deben validarse antes de usarse para una estimación real.
-
-### Paso 1. Crear `config.py`
-
-- Abre una terminal de Bash dentro de Visual Studio Code.
-- Ejecuta el siguiente comando para entrar a la carpeta de la practica.
-
-```bash
-cd Desktop/lab-01-00-01/
-```
-
-
-Ejecuta el siguiente comando:
-
-```bash
-cat > config.py << 'EOF'
-# config.py
-# Configuración central del lab.
-# IMPORTANTE:
-# Los precios de modelos cambian con frecuencia.
-# Antes de impartir o ejecutar el lab, valida los precios actuales en las páginas oficiales.
-
-MODEL_CONFIG = {
-    # OpenAI
-    "gpt-4.1": {
-        "provider": "OpenAI",
-        "display_name": "GPT-4.1",
-        "input_price_per_1m": 2.00,
-        "output_price_per_1m": 8.00,
-        "context_window_tokens": 1_000_000,
-        "tokenizer": "openai_tiktoken",
-        "tiktoken_encoding": "cl100k_base",
-    },
-    "gpt-4.1-mini": {
-        "provider": "OpenAI",
-        "display_name": "GPT-4.1 mini",
-        "input_price_per_1m": 0.40,
-        "output_price_per_1m": 1.60,
-        "context_window_tokens": 1_000_000,
-        "tokenizer": "openai_tiktoken",
-        "tiktoken_encoding": "cl100k_base",
-    },
-
-    # Google Gemini
-    "gemini-2.5-pro": {
-        "provider": "Google",
-        "display_name": "Gemini 2.5 Pro",
-        "input_price_per_1m": 1.25,
-        "output_price_per_1m": 10.00,
-        "context_window_tokens": 1_000_000,
-        "tokenizer": "gemini_api",
-    },
-    "gemini-2.5-flash": {
-        "provider": "Google",
-        "display_name": "Gemini 2.5 Flash",
-        "input_price_per_1m": 0.30,
-        "output_price_per_1m": 2.50,
-        "context_window_tokens": 1_000_000,
-        "tokenizer": "gemini_api",
-    },
-
-    # Anthropic Claude
-    "claude-sonnet-4-6": {
-        "provider": "Anthropic",
-        "display_name": "Claude Sonnet 4.6",
-        "input_price_per_1m": 3.00,
-        "output_price_per_1m": 15.00,
-        "context_window_tokens": 200_000,
-        "tokenizer": "anthropic_api",
-    },
-    "claude-haiku-4-5": {
-        "provider": "Anthropic",
-        "display_name": "Claude Haiku 4.5",
-        "input_price_per_1m": 1.00,
-        "output_price_per_1m": 5.00,
-        "context_window_tokens": 200_000,
-        "tokenizer": "anthropic_api",
-    },
-}
-
-DATASET_FILE = "prompts_dataset.json"
-DATASET_SIZE = 20
-
-SAMPLE_SIZE = 5
-SAMPLE_INDICES = [0, 5, 9, 13, 18]
-
-MAX_OUTPUT_TOKENS = 512
-OUTPUT_CSV = "cost_comparison_report.csv"
-
-# Pausa base entre llamadas para reducir errores por rate limit.
-API_DELAY_SECONDS = 2
-
-# Reintentos por llamada cuando ocurre error temporal.
-MAX_RETRIES = 2
-EOF
-```
-
-Qué haces en este paso:
-
-Defines qué modelos vas a comparar, sus precios por millón de tokens y los parámetros principales del lab.
-
-### Validación
-
-Ejecuta:
-
-```bash
-python -c "from config import MODEL_CONFIG; print(f'Modelos configurados: {len(MODEL_CONFIG)}'); print(list(MODEL_CONFIG.keys()))"
-```
-
-Salida esperada:
-
-```text
-Modelos configurados: 6
-['gpt-4.1', 'gpt-4.1-mini', 'gemini-2.5-pro', 'gemini-2.5-flash', 'claude-sonnet-4-6', 'claude-haiku-4-5']
-```
-
----
-
-## Tarea 8 — Crear el módulo de tokenización
-
-### Objetivo
-
-Implementar el conteo de tokens de entrada usando el método adecuado para cada proveedor.
-
-### Paso 1. Crear `tokenizer.py`
-
-Ejecuta el siguiente comando dentro de la carpeta de la practica:
-
-```bash
-cat > tokenizer.py << 'EOF'
-# tokenizer.py
-# Módulo de tokenización multi-proveedor.
-
+```python
 import os
-import tiktoken
 from dotenv import load_dotenv
-from google import genai
-import anthropic
-
-from config import MODEL_CONFIG
 
 load_dotenv()
 
-google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+required_keys = [
+    "OPENAI_API_KEY",
+    "GEMINI_API_KEY",
+    "ANTHROPIC_API_KEY",
+]
 
+missing_keys = []
 
-def count_tokens_openai_estimate(text: str, encoding_name: str = "cl100k_base") -> int:
-    """
-    Estima tokens para modelos OpenAI usando tiktoken.
+for key in required_keys:
+    value = os.getenv(key)
+    if not value or value.startswith("pega_aqui"):
+        missing_keys.append(key)
 
-    Nota:
-    Este conteo estima tokens del texto plano. La API puede sumar tokens
-    adicionales por estructura de mensaje.
-    """
-    encoding = tiktoken.get_encoding(encoding_name)
-    return len(encoding.encode(text))
+if missing_keys:
+    print("Faltan variables de entorno o tienen valores de ejemplo:")
+    for key in missing_keys:
+        print(f"- {key}")
+    raise SystemExit(1)
 
-
-def count_tokens_gemini(text: str, model_name: str) -> int:
-    """
-    Cuenta tokens usando la API de Gemini.
-    """
-    result = google_client.models.count_tokens(
-        model=model_name,
-        contents=text,
-    )
-    return int(result.total_tokens)
-
-
-def count_tokens_anthropic(text: str, model_name: str) -> int:
-    """
-    Cuenta tokens usando el endpoint oficial de Anthropic.
-    """
-    result = anthropic_client.messages.count_tokens(
-        model=model_name,
-        messages=[
-            {
-                "role": "user",
-                "content": text,
-            }
-        ],
-    )
-    return int(result.input_tokens)
-
-
-def count_input_tokens(text: str, model_key: str) -> int:
-    """
-    Selecciona automáticamente el método de conteo según el modelo.
-    """
-    config = MODEL_CONFIG[model_key]
-    tokenizer_type = config["tokenizer"]
-
-    if tokenizer_type == "openai_tiktoken":
-        return count_tokens_openai_estimate(
-            text=text,
-            encoding_name=config.get("tiktoken_encoding", "cl100k_base"),
-        )
-
-    if tokenizer_type == "gemini_api":
-        return count_tokens_gemini(
-            text=text,
-            model_name=model_key,
-        )
-
-    if tokenizer_type == "anthropic_api":
-        return count_tokens_anthropic(
-            text=text,
-            model_name=model_key,
-        )
-
-    raise ValueError(f"Tipo de tokenizador no soportado: {tokenizer_type}")
-EOF
+print("Variables de entorno cargadas correctamente.")
+print("No se muestran las claves por seguridad.")
 ```
 
-Qué haces en este paso:
+**🔧 Qué puedes ajustar:**  
+No imprimas las claves reales en pantalla. Si necesitas validar parcialmente una clave, imprime solo los primeros o últimos 4 caracteres, pero evita hacerlo en ambientes compartidos.
 
-Creas funciones para contar tokens por proveedor. Para OpenAI usas estimación local con `tiktoken`. Para Gemini y Anthropic usas conteo vía API.
-
-### Validación
-
+**✅ Validación del paso:**  
 Ejecuta:
 
 ```bash
-python -c "from tokenizer import count_tokens_openai_estimate; print(count_tokens_openai_estimate('Hola, esto es una prueba de tokenización.'))"
+python 00_validar_entorno.py
 ```
 
-Salida esperada:
-
-Debes ver un número entero mayor que cero.
-
-Ejemplo:
+**📌 Resultado esperado:**  
+Debes ver:
 
 ```text
-11
+Variables de entorno cargadas correctamente.
+No se muestran las claves por seguridad.
 ```
 
 ---
 
-## Tarea 9 — Crear el módulo de ejecución de APIs
+## 💬 Prompt de apoyo para explicar lo realizado
 
-### Objetivo
+[Explicar la Tarea 2 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%202%20de%20un%20laboratorio%20de%20IA%20generativa.%20Configur%C3%A9%20un%20archivo%20.env%20con%20claves%20de%20OpenAI%2C%20Gemini%20y%20Claude%2C%20agregu%C3%A9%20.gitignore%20para%20proteger%20las%20claves%20y%20valid%C3%A9%20que%20Python%20pueda%20leer%20las%20variables%20de%20entorno.)
 
-Enviar prompts reales a cada API, medir latencia y capturar tokens de entrada y salida.
+---
 
-### Paso 1. Crear `api_executor.py`
+# 🧩 Tarea 3. Definir los casos de uso y prompts de prueba
+
+## 🎯 Objetivo de la tarea
+
+Crear tres prompts comparables para probar los modelos bajo los mismos escenarios: resumen, soporte técnico y análisis documental.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo de casos de prueba
+
+**📝 Descripción del paso:**  
+Vas a centralizar los prompts para reutilizarlos con los tres proveedores.
+
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
+
+```text
+casos_prueba.py
+```
+
+Agrega el siguiente código:
+
+```python
+CASOS_USO = [
+    {
+        "id": "CU-01",
+        "nombre": "Resumen de contenido",
+        "solicitudes_mensuales": 1000,
+        "prompt": """
+Eres un asistente ejecutivo. Resume el siguiente contenido en:
+1. Resumen breve.
+2. Ideas principales.
+3. Riesgos o puntos de atención.
+4. Próximos pasos sugeridos.
+
+Contenido:
+La organización está evaluando incorporar IA generativa en procesos internos.
+Actualmente existen áreas interesadas en automatizar la creación de reportes,
+responder preguntas frecuentes de soporte y analizar documentos largos de
+cumplimiento. Sin embargo, la dirección solicita una evaluación previa de costo,
+privacidad, latencia y dependencia del proveedor antes de aprobar cualquier
+implementación productiva. El equipo técnico debe comparar proveedores, estimar
+tokens, identificar riesgos y recomendar una arquitectura inicial.
+"""
+    },
+    {
+        "id": "CU-02",
+        "nombre": "Soporte técnico asistido",
+        "solicitudes_mensuales": 5000,
+        "prompt": """
+Eres un asistente de soporte técnico. Responde de forma clara, breve y accionable.
+
+Pregunta del usuario:
+No puedo conectarme a la VPN corporativa desde Windows. El error indica que las
+credenciales no son válidas, pero ya confirmé que mi contraseña funciona en el
+correo corporativo.
+
+Base de conocimiento:
+- Verificar conexión a internet.
+- Confirmar que la cuenta no esté bloqueada.
+- Validar que la hora del equipo esté sincronizada.
+- Cerrar sesión y volver a iniciar.
+- Reiniciar el cliente VPN.
+- Si el problema continúa, levantar ticket con captura del error.
+"""
+    },
+    {
+        "id": "CU-03",
+        "nombre": "Análisis documental",
+        "solicitudes_mensuales": 800,
+        "prompt": """
+Eres un analista de cumplimiento. Revisa el siguiente fragmento de política
+interna y genera:
+1. Hallazgos principales.
+2. Riesgos de cumplimiento.
+3. Preguntas que deberían hacerse al área responsable.
+4. Recomendaciones de mejora.
+
+Documento:
+La empresa podrá utilizar herramientas de inteligencia artificial generativa
+para apoyar actividades operativas, administrativas y analíticas. Los usuarios
+deberán evitar compartir información altamente confidencial, datos personales
+sensibles, secretos comerciales o credenciales. Cada área será responsable de
+validar las respuestas generadas antes de utilizarlas en documentos oficiales.
+La organización podrá contratar servicios externos de IA cuando exista una
+evaluación previa de seguridad, privacidad, costo y cumplimiento. Actualmente no
+existe un procedimiento formal para registrar prompts, auditar respuestas,
+monitorear consumo o clasificar información antes de enviarla a modelos externos.
+"""
+    }
+]
+```
+
+**🔧 Qué puedes ajustar:**  
+Puedes cambiar el contenido de cada prompt para alinearlo con tu industria. Mantén los tres tipos de caso de uso para poder comparar resultados.
+
+**✅ Validación del paso:**  
+Confirma que el archivo no tenga errores de sintaxis.
 
 Ejecuta:
 
 ```bash
-cat > api_executor.py << 'EOF'
-# api_executor.py
-# Ejecuta llamadas reales a APIs comerciales y mide latencia.
+python -m py_compile casos_prueba.py
+```
 
-import os
+**📌 Resultado esperado:**  
+El comando no debe mostrar errores.
+
+---
+
+### ✅ Paso 2. Revisa los volúmenes mensuales
+
+**📝 Descripción del paso:**  
+Vas a confirmar el volumen de uso que se utilizará en el cálculo de costos.
+
+**⚙️ Contenido del paso:**  
+Los valores iniciales son:
+
+| Caso de uso | Solicitudes mensuales |
+|---|---:|
+| Resumen de contenido | 1,000 |
+| Soporte técnico asistido | 5,000 |
+| Análisis documental | 800 |
+
+**🔧 Qué puedes ajustar:**  
+En el archivo `casos_prueba.py`, puedes modificar:
+
+```python
+"solicitudes_mensuales": 1000
+```
+
+por el volumen real que quieras analizar.
+
+**✅ Validación del paso:**  
+Cada caso debe tener un valor numérico mayor que cero.
+
+**📌 Resultado esperado:**  
+Los casos de uso están listos para pruebas y estimaciones.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 3 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%203%20de%20un%20laboratorio%20de%20IA%20generativa.%20Defin%C3%AD%20tres%20casos%20de%20uso%20con%20prompts%20comparables%3A%20resumen%2C%20soporte%20t%C3%A9cnico%20y%20an%C3%A1lisis%20documental.%20Tambi%C3%A9n%20defin%C3%AD%20solicitudes%20mensuales%20para%20calcular%20costos.)
+
+---
+
+# 🧩 Tarea 4. Crear funciones comunes para medir tokens, latencia y costo
+
+## 🎯 Objetivo de la tarea
+
+Crear funciones reutilizables para estimar tokens, medir tiempo de respuesta y calcular costos.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo de utilidades
+
+**📝 Descripción del paso:**  
+Vas a crear un archivo con funciones compartidas por todos los scripts.
+
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
+
+```text
+utils.py
+```
+
+Agrega el siguiente código:
+
+```python
 import time
-from dataclasses import dataclass
 
+
+def estimar_tokens(texto: str) -> int:
+    """
+    Estimación simple de tokens.
+    Regla aproximada: 1 token equivale a 4 caracteres en inglés/español técnico.
+    Esta estimación no reemplaza los contadores oficiales de cada proveedor.
+    """
+    if not texto:
+        return 0
+
+    return max(1, round(len(texto) / 4))
+
+
+def iniciar_cronometro() -> float:
+    return time.perf_counter()
+
+
+def detener_cronometro(inicio: float) -> float:
+    fin = time.perf_counter()
+    return round(fin - inicio, 3)
+
+
+def calcular_costo_usd(
+    tokens_entrada: int,
+    tokens_salida: int,
+    precio_entrada_1m: float,
+    precio_salida_1m: float
+) -> float:
+    costo_entrada = (tokens_entrada / 1_000_000) * precio_entrada_1m
+    costo_salida = (tokens_salida / 1_000_000) * precio_salida_1m
+    return round(costo_entrada + costo_salida, 6)
+
+
+def imprimir_resultado(resultado: dict) -> None:
+    print("\n" + "=" * 80)
+    print(f"Proveedor: {resultado['proveedor']}")
+    print(f"Modelo: {resultado['modelo']}")
+    print(f"Caso de uso: {resultado['caso_uso']}")
+    print(f"Latencia: {resultado['latencia_segundos']} segundos")
+    print(f"Tokens entrada estimados: {resultado['tokens_entrada']}")
+    print(f"Tokens salida estimados: {resultado['tokens_salida']}")
+    print(f"Costo estimado por solicitud: ${resultado['costo_solicitud_usd']} USD")
+    print(f"Costo mensual estimado: ${resultado['costo_mensual_usd']} USD")
+    print("-" * 80)
+    print("Respuesta:")
+    print(resultado["respuesta"])
+    print("=" * 80)
+```
+
+**🔧 Qué puedes ajustar:**  
+La función `estimar_tokens()` usa una regla aproximada. Si necesitas mayor precisión, puedes sustituirla por contadores oficiales o librerías específicas por proveedor.
+
+**✅ Validación del paso:**  
+Ejecuta:
+
+```bash
+python -m py_compile utils.py
+```
+
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
+
+---
+
+### ✅ Paso 2. Define los precios de referencia
+
+**📝 Descripción del paso:**  
+Vas a crear un archivo donde registrarás los precios usados para el cálculo.
+
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
+
+```text
+precios_modelos.py
+```
+
+Agrega el siguiente código:
+
+```python
+PRECIOS_MODELOS = {
+    "openai": {
+        "proveedor": "OpenAI",
+        "modelo": "gpt-5.4-mini",
+        "precio_entrada_1m": 0.75,
+        "precio_salida_1m": 4.50,
+        "ventana_contexto": "Consultar documentación oficial",
+        "fuente": "OpenAI API Pricing"
+    },
+    "gemini": {
+        "proveedor": "Google Gemini",
+        "modelo": "gemini-2.5-flash",
+        "precio_entrada_1m": 0.30,
+        "precio_salida_1m": 2.50,
+        "ventana_contexto": "Consultar documentación oficial",
+        "fuente": "Google AI Gemini API Pricing"
+    },
+    "claude": {
+        "proveedor": "Anthropic Claude",
+        "modelo": "claude-sonnet-4-6",
+        "precio_entrada_1m": 3.00,
+        "precio_salida_1m": 15.00,
+        "ventana_contexto": "Consultar documentación oficial",
+        "fuente": "Anthropic Pricing"
+    }
+}
+```
+
+**🔧 Qué debes cambiar:**  
+Antes de ejecutar el laboratorio, revisa los precios actuales en la documentación oficial de cada proveedor y ajusta estos campos:
+
+```python
+"modelo": "gpt-5.4-mini"
+"precio_entrada_1m": 0.75
+"precio_salida_1m": 4.50
+```
+
+Haz lo mismo para Gemini y Claude.
+
+**✅ Validación del paso:**  
+Ejecuta:
+
+```bash
+python -m py_compile precios_modelos.py
+```
+
+**📌 Resultado esperado:**  
+El archivo de precios compila correctamente.
+
+> [!WARNING]
+> Los valores incluidos en `precios_modelos.py` son valores de referencia para el laboratorio. Antes de impartir o entregar la práctica, actualiza modelo y precios con la documentación oficial del día.
+
+**Nota:** 
+- [Página de precios OpenAI](https://openai.com/api/pricing/)
+- [Página de precios Gemini](https://ai.google.dev/gemini-api/docs/pricing)
+- [Página de precios Claude](https://platform.claude.com/docs/es/about-claude/pricing)
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 4 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%204%20de%20un%20laboratorio%20de%20IA%20generativa.%20Cre%C3%A9%20funciones%20para%20estimar%20tokens%2C%20medir%20latencia%2C%20calcular%20costo%20por%20solicitud%20y%20costo%20mensual.%20Tambi%C3%A9n%20cre%C3%A9%20un%20archivo%20de%20precios%20para%20OpenAI%2C%20Gemini%20y%20Claude.)
+
+---
+
+# 🧩 Tarea 5. Probar OpenAI desde Python
+
+## 🎯 Objetivo de la tarea
+
+Ejecutar una prueba real contra OpenAI, medir latencia, estimar tokens y calcular costo aproximado.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el script de prueba para OpenAI
+
+**📝 Descripción del paso:**  
+Vas a crear un script que envía los tres casos de uso a OpenAI.
+
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
+
+```text
+01_probar_openai.py
+```
+
+Agrega el siguiente código:
+
+```python
+import os
 from dotenv import load_dotenv
+from openai import OpenAI
+
+from casos_prueba import CASOS_USO
+from precios_modelos import PRECIOS_MODELOS
+from utils import (
+    estimar_tokens,
+    iniciar_cronometro,
+    detener_cronometro,
+    calcular_costo_usd,
+    imprimir_resultado,
+)
+
+load_dotenv()
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+CONFIG = PRECIOS_MODELOS["openai"]
+
+# Puedes cambiar el modelo aquí.
+# Revisa que el modelo exista y esté habilitado en tu cuenta.
+MODELO = CONFIG["modelo"]
+
+
+def probar_openai(caso: dict) -> dict:
+    prompt = caso["prompt"]
+
+    tokens_entrada = estimar_tokens(prompt)
+
+    inicio = iniciar_cronometro()
+
+    response = client.responses.create(
+        model=MODELO,
+        input=prompt,
+        max_output_tokens=500,
+        temperature=0.2,
+    )
+
+    latencia = detener_cronometro(inicio)
+
+    respuesta = response.output_text
+
+    tokens_salida = estimar_tokens(respuesta)
+
+    costo_solicitud = calcular_costo_usd(
+        tokens_entrada=tokens_entrada,
+        tokens_salida=tokens_salida,
+        precio_entrada_1m=CONFIG["precio_entrada_1m"],
+        precio_salida_1m=CONFIG["precio_salida_1m"],
+    )
+
+    costo_mensual = round(costo_solicitud * caso["solicitudes_mensuales"], 4)
+
+    return {
+        "proveedor": CONFIG["proveedor"],
+        "modelo": MODELO,
+        "caso_uso": caso["nombre"],
+        "latencia_segundos": latencia,
+        "tokens_entrada": tokens_entrada,
+        "tokens_salida": tokens_salida,
+        "costo_solicitud_usd": costo_solicitud,
+        "costo_mensual_usd": costo_mensual,
+        "respuesta": respuesta,
+    }
+
+
+if __name__ == "__main__":
+    for caso in CASOS_USO:
+        resultado = probar_openai(caso)
+        imprimir_resultado(resultado)
+```
+
+**🔧 Qué puedes ajustar:**  
+Puedes cambiar:
+
+```python
+MODELO = CONFIG["modelo"]
+```
+
+si deseas probar otro modelo de OpenAI.
+
+También puedes ajustar:
+
+```python
+max_output_tokens=500
+temperature=0.2
+```
+
+- `max_output_tokens` controla la longitud máxima de respuesta.
+- `temperature` controla variabilidad; valores bajos generan respuestas más consistentes.
+
+**✅ Validación del paso:**  
+Ejecuta:
+
+```bash
+python 01_probar_openai.py
+```
+
+**📌 Resultado esperado:**  
+Debes ver tres respuestas, una por cada caso de uso, con latencia, tokens estimados y costo aproximado.
+
+---
+
+### ✅ Paso 2. Identifica errores comunes en OpenAI
+
+**📝 Descripción del paso:**  
+Vas a reconocer problemas frecuentes al ejecutar la prueba.
+
+**⚙️ Contenido del paso:**
+
+| Error posible | Causa probable | Corrección |
+|---|---|---|
+| API key inválida | La clave está mal copiada | Revisa `OPENAI_API_KEY` en `.env` |
+| Modelo no encontrado | El modelo no existe o no está habilitado | Cambia el campo `modelo` en `precios_modelos.py` |
+| Error de cuota | No tienes saldo o límite disponible | Revisa facturación/límites de la cuenta |
+| Módulo no encontrado | Faltan dependencias | Ejecuta `pip install -r requirements.txt` |
+
+**✅ Validación del paso:**  
+Si ocurre un error, corrígelo y vuelve a ejecutar el script.
+
+**📌 Resultado esperado:**  
+OpenAI responde correctamente para los tres casos de uso.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 5 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%205%20de%20un%20laboratorio%20de%20IA%20generativa.%20Ejecut%C3%A9%20una%20prueba%20real%20con%20OpenAI%20desde%20Python%2C%20usando%20la%20Responses%20API%2C%20med%C3%AD%20latencia%2C%20estim%C3%A9%20tokens%20de%20entrada%20y%20salida%2C%20y%20calcul%C3%A9%20costo%20aproximado%20por%20solicitud%20y%20por%20mes.)
+
+---
+
+# 🧩 Tarea 6. Probar Gemini desde Python
+
+## 🎯 Objetivo de la tarea
+
+Ejecutar una prueba real contra Google Gemini, medir latencia, estimar tokens y calcular costo aproximado.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el script de prueba para Gemini
+
+**📝 Descripción del paso:**  
+Vas a crear un script que envía los mismos tres casos de uso a Gemini.
+
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
+
+```text
+02_probar_gemini.py
+```
+
+Agrega el siguiente código:
+
+```python
+import os
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+from casos_prueba import CASOS_USO
+from precios_modelos import PRECIOS_MODELOS
+from utils import (
+    estimar_tokens,
+    iniciar_cronometro,
+    detener_cronometro,
+    calcular_costo_usd,
+    imprimir_resultado,
+)
+
+load_dotenv()
+
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+CONFIG = PRECIOS_MODELOS["gemini"]
+
+# Puedes cambiar el modelo aquí.
+# Revisa que el modelo exista y esté habilitado para tu API key.
+MODELO = CONFIG["modelo"]
+
+
+def probar_gemini(caso: dict) -> dict:
+    prompt = caso["prompt"]
+
+    tokens_entrada = estimar_tokens(prompt)
+
+    inicio = iniciar_cronometro()
+
+    response = client.models.generate_content(
+        model=MODELO,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.2,
+            max_output_tokens=500,
+        ),
+    )
+
+    latencia = detener_cronometro(inicio)
+
+    respuesta = response.text or ""
+
+    tokens_salida = estimar_tokens(respuesta)
+
+    costo_solicitud = calcular_costo_usd(
+        tokens_entrada=tokens_entrada,
+        tokens_salida=tokens_salida,
+        precio_entrada_1m=CONFIG["precio_entrada_1m"],
+        precio_salida_1m=CONFIG["precio_salida_1m"],
+    )
+
+    costo_mensual = round(costo_solicitud * caso["solicitudes_mensuales"], 4)
+
+    return {
+        "proveedor": CONFIG["proveedor"],
+        "modelo": MODELO,
+        "caso_uso": caso["nombre"],
+        "latencia_segundos": latencia,
+        "tokens_entrada": tokens_entrada,
+        "tokens_salida": tokens_salida,
+        "costo_solicitud_usd": costo_solicitud,
+        "costo_mensual_usd": costo_mensual,
+        "respuesta": respuesta,
+    }
+
+
+if __name__ == "__main__":
+    for caso in CASOS_USO:
+        resultado = probar_gemini(caso)
+        imprimir_resultado(resultado)
+```
+
+**🔧 Qué puedes ajustar:**  
+Puedes cambiar:
+
+```python
+MODELO = CONFIG["modelo"]
+```
+
+para probar otro modelo Gemini.
+
+También puedes ajustar:
+
+```python
+temperature=0.2
+max_output_tokens=500
+```
+
+Si el modelo devuelve respuestas muy largas, reduce `max_output_tokens`. Si necesitas respuestas más creativas, aumenta ligeramente `temperature`.
+
+**✅ Validación del paso:**  
+Ejecuta:
+
+```bash
+python 02_probar_gemini.py
+```
+
+**📌 Resultado esperado:**  
+Debes ver tres respuestas generadas por Gemini con latencia, tokens estimados y costo aproximado.
+
+---
+
+### ✅ Paso 2. Identifica errores comunes en Gemini
+
+**📝 Descripción del paso:**  
+Vas a reconocer problemas frecuentes al ejecutar la prueba.
+
+**⚙️ Contenido del paso:**
+
+| Error posible | Causa probable | Corrección |
+|---|---|---|
+| API key inválida | La clave de Gemini está mal configurada | Revisa `GEMINI_API_KEY` en `.env` |
+| Modelo no disponible | El nombre del modelo cambió o no está habilitado | Ajusta `modelo` en `precios_modelos.py` |
+| Error de permisos | Tu proyecto/API key no tiene acceso | Revisa la configuración en Google AI Studio o Google Cloud |
+| Respuesta vacía | El contenido fue bloqueado o no generado | Prueba con un prompt más simple |
+
+**✅ Validación del paso:**  
+Si existe error, corrige la clave, el modelo o el prompt y vuelve a ejecutar.
+
+**📌 Resultado esperado:**  
+Gemini responde correctamente para los tres casos de uso.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 6 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%206%20de%20un%20laboratorio%20de%20IA%20generativa.%20Ejecut%C3%A9%20una%20prueba%20real%20con%20Google%20Gemini%20desde%20Python%2C%20usando%20generate_content%2C%20med%C3%AD%20latencia%2C%20estim%C3%A9%20tokens%20y%20calcul%C3%A9%20costo%20aproximado%20por%20solicitud%20y%20por%20mes.)
+
+---
+
+# 🧩 Tarea 7. Probar Claude desde Python
+
+## 🎯 Objetivo de la tarea
+
+Ejecutar una prueba real contra Anthropic Claude, medir latencia, estimar tokens y calcular costo aproximado.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el script de prueba para Claude
+
+**📝 Descripción del paso:**  
+Vas a crear un script que envía los mismos tres casos de uso a Claude.
+
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
+
+```text
+03_probar_claude.py
+```
+
+Agrega el siguiente código:
+
+```python
+import os
+from dotenv import load_dotenv
+from anthropic import Anthropic
+
+from casos_prueba import CASOS_USO
+from precios_modelos import PRECIOS_MODELOS
+from utils import (
+    estimar_tokens,
+    iniciar_cronometro,
+    detener_cronometro,
+    calcular_costo_usd,
+    imprimir_resultado,
+)
+
+load_dotenv()
+
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+CONFIG = PRECIOS_MODELOS["claude"]
+
+# Puedes cambiar el modelo aquí.
+# Revisa que el modelo exista y esté habilitado en tu cuenta.
+MODELO = CONFIG["modelo"]
+
+
+def probar_claude(caso: dict) -> dict:
+    prompt = caso["prompt"]
+
+    tokens_entrada = estimar_tokens(prompt)
+
+    inicio = iniciar_cronometro()
+
+    message = client.messages.create(
+        model=MODELO,
+        max_tokens=500,
+        temperature=0.2,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+    )
+
+    latencia = detener_cronometro(inicio)
+
+    respuesta = ""
+    if message.content:
+        respuesta = message.content[0].text
+
+    tokens_salida = estimar_tokens(respuesta)
+
+    costo_solicitud = calcular_costo_usd(
+        tokens_entrada=tokens_entrada,
+        tokens_salida=tokens_salida,
+        precio_entrada_1m=CONFIG["precio_entrada_1m"],
+        precio_salida_1m=CONFIG["precio_salida_1m"],
+    )
+
+    costo_mensual = round(costo_solicitud * caso["solicitudes_mensuales"], 4)
+
+    return {
+        "proveedor": CONFIG["proveedor"],
+        "modelo": MODELO,
+        "caso_uso": caso["nombre"],
+        "latencia_segundos": latencia,
+        "tokens_entrada": tokens_entrada,
+        "tokens_salida": tokens_salida,
+        "costo_solicitud_usd": costo_solicitud,
+        "costo_mensual_usd": costo_mensual,
+        "respuesta": respuesta,
+    }
+
+
+if __name__ == "__main__":
+    for caso in CASOS_USO:
+        resultado = probar_claude(caso)
+        imprimir_resultado(resultado)
+```
+
+**🔧 Qué puedes ajustar:**  
+Puedes cambiar:
+
+```python
+MODELO = CONFIG["modelo"]
+```
+
+para probar otro modelo Claude.
+
+También puedes ajustar:
+
+```python
+max_tokens=500
+temperature=0.2
+```
+
+- `max_tokens` controla el máximo de tokens generados.
+- `temperature` controla variación en la respuesta.
+
+**✅ Validación del paso:**  
+Ejecuta:
+
+```bash
+python 03_probar_claude.py
+```
+
+**📌 Resultado esperado:**  
+Debes ver tres respuestas generadas por Claude con latencia, tokens estimados y costo aproximado.
+
+---
+
+### ✅ Paso 2. Identifica errores comunes en Claude
+
+**📝 Descripción del paso:**  
+Vas a reconocer problemas frecuentes al ejecutar la prueba.
+
+**⚙️ Contenido del paso:**
+
+| Error posible | Causa probable | Corrección |
+|---|---|---|
+| API key inválida | La clave de Anthropic está mal configurada | Revisa `ANTHROPIC_API_KEY` en `.env` |
+| Modelo no disponible | El nombre del modelo no existe o no está habilitado | Ajusta `modelo` en `precios_modelos.py` |
+| Error de cuota | No tienes crédito o acceso suficiente | Revisa la consola de Anthropic |
+| Respuesta no esperada | Prompt ambiguo o muy largo | Ajusta el prompt o reduce contenido |
+
+**✅ Validación del paso:**  
+Corrige cualquier error y vuelve a ejecutar el script.
+
+**📌 Resultado esperado:**  
+Claude responde correctamente para los tres casos de uso.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 7 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%207%20de%20un%20laboratorio%20de%20IA%20generativa.%20Ejecut%C3%A9%20una%20prueba%20real%20con%20Claude%20desde%20Python%2C%20usando%20el%20SDK%20oficial%20de%20Anthropic%2C%20med%C3%AD%20latencia%2C%20estim%C3%A9%20tokens%20y%20calcul%C3%A9%20costo%20aproximado%20por%20solicitud%20y%20por%20mes.)
+
+---
+
+# 🧩 Tarea 8. Ejecutar una prueba comparativa automatizada
+
+## 🎯 Objetivo de la tarea
+
+Crear un script único que ejecute OpenAI, Gemini y Claude sobre los mismos casos de uso y genere un archivo CSV con los resultados.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el script comparativo
+
+**📝 Descripción del paso:**  
+Vas a automatizar la comparación para no copiar resultados manualmente.
+
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
+
+```text
+04_comparar_modelos.py
+```
+
+Agrega el siguiente código:
+
+```python
+import os
+import pandas as pd
+from dotenv import load_dotenv
+
 from openai import OpenAI
 from google import genai
 from google.genai import types
-import anthropic
+from anthropic import Anthropic
 
-from config import MAX_OUTPUT_TOKENS, MAX_RETRIES
+from casos_prueba import CASOS_USO
+from precios_modelos import PRECIOS_MODELOS
+from utils import (
+    estimar_tokens,
+    iniciar_cronometro,
+    detener_cronometro,
+    calcular_costo_usd,
+)
 
 load_dotenv()
 
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+claude_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
-@dataclass
-class APICallResult:
-    model_key: str
-    prompt_id: int
-    input_tokens: int
-    output_tokens: int
-    latency_seconds: float
-    success: bool
-    error_message: str = ""
+def ejecutar_openai(caso: dict) -> dict:
+    config = PRECIOS_MODELOS["openai"]
+    modelo = config["modelo"]
+    prompt = caso["prompt"]
+    tokens_entrada = estimar_tokens(prompt)
 
+    inicio = iniciar_cronometro()
+    response = openai_client.responses.create(
+        model=modelo,
+        input=prompt,
+        max_output_tokens=500,
+        temperature=0.2,
+    )
+    latencia = detener_cronometro(inicio)
 
-def retry_sleep(attempt: int) -> None:
-    """
-    Aplica una pausa incremental para reducir fallos temporales por rate limit.
-    """
-    time.sleep(2 ** attempt)
+    respuesta = response.output_text
+    tokens_salida = estimar_tokens(respuesta)
 
-
-def call_openai(prompt: str, model_key: str, prompt_id: int) -> APICallResult:
-    """
-    Envía un prompt a OpenAI usando Responses API.
-    """
-    start = time.perf_counter()
-
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            response = openai_client.responses.create(
-                model=model_key,
-                input=prompt,
-                max_output_tokens=MAX_OUTPUT_TOKENS,
-            )
-
-            latency = time.perf_counter() - start
-            usage = response.usage
-
-            return APICallResult(
-                model_key=model_key,
-                prompt_id=prompt_id,
-                input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
-                output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
-                latency_seconds=round(latency, 3),
-                success=True,
-            )
-
-        except Exception as e:
-            if attempt < MAX_RETRIES:
-                retry_sleep(attempt)
-                continue
-
-            latency = time.perf_counter() - start
-            return APICallResult(
-                model_key=model_key,
-                prompt_id=prompt_id,
-                input_tokens=0,
-                output_tokens=0,
-                latency_seconds=round(latency, 3),
-                success=False,
-                error_message=str(e),
-            )
-
-
-def call_gemini(prompt: str, model_key: str, prompt_id: int) -> APICallResult:
-    """
-    Envía un prompt a Gemini usando Google GenAI SDK.
-    """
-    start = time.perf_counter()
-
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            response = google_client.models.generate_content(
-                model=model_key,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    max_output_tokens=MAX_OUTPUT_TOKENS,
-                ),
-            )
-
-            latency = time.perf_counter() - start
-            usage = response.usage_metadata
-
-            return APICallResult(
-                model_key=model_key,
-                prompt_id=prompt_id,
-                input_tokens=int(getattr(usage, "prompt_token_count", 0) or 0),
-                output_tokens=int(getattr(usage, "candidates_token_count", 0) or 0),
-                latency_seconds=round(latency, 3),
-                success=True,
-            )
-
-        except Exception as e:
-            if attempt < MAX_RETRIES:
-                retry_sleep(attempt)
-                continue
-
-            latency = time.perf_counter() - start
-            return APICallResult(
-                model_key=model_key,
-                prompt_id=prompt_id,
-                input_tokens=0,
-                output_tokens=0,
-                latency_seconds=round(latency, 3),
-                success=False,
-                error_message=str(e),
-            )
-
-
-def call_anthropic(prompt: str, model_key: str, prompt_id: int) -> APICallResult:
-    """
-    Envía un prompt a Anthropic Claude.
-    """
-    start = time.perf_counter()
-
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            response = anthropic_client.messages.create(
-                model=model_key,
-                max_tokens=MAX_OUTPUT_TOKENS,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    }
-                ],
-            )
-
-            latency = time.perf_counter() - start
-
-            return APICallResult(
-                model_key=model_key,
-                prompt_id=prompt_id,
-                input_tokens=int(response.usage.input_tokens),
-                output_tokens=int(response.usage.output_tokens),
-                latency_seconds=round(latency, 3),
-                success=True,
-            )
-
-        except Exception as e:
-            if attempt < MAX_RETRIES:
-                retry_sleep(attempt)
-                continue
-
-            latency = time.perf_counter() - start
-            return APICallResult(
-                model_key=model_key,
-                prompt_id=prompt_id,
-                input_tokens=0,
-                output_tokens=0,
-                latency_seconds=round(latency, 3),
-                success=False,
-                error_message=str(e),
-            )
-
-
-PROVIDER_CALL_MAP = {
-    "OpenAI": call_openai,
-    "Google": call_gemini,
-    "Anthropic": call_anthropic,
-}
-EOF
-```
-
-Qué haces en este paso:
-
-Creas las funciones que ejecutan llamadas reales a OpenAI, Gemini y Anthropic. Cada función mide latencia, captura tokens y maneja errores.
-
-### Validación
-
-Ejecuta:
-
-```bash
-python -c "from api_executor import PROVIDER_CALL_MAP; print(list(PROVIDER_CALL_MAP.keys()))"
-```
-
-Salida esperada:
-
-```text
-['OpenAI', 'Google', 'Anthropic']
-```
-
----
-
-## Tarea 10 — Crear el módulo de análisis de costos
-
-### Objetivo
-
-Calcular costos por modelo usando tokens de entrada, tokens de salida y precios configurados.
-
-### Paso 1. Crear `cost_analyzer.py`
-
-Ejecuta:
-
-```bash
-cat > cost_analyzer.py << 'EOF'
-# cost_analyzer.py
-# Calcula costos y extrapola resultados al dataset completo.
-
-from dataclasses import dataclass
-from typing import List
-
-from api_executor import APICallResult
-from config import MODEL_CONFIG
-
-
-@dataclass
-class ModelCostSummary:
-    model_key: str
-    display_name: str
-    provider: str
-    context_window_tokens: int
-
-    sample_calls: int = 0
-    successful_calls: int = 0
-
-    sample_input_tokens: int = 0
-    sample_output_tokens: int = 0
-    sample_cost_usd: float = 0.0
-
-    avg_latency_seconds: float = 0.0
-    avg_output_input_ratio: float = 0.0
-
-    estimated_total_input_tokens: int = 0
-    estimated_total_output_tokens: int = 0
-    estimated_total_cost_usd: float = 0.0
-
-
-def calculate_cost(input_tokens: int, output_tokens: int, model_key: str) -> float:
-    """
-    Calcula el costo total de input y output.
-    """
-    config = MODEL_CONFIG[model_key]
-
-    input_cost = (input_tokens / 1_000_000) * config["input_price_per_1m"]
-    output_cost = (output_tokens / 1_000_000) * config["output_price_per_1m"]
-
-    return round(input_cost + output_cost, 8)
-
-
-def analyze_model_results(
-    model_key: str,
-    results: List[APICallResult],
-    all_input_tokens: List[int],
-) -> ModelCostSummary:
-    """
-    Analiza resultados de muestra y extrapola al dataset completo.
-    """
-    config = MODEL_CONFIG[model_key]
-    successful = [r for r in results if r.success]
-
-    summary = ModelCostSummary(
-        model_key=model_key,
-        display_name=config["display_name"],
-        provider=config["provider"],
-        context_window_tokens=config["context_window_tokens"],
-        sample_calls=len(results),
-        successful_calls=len(successful),
+    costo_solicitud = calcular_costo_usd(
+        tokens_entrada,
+        tokens_salida,
+        config["precio_entrada_1m"],
+        config["precio_salida_1m"],
     )
 
-    if not successful:
-        return summary
-
-    summary.sample_input_tokens = sum(r.input_tokens for r in successful)
-    summary.sample_output_tokens = sum(r.output_tokens for r in successful)
-    summary.sample_cost_usd = calculate_cost(
-        input_tokens=summary.sample_input_tokens,
-        output_tokens=summary.sample_output_tokens,
-        model_key=model_key,
+    return construir_resultado(
+        caso, config, modelo, latencia,
+        tokens_entrada, tokens_salida,
+        costo_solicitud, respuesta
     )
 
-    summary.avg_latency_seconds = round(
-        sum(r.latency_seconds for r in successful) / len(successful),
-        3,
+
+def ejecutar_gemini(caso: dict) -> dict:
+    config = PRECIOS_MODELOS["gemini"]
+    modelo = config["modelo"]
+    prompt = caso["prompt"]
+    tokens_entrada = estimar_tokens(prompt)
+
+    inicio = iniciar_cronometro()
+    response = gemini_client.models.generate_content(
+        model=modelo,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.2,
+            max_output_tokens=500,
+        ),
+    )
+    latencia = detener_cronometro(inicio)
+
+    respuesta = response.text or ""
+    tokens_salida = estimar_tokens(respuesta)
+
+    costo_solicitud = calcular_costo_usd(
+        tokens_entrada,
+        tokens_salida,
+        config["precio_entrada_1m"],
+        config["precio_salida_1m"],
     )
 
-    if summary.sample_input_tokens > 0:
-        summary.avg_output_input_ratio = round(
-            summary.sample_output_tokens / summary.sample_input_tokens,
-            4,
-        )
-
-    summary.estimated_total_input_tokens = sum(all_input_tokens)
-    summary.estimated_total_output_tokens = int(
-        summary.estimated_total_input_tokens * summary.avg_output_input_ratio
+    return construir_resultado(
+        caso, config, modelo, latencia,
+        tokens_entrada, tokens_salida,
+        costo_solicitud, respuesta
     )
 
-    summary.estimated_total_cost_usd = calculate_cost(
-        input_tokens=summary.estimated_total_input_tokens,
-        output_tokens=summary.estimated_total_output_tokens,
-        model_key=model_key,
+
+def ejecutar_claude(caso: dict) -> dict:
+    config = PRECIOS_MODELOS["claude"]
+    modelo = config["modelo"]
+    prompt = caso["prompt"]
+    tokens_entrada = estimar_tokens(prompt)
+
+    inicio = iniciar_cronometro()
+    message = claude_client.messages.create(
+        model=modelo,
+        max_tokens=500,
+        temperature=0.2,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+    )
+    latencia = detener_cronometro(inicio)
+
+    respuesta = ""
+    if message.content:
+        respuesta = message.content[0].text
+
+    tokens_salida = estimar_tokens(respuesta)
+
+    costo_solicitud = calcular_costo_usd(
+        tokens_entrada,
+        tokens_salida,
+        config["precio_entrada_1m"],
+        config["precio_salida_1m"],
     )
 
-    return summary
-EOF
-```
-
-Qué haces en este paso:
-
-Creas la lógica de cálculo para convertir tokens en costo estimado.
-
-### Validación
-
-Ejecuta:
-
-```bash
-python -c "from cost_analyzer import calculate_cost; print(calculate_cost(1000, 1000, 'gpt-4.1-mini'))"
-```
-
-Salida esperada:
-
-Debes ver un número decimal pequeño.
-
-Ejemplo:
-
-```text
-2e-06
-```
-
----
-
-## Tarea 11 — Crear el módulo de reporte
-
-### Objetivo
-
-Generar una tabla comparativa y exportarla a CSV.
-
-### Paso 1. Crear `reporter.py`
-
-Ejecuta:
-
-```bash
-cat > reporter.py << 'EOF'
-# reporter.py
-# Genera reporte en consola y exporta a CSV.
-
-from typing import List
-import pandas as pd
-
-from cost_analyzer import ModelCostSummary
-from config import OUTPUT_CSV
-
-
-def generate_report(summaries: List[ModelCostSummary]) -> pd.DataFrame:
-    """
-    Convierte los resultados en un DataFrame.
-    """
-    rows = []
-
-    for s in summaries:
-        rows.append({
-            "Proveedor": s.provider,
-            "Modelo": s.display_name,
-            "Ventana Contexto (tokens)": s.context_window_tokens,
-            "Latencia Prom. (s)": s.avg_latency_seconds,
-            "Tokens Input (muestra)": s.sample_input_tokens,
-            "Tokens Output (muestra)": s.sample_output_tokens,
-            "Costo Muestra (USD)": round(s.sample_cost_usd, 8),
-            "Tokens Input (dataset)": s.estimated_total_input_tokens,
-            "Tokens Output (dataset)": s.estimated_total_output_tokens,
-            "Costo Dataset (USD)": round(s.estimated_total_cost_usd, 8),
-            "Llamadas Exitosas": f"{s.successful_calls}/{s.sample_calls}",
-        })
-
-    return pd.DataFrame(rows)
-
-
-def print_console_report(df: pd.DataFrame) -> None:
-    """
-    Imprime el reporte en consola.
-    """
-    print("\n" + "═" * 110)
-    print("REPORTE COMPARATIVO DE COSTOS — ANÁLISIS MULTI-PROVEEDOR")
-    print("═" * 110)
-
-    pd.set_option("display.max_columns", None)
-    pd.set_option("display.width", 160)
-    pd.set_option("display.max_colwidth", 35)
-
-    print(df.to_string(index=False))
-
-    print("═" * 110)
-
-    if df.empty:
-        print("No hay resultados para analizar.")
-        return
-
-    df_numeric = df.copy()
-
-    min_cost_idx = df_numeric["Costo Dataset (USD)"].idxmin()
-    max_cost_idx = df_numeric["Costo Dataset (USD)"].idxmax()
-    min_latency_idx = df_numeric["Latencia Prom. (s)"].idxmin()
-
-    print(f"\nModelo más económico: {df.loc[min_cost_idx, 'Modelo']} (${df.loc[min_cost_idx, 'Costo Dataset (USD)']})")
-    print(f"Modelo más costoso:   {df.loc[max_cost_idx, 'Modelo']} (${df.loc[max_cost_idx, 'Costo Dataset (USD)']})")
-    print(f"Menor latencia:       {df.loc[min_latency_idx, 'Modelo']} ({df.loc[min_latency_idx, 'Latencia Prom. (s)']} s)")
-    print("═" * 110 + "\n")
-
-
-def export_to_csv(df: pd.DataFrame, filepath: str = OUTPUT_CSV) -> None:
-    """
-    Exporta el reporte a CSV.
-    """
-    df.to_csv(filepath, index=False, encoding="utf-8-sig")
-    print(f"Reporte exportado correctamente: {filepath}")
-EOF
-```
-
-Qué haces en este paso:
-
-Creas el módulo que convierte los resultados en tabla, imprime la comparación y genera el archivo CSV.
-
-### Validación
-
-Ejecuta:
-
-```bash
-python -c "from reporter import generate_report, print_console_report, export_to_csv; print('Módulo reporter importado correctamente')"
-```
-
-Salida esperada:
-
-```text
-Módulo reporter importado correctamente
-```
-
----
-
-## Tarea 12 — Crear el script principal
-
-### Objetivo
-
-Orquestar todo el flujo: validación de entorno, carga de dataset, tokenización, llamadas a APIs, análisis y reporte.
-
-### Paso 1. Crear `main.py`
-
-Ejecuta:
-
-```bash
-cat > main.py << 'EOF'
-# main.py
-# Orquestador principal del lab.
-
-import json
-import os
-import sys
-import time
-from dotenv import load_dotenv
-
-from config import (
-    MODEL_CONFIG,
-    SAMPLE_INDICES,
-    SAMPLE_SIZE,
-    DATASET_FILE,
-    OUTPUT_CSV,
-    API_DELAY_SECONDS,
-)
-from tokenizer import count_input_tokens
-from api_executor import PROVIDER_CALL_MAP
-from cost_analyzer import analyze_model_results
-from reporter import generate_report, print_console_report, export_to_csv
-
-
-def validate_environment() -> bool:
-    """
-    Verifica que las API keys estén configuradas.
-    """
-    required_keys = [
-        "OPENAI_API_KEY",
-        "GOOGLE_API_KEY",
-        "ANTHROPIC_API_KEY",
-    ]
-
-    missing = [key for key in required_keys if not os.getenv(key)]
-
-    if missing:
-        print(f"ERROR: Faltan variables de entorno: {missing}")
-        print("Verifica tu archivo .env antes de continuar.")
-        return False
-
-    print("Variables de entorno verificadas correctamente.")
-    return True
-
-
-def load_dataset(filepath: str = DATASET_FILE) -> list:
-    """
-    Carga el dataset de prompts.
-    """
-    with open(filepath, "r", encoding="utf-8") as file:
-        data = json.load(file)
-
-    prompts = data.get("prompts", [])
-
-    if len(prompts) == 0:
-        raise ValueError("El dataset no contiene prompts.")
-
-    return prompts
-
-
-def validate_dataset(prompts: list) -> None:
-    """
-    Valida estructura mínima del dataset.
-    """
-    required_fields = {"id", "category", "text"}
-
-    for prompt in prompts:
-        missing = required_fields - set(prompt.keys())
-        if missing:
-            raise ValueError(f"Prompt inválido. Faltan campos: {missing}")
-
-    print(f"Dataset validado correctamente: {len(prompts)} prompts.")
-
-
-def show_dataset_distribution(prompts: list) -> None:
-    """
-    Muestra la distribución por categoría.
-    """
-    distribution = {}
-
-    for prompt in prompts:
-        category = prompt["category"]
-        distribution[category] = distribution.get(category, 0) + 1
-
-    print(f"Distribución por categoría: {distribution}")
-
-
-def tokenize_full_dataset(prompts: list) -> dict:
-    """
-    Cuenta tokens de entrada para todo el dataset por modelo.
-    """
-    print("\nTokenizando dataset completo...")
-
-    token_counts = {model_key: [] for model_key in MODEL_CONFIG}
-
-    for index, prompt_data in enumerate(prompts, start=1):
-        text = prompt_data["text"]
-
-        for model_key in MODEL_CONFIG:
-            try:
-                count = count_input_tokens(text=text, model_key=model_key)
-            except Exception as e:
-                print(f"Error tokenizando modelo {model_key}, prompt {prompt_data['id']}: {e}")
-                count = 0
-
-            token_counts[model_key].append(count)
-
-        if index % 5 == 0:
-            print(f"Procesados {index}/{len(prompts)} prompts.")
-
-    print("Tokenización completada.")
-    return token_counts
-
-
-def run_api_sample(prompts: list) -> dict:
-    """
-    Ejecuta la muestra de prompts contra cada modelo configurado.
-    """
-    sample_prompts = [prompts[index] for index in SAMPLE_INDICES]
-    results = {model_key: [] for model_key in MODEL_CONFIG}
-
-    total_calls = SAMPLE_SIZE * len(MODEL_CONFIG)
-
-    print("\nEjecutando llamadas reales a APIs...")
-    print(f"Prompts seleccionados: {[p['id'] for p in sample_prompts]}")
-    print(f"Total de llamadas reales: {total_calls}")
-
-    for model_key, config in MODEL_CONFIG.items():
-        provider = config["provider"]
-        call_fn = PROVIDER_CALL_MAP[provider]
-
-        print(f"\nProcesando modelo: {config['display_name']} ({provider})")
-
-        for prompt_data in sample_prompts:
-            result = call_fn(
-                prompt=prompt_data["text"],
-                model_key=model_key,
-                prompt_id=prompt_data["id"],
-            )
-
-            results[model_key].append(result)
-
-            status = "OK" if result.success else "ERROR"
-
-            print(
-                f"{status} | Prompt ID {result.prompt_id} | "
-                f"Input: {result.input_tokens} | "
-                f"Output: {result.output_tokens} | "
-                f"Latencia: {result.latency_seconds}s"
-            )
-
-            if not result.success:
-                print(f"Detalle del error: {result.error_message[:200]}")
-
-            time.sleep(API_DELAY_SECONDS)
-
-    return results
-
-
-def analyze_all_models(api_results: dict, token_counts: dict) -> list:
-    """
-    Analiza resultados para todos los modelos.
-    """
-    print("\nCalculando costos y extrapolaciones...")
-
-    summaries = []
-
-    for model_key in MODEL_CONFIG:
-        summary = analyze_model_results(
-            model_key=model_key,
-            results=api_results[model_key],
-            all_input_tokens=token_counts[model_key],
-        )
-
-        summaries.append(summary)
-
-        print(
-            f"{summary.display_name}: "
-            f"${summary.estimated_total_cost_usd:.8f} USD estimados para dataset completo"
-        )
-
-    return summaries
-
-
-def main() -> None:
-    """
-    Ejecuta el pipeline completo.
-    """
-    print("\n" + "═" * 70)
-    print("LAB 01-00-01 — Comparador de costos entre modelos comerciales")
-    print("═" * 70)
-
-    load_dotenv()
-
-    if not validate_environment():
-        sys.exit(1)
-
-    print("\nCargando dataset...")
-    prompts = load_dataset()
-    validate_dataset(prompts)
-    show_dataset_distribution(prompts)
-
-    token_counts = tokenize_full_dataset(prompts)
-
-    api_results = run_api_sample(prompts)
-
-    summaries = analyze_all_models(
-        api_results=api_results,
-        token_counts=token_counts,
+    return construir_resultado(
+        caso, config, modelo, latencia,
+        tokens_entrada, tokens_salida,
+        costo_solicitud, respuesta
     )
 
-    df_report = generate_report(summaries)
-    print_console_report(df_report)
-    export_to_csv(df_report, OUTPUT_CSV)
 
-    print("\nLab completado correctamente.")
+def construir_resultado(
+    caso: dict,
+    config: dict,
+    modelo: str,
+    latencia: float,
+    tokens_entrada: int,
+    tokens_salida: int,
+    costo_solicitud: float,
+    respuesta: str,
+) -> dict:
+    return {
+        "caso_id": caso["id"],
+        "caso_uso": caso["nombre"],
+        "proveedor": config["proveedor"],
+        "modelo": modelo,
+        "solicitudes_mensuales": caso["solicitudes_mensuales"],
+        "tokens_entrada_estimados": tokens_entrada,
+        "tokens_salida_estimados": tokens_salida,
+        "latencia_segundos": latencia,
+        "precio_entrada_1m": config["precio_entrada_1m"],
+        "precio_salida_1m": config["precio_salida_1m"],
+        "costo_solicitud_usd": costo_solicitud,
+        "costo_mensual_usd": round(costo_solicitud * caso["solicitudes_mensuales"], 4),
+        "respuesta_muestra": respuesta.replace("\n", " ")[:500],
+    }
+
+
+def main():
+    resultados = []
+
+    for caso in CASOS_USO:
+        print(f"Ejecutando caso: {caso['nombre']}")
+
+        resultados.append(ejecutar_openai(caso))
+        resultados.append(ejecutar_gemini(caso))
+        resultados.append(ejecutar_claude(caso))
+
+    df = pd.DataFrame(resultados)
+    df.to_csv("resultados_modelos.csv", index=False, encoding="utf-8-sig")
+
+    print("\nComparación final:")
+    print(df[[
+        "caso_uso",
+        "proveedor",
+        "modelo",
+        "latencia_segundos",
+        "tokens_entrada_estimados",
+        "tokens_salida_estimados",
+        "costo_mensual_usd",
+    ]].to_markdown(index=False))
+
+    print("\nArchivo generado: resultados_modelos.csv")
 
 
 if __name__ == "__main__":
     main()
-EOF
 ```
 
-Qué haces en este paso:
+**🔧 Qué puedes ajustar:**  
+Puedes modificar:
 
-Creas el archivo principal que ejecuta todo el pipeline.
+```python
+max_output_tokens=500
+temperature=0.2
+```
 
-### Validación de sintaxis
+en cada proveedor para hacer pruebas más cortas, más largas o más creativas.
 
+También puedes ajustar:
+
+```python
+"respuesta_muestra": respuesta.replace("\n", " ")[:500]
+```
+
+si quieres guardar más o menos texto de muestra en el CSV.
+
+**✅ Validación del paso:**  
 Ejecuta:
 
 ```bash
-python -m py_compile config.py tokenizer.py api_executor.py cost_analyzer.py reporter.py main.py
+python 04_comparar_modelos.py
 ```
 
-Salida esperada:
-
-No debe aparecer ningún error.
-
----
-
-# 9. Ejecución completa del lab
-
-## Tarea 13 — Ejecutar el pipeline
-
-### Objetivo
-
-Ejecutar el proyecto completo y generar el reporte comparativo.
-
-### Paso 1. Confirmar que el entorno virtual está activo
-
-Ejecuta:
-
-```bash
-python --version
-```
-
-Qué haces en este paso:
-
-Confirmas que Python está disponible antes de ejecutar el proyecto.
-
-### Paso 2. Ejecutar `main.py`
-
-Ejecuta:
-
-```bash
-python main.py
-```
-
-Qué haces en este paso:
-
-Inicias la validación del entorno, carga del dataset, tokenización, llamadas reales, cálculo de costos y generación del reporte.
-
-### Salida esperada aproximada
-
-La salida exacta puede variar por modelo, disponibilidad, latencia, tokens generados, límites de cuenta y cambios en APIs.
-
-Debes ver una salida similar a esta:
+**📌 Resultado esperado:**  
+Debes ver una tabla comparativa en terminal y un archivo nuevo llamado:
 
 ```text
-══════════════════════════════════════════════════════════════════════
-LAB 01-00-01 — Comparador de costos entre modelos comerciales
-══════════════════════════════════════════════════════════════════════
-Variables de entorno verificadas correctamente.
-
-Cargando dataset...
-Dataset validado correctamente: 20 prompts.
-Distribución por categoría: {'corto': 5, 'mediano': 7, 'largo': 8}
-
-Tokenizando dataset completo...
-Procesados 5/20 prompts.
-Procesados 10/20 prompts.
-Procesados 15/20 prompts.
-Procesados 20/20 prompts.
-Tokenización completada.
-
-Ejecutando llamadas reales a APIs...
-Prompts seleccionados: [1, 6, 10, 14, 19]
-Total de llamadas reales: 30
-
-Procesando modelo: GPT-4.1 (OpenAI)
-OK | Prompt ID 1 | Input: 10 | Output: 20 | Latencia: 1.231s
-...
-
-Calculando costos y extrapolaciones...
-GPT-4.1: $0.00123456 USD estimados para dataset completo
-...
-
-REPORTE COMPARATIVO DE COSTOS — ANÁLISIS MULTI-PROVEEDOR
-...
-
-Reporte exportado correctamente: cost_comparison_report.csv
-
-Lab completado correctamente.
+resultados_modelos.csv
 ```
 
 ---
 
-# 10. Validación final de funcionalidad
+### ✅ Paso 2. Abre el archivo CSV
 
-## Tarea 14 — Validar archivos del proyecto
+**📝 Descripción del paso:**  
+Vas a revisar los resultados generados por el script.
 
-### Objetivo
-
-Confirmar que todos los archivos requeridos existen.
-
-### Paso 1. Ejecutar validación
-
-Ejecuta:
-
-```bash
-python -c "import os; required=['.env','.gitignore','requirements.txt','prompts_dataset.json','config.py','tokenizer.py','api_executor.py','cost_analyzer.py','reporter.py','main.py']; [print(('OK' if os.path.exists(f) else 'FALTA'), f) for f in required]"
-```
-
-Resultado esperado:
-
-Todos los archivos deben aparecer con `OK`.
-
----
-
-## Tarea 15 — Validar dataset
-
-### Objetivo
-
-Confirmar que el dataset tiene exactamente 20 prompts.
-
-### Paso 1. Ejecutar validación
-
-```bash
-python -c "import json; data=json.load(open('prompts_dataset.json', encoding='utf-8')); assert len(data['prompts']) == 20; print('Dataset válido con 20 prompts')"
-```
-
-Resultado esperado:
+**⚙️ Contenido del paso:**  
+Desde VS Code, abre:
 
 ```text
-Dataset válido con 20 prompts
+resultados_modelos.csv
 ```
 
----
+También puedes abrirlo con Excel.
 
-## Tarea 16 — Validar CSV generado
-
-### Objetivo
-
-Confirmar que el reporte fue creado y tiene una fila por modelo.
-
-### Paso 1. Ejecutar validación
-
-```bash
-python -c "import pandas as pd; df=pd.read_csv('cost_comparison_report.csv'); print(df[['Proveedor','Modelo','Costo Dataset (USD)','Latencia Prom. (s)']].to_string(index=False)); assert len(df) == 6; print('CSV válido con 6 modelos')"
-```
-
-Resultado esperado:
-
-Debes ver la tabla con 6 modelos y el mensaje:
+**✅ Validación del paso:**  
+El archivo debe contener al menos 9 filas:
 
 ```text
-CSV válido con 6 modelos
+3 casos de uso x 3 proveedores = 9 resultados
 ```
+
+**📌 Resultado esperado:**  
+Tienes resultados comparables para OpenAI, Gemini y Claude.
 
 ---
 
-## Tarea 17 — Validar que no hay credenciales en código
+## 💬 Prompt de apoyo para explicar lo realizado
 
-### Objetivo
-
-Verificar que no escribiste API keys directamente en archivos `.py`.
-
-### Paso 1. Ejecutar validación
-
-```bash
-python -c "import glob, re; pattern=re.compile(r'(sk-|AIza|sk-ant-)'); found=False; [print('ALERTA:', f) for f in glob.glob('*.py') if pattern.search(open(f, encoding='utf-8').read())]; print('Revisión completada')"
-```
-
-Resultado esperado:
-
-No debe aparecer ningún archivo después de `ALERTA`.
+[Explicar la Tarea 8 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%208%20de%20un%20laboratorio%20de%20IA%20generativa.%20Cre%C3%A9%20un%20script%20comparativo%20que%20ejecuta%20OpenAI%2C%20Gemini%20y%20Claude%20sobre%20los%20mismos%20casos%20de%20uso%2C%20mide%20latencia%2C%20estima%20tokens%2C%20calcula%20costos%20y%20genera%20un%20archivo%20CSV%20con%20los%20resultados.)
 
 ---
 
-# 11. Interpretación de resultados
+# 🧩 Tarea 9. Construir la matriz técnica de decisión
 
-Después de ejecutar el lab, revisa estas columnas del CSV:
+## 🎯 Objetivo de la tarea
 
-| Columna | Qué significa |
+Convertir los resultados técnicos de las pruebas en una matriz profesional para comparar costo, latencia, contexto, privacidad y operación.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo de matriz
+
+**📝 Descripción del paso:**  
+Vas a crear una hoja de cálculo para documentar la comparación.
+
+**⚙️ Contenido del paso:**  
+Crea un archivo llamado:
+
+```text
+Laboratorio_1_Matriz_Seleccion_Modelos.xlsx
+```
+
+Crea las siguientes hojas:
+
+```text
+01_Resultados
+02_Contexto_Privacidad
+03_Riesgos
+04_Recomendacion
+```
+
+**✅ Validación del paso:**  
+Confirma que el archivo tenga las cuatro hojas.
+
+**📌 Resultado esperado:**  
+Tienes un archivo profesional para documentar la selección técnica.
+
+---
+
+### ✅ Paso 2. Importa los resultados del CSV
+
+**📝 Descripción del paso:**  
+Vas a cargar los resultados reales generados por Python.
+
+**⚙️ Contenido del paso:**  
+Abre `resultados_modelos.csv` en Excel o Google Sheets y copia la información a la hoja:
+
+```text
+01_Resultados
+```
+
+Asegúrate de incluir estas columnas:
+
+| Columna |
+|---|
+| caso_id |
+| caso_uso |
+| proveedor |
+| modelo |
+| solicitudes_mensuales |
+| tokens_entrada_estimados |
+| tokens_salida_estimados |
+| latencia_segundos |
+| precio_entrada_1m |
+| precio_salida_1m |
+| costo_solicitud_usd |
+| costo_mensual_usd |
+| respuesta_muestra |
+
+**✅ Validación del paso:**  
+Confirma que existan 9 filas de resultados.
+
+**📌 Resultado esperado:**  
+La matriz contiene resultados medidos desde código.
+
+---
+
+### ✅ Paso 3. Evalúa ventana de contexto y privacidad
+
+**📝 Descripción del paso:**  
+Vas a complementar los resultados técnicos con criterios arquitectónicos.
+
+**⚙️ Contenido del paso:**  
+En la hoja `02_Contexto_Privacidad`, crea esta tabla:
+
+| Caso de uso | Proveedor | Modelo | Ventana de contexto | ¿Soporta el caso? | Sensibilidad de datos | Riesgo de privacidad | Observaciones |
+|---|---|---|---|---|---|---|---|
+
+Usa esta guía para `¿Soporta el caso?`:
+
+| Valor | Criterio |
 |---|---|
-| Proveedor | Empresa que ofrece el modelo |
-| Modelo | Modelo evaluado |
-| Ventana Contexto (tokens) | Límite aproximado de contexto del modelo |
-| Latencia Prom. (s) | Tiempo promedio de respuesta en la muestra |
-| Tokens Input (muestra) | Tokens de entrada usados en los prompts enviados |
-| Tokens Output (muestra) | Tokens generados por el modelo en la muestra |
-| Costo Muestra (USD) | Costo real aproximado de la muestra |
-| Tokens Input (dataset) | Tokens estimados de entrada para los 20 prompts |
-| Tokens Output (dataset) | Tokens de salida extrapolados al dataset completo |
-| Costo Dataset (USD) | Costo estimado para procesar todo el dataset |
-| Llamadas Exitosas | Número de llamadas correctas sobre llamadas intentadas |
+| Sí | El contexto del modelo es suficiente |
+| Parcial | Requiere dividir el documento o usar RAG |
+| No | No es adecuado para el tamaño esperado |
 
-## Preguntas guía para análisis
+Usa esta guía para `Riesgo de privacidad`:
 
-Responde estas preguntas después de revisar el reporte:
+| Valor | Criterio |
+|---|---|
+| Bajo | Datos no sensibles o controles empresariales adecuados |
+| Medio | Datos internos con dependencia de proveedor externo |
+| Alto | Datos sensibles, legales, personales o confidenciales |
 
-1. ¿Qué modelo fue más económico?
-2. ¿Qué modelo tuvo menor latencia promedio?
-3. ¿Qué proveedor tuvo más llamadas exitosas?
-4. ¿Qué modelo tiene mejor relación costo/latencia?
-5. ¿Qué modelo elegirías para prompts cortos?
-6. ¿Qué modelo elegirías para prompts largos?
-7. ¿Qué modelo elegirías si tu prioridad fuera costo?
-8. ¿Qué modelo elegirías si tu prioridad fuera calidad esperada?
-9. ¿Cómo cambiaría el costo si procesaras 10,000 prompts diarios?
-10. ¿Qué riesgos tendría usar solo costo como criterio de selección?
+**🔧 Qué debes cambiar:**  
+Consulta la documentación actual del proveedor y actualiza la ventana de contexto real de cada modelo usado.
+
+**✅ Validación del paso:**  
+Cada combinación de modelo y caso de uso debe tener evaluación de contexto y privacidad.
+
+**📌 Resultado esperado:**  
+La matriz no se limita a costo y latencia; también considera riesgo.
 
 ---
 
-# 12. Resolución de problemas
+### ✅ Paso 4. Evalúa riesgos operativos
 
-## Problema 1 — Faltan variables de entorno
+**📝 Descripción del paso:**  
+Vas a documentar los riesgos de operación por proveedor.
 
-### Síntoma
+**⚙️ Contenido del paso:**  
+En la hoja `03_Riesgos`, crea esta tabla:
 
-Ves un error como:
+| Proveedor | Modelo | Riesgo de costo | Riesgo de latencia | Riesgo de cuota/límites | Riesgo de dependencia | Riesgo de integración | Mitigación |
+|---|---|---|---|---|---|---|---|
+
+Ejemplos de mitigación:
 
 ```text
-ERROR: Faltan variables de entorno
+Definir presupuesto mensual y alertas de consumo.
+Aplicar límites de max_output_tokens.
+Usar caché para preguntas frecuentes.
+Implementar RAG para reducir contexto innecesario.
+Definir proveedor alternativo.
+No enviar datos sensibles sin clasificación previa.
+Registrar prompts y respuestas para auditoría.
 ```
 
-### Causa
+**✅ Validación del paso:**  
+Cada proveedor debe tener al menos una mitigación clara.
 
-El archivo `.env` no existe, está mal escrito o no contiene las variables requeridas.
+**📌 Resultado esperado:**  
+Tienes una evaluación realista de operación.
 
-### Solución
+---
 
-Verifica que `.env` tenga exactamente estos nombres:
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 9 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%209%20de%20un%20laboratorio%20de%20IA%20generativa.%20Constru%C3%AD%20una%20matriz%20t%C3%A9cnica%20de%20decisi%C3%B3n%20con%20resultados%20reales%20del%20CSV%2C%20evalu%C3%A9%20ventana%20de%20contexto%2C%20privacidad%2C%20riesgos%20operativos%20y%20mitigaciones.)
+
+---
+
+# 🧩 Tarea 10. Recomendar un modelo por caso de uso
+
+## 🎯 Objetivo de la tarea
+
+Seleccionar el proveedor/modelo más adecuado para cada caso de uso usando los resultados de la prueba y la matriz técnica.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea la tabla de recomendación
+
+**📝 Descripción del paso:**  
+Vas a documentar la decisión final.
+
+**⚙️ Contenido del paso:**  
+En la hoja `04_Recomendacion`, crea esta tabla:
+
+| Caso de uso | Modelo recomendado | Proveedor | Razón principal | Costo mensual estimado | Latencia medida | Riesgo principal | Mitigación | Alternativa |
+|---|---|---|---|---:|---:|---|---|---|
+
+**✅ Validación del paso:**  
+La tabla debe tener una fila por cada caso de uso.
+
+**📌 Resultado esperado:**  
+Tienes una estructura lista para justificar la decisión.
+
+---
+
+### ✅ Paso 2. Recomienda modelo para resumen de contenido
+
+**📝 Descripción del paso:**  
+Vas a seleccionar el modelo más adecuado para generar resúmenes.
+
+**⚙️ Contenido del paso:**  
+Considera:
+
+1. Costo mensual.
+2. Claridad del resumen.
+3. Latencia.
+4. Longitud del texto de entrada.
+5. Calidad de estructura en la respuesta.
+
+Ejemplo de justificación:
 
 ```text
-OPENAI_API_KEY
-GOOGLE_API_KEY
-ANTHROPIC_API_KEY
+Para resumen de contenido se recomienda [modelo] de [proveedor] porque ofrece una buena relación entre costo, latencia y calidad de síntesis. La prueba mostró una latencia de [x] segundos y un costo mensual estimado de [y] USD. El principal riesgo es [riesgo], mitigado mediante [mitigación].
 ```
 
-Después ejecuta de nuevo:
+**✅ Validación del paso:**  
+La recomendación debe estar alineada con los datos de `01_Resultados`.
 
-```bash
-python main.py
-```
+**📌 Resultado esperado:**  
+Tienes una recomendación defendible para resumen.
 
 ---
 
-## Problema 2 — Error de autenticación
+### ✅ Paso 3. Recomienda modelo para soporte técnico
 
-### Síntoma
+**📝 Descripción del paso:**  
+Vas a seleccionar el modelo más adecuado para alto volumen y respuesta rápida.
 
-Ves errores de autenticación, permisos o API key inválida.
+**⚙️ Contenido del paso:**  
+Considera:
 
-### Causa
+1. Menor latencia.
+2. Costo mensual bajo o moderado.
+3. Respuestas claras y accionables.
+4. Capacidad de integrarse con una base de conocimiento.
+5. Consistencia en instrucciones.
 
-La API key es incorrecta, expiró, no tiene permisos o pertenece a una cuenta sin acceso al modelo.
-
-### Solución
-
-1. Verifica la API key en la consola del proveedor.
-2. Confirma que tienes crédito o cuota disponible.
-3. Revisa que el modelo configurado esté disponible para tu cuenta.
-4. Actualiza `.env`.
-5. Ejecuta de nuevo el lab.
-
----
-
-## Problema 3 — Error por modelo no disponible
-
-### Síntoma
-
-Ves un error indicando que el modelo no existe o no está disponible.
-
-### Causa
-
-El proveedor cambió el nombre del modelo, lo retiró o tu cuenta no tiene acceso.
-
-### Solución
-
-Edita `config.py` y reemplaza el modelo por uno disponible en tu cuenta.
-
-Ejemplo:
-
-```python
-"modelo-disponible": {
-    "provider": "OpenAI",
-    "display_name": "Modelo disponible",
-    ...
-}
-```
-
-Después ejecuta:
-
-```bash
-python main.py
-```
-
----
-
-## Problema 4 — Rate limit o cuota excedida
-
-### Síntoma
-
-Ves errores como:
+Ejemplo de justificación:
 
 ```text
-429
-rate limit
-quota exceeded
-resource exhausted
+Para soporte técnico asistido se recomienda [modelo] de [proveedor] porque el escenario requiere alto volumen, baja latencia y respuestas breves. La prueba mostró [x] segundos de latencia y un costo mensual estimado de [y] USD. El principal riesgo es [riesgo], por lo que se recomienda [mitigación].
 ```
 
-### Causa
+**✅ Validación del paso:**  
+No selecciones un modelo con latencia alta si existe otra opción con calidad suficiente y menor tiempo de respuesta.
 
-Hiciste demasiadas llamadas en poco tiempo o tu cuenta tiene una cuota baja.
-
-### Solución
-
-Edita `config.py` y aumenta:
-
-```python
-API_DELAY_SECONDS = 5
-MAX_RETRIES = 3
-```
-
-Después ejecuta de nuevo:
-
-```bash
-python main.py
-```
-
-Si el error continúa, reduce la muestra:
-
-```python
-SAMPLE_SIZE = 3
-SAMPLE_INDICES = [0, 9, 18]
-```
+**📌 Resultado esperado:**  
+Tienes una recomendación orientada a operación.
 
 ---
 
-## Problema 5 — El CSV no se genera
+### ✅ Paso 4. Recomienda modelo para análisis documental
 
-### Síntoma
+**📝 Descripción del paso:**  
+Vas a seleccionar el modelo más adecuado para documentos largos y mayor sensibilidad.
 
-No aparece `cost_comparison_report.csv`.
+**⚙️ Contenido del paso:**  
+Considera:
 
-### Causa
+1. Ventana de contexto.
+2. Calidad del razonamiento.
+3. Capacidad para seguir instrucciones complejas.
+4. Privacidad.
+5. Riesgo de costo por entradas largas.
+6. Necesidad de auditoría o cumplimiento.
 
-El pipeline falló antes de llegar al módulo de reporte.
+Ejemplo de justificación:
 
-### Solución
-
-1. Revisa errores en consola.
-2. Confirma que `main.py` terminó correctamente.
-3. Ejecuta validación de sintaxis:
-
-```bash
-python -m py_compile config.py tokenizer.py api_executor.py cost_analyzer.py reporter.py main.py
+```text
+Para análisis documental se recomienda [modelo] de [proveedor] porque el caso requiere mayor capacidad de razonamiento y soporte para entradas largas. El costo mensual estimado fue de [y] USD y la latencia medida fue de [x] segundos. El principal riesgo es [riesgo], mitigado mediante clasificación previa de documentos, reducción de contexto y controles de privacidad.
 ```
 
-4. Ejecuta de nuevo:
+**✅ Validación del paso:**  
+La recomendación debe considerar contexto y privacidad, no solo costo.
 
-```bash
-python main.py
-```
+**📌 Resultado esperado:**  
+Tienes una recomendación para el caso más exigente.
 
 ---
 
-## Problema 6 — Conteos de tokens diferentes entre estimación y API
+## 💬 Prompt de apoyo para explicar lo realizado
 
-### Síntoma
-
-Los tokens estimados de OpenAI con `tiktoken` no coinciden exactamente con los tokens reportados por la API.
-
-### Causa
-
-`tiktoken` cuenta el texto plano, pero la API puede incluir tokens adicionales por estructura de mensaje, metadatos o formato interno.
-
-### Solución
-
-Para este lab, la diferencia es aceptable porque buscas estimación comparativa. Para máxima precisión, usa los tokens reales devueltos por la API en una muestra más amplia.
+[Explicar la Tarea 10 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2010%20de%20un%20laboratorio%20de%20IA%20generativa.%20Recomend%C3%A9%20un%20modelo%20por%20caso%20de%20uso%20usando%20resultados%20reales%20de%20latencia%2C%20tokens%2C%20costo%2C%20calidad%20observada%2C%20ventana%20de%20contexto%2C%20privacidad%20y%20riesgos%20operativos.)
 
 ---
 
-# 13. Limpieza del entorno
+# 🧩 Tarea 11. Validar funcionamiento y entregar evidencias
 
-## Tarea 18 — Desactivar entorno virtual
+## 🎯 Objetivo de la tarea
 
-### Objetivo
+Confirmar que los scripts funcionan, que la matriz contiene datos consistentes y que la recomendación final está soportada por evidencia.
 
-Salir del entorno virtual cuando termines el lab.
+---
 
-### Paso 1. Desactivar entorno
+## 🛠️ Pasos
 
+### ✅ Paso 1. Valida que todos los scripts compilen
+
+**📝 Descripción del paso:**  
+Vas a verificar que los archivos Python no tengan errores de sintaxis.
+
+**⚙️ Contenido del paso:**  
 Ejecuta:
 
 ```bash
-deactivate
+python -m py_compile 00_validar_entorno.py
+python -m py_compile casos_prueba.py
+python -m py_compile utils.py
+python -m py_compile precios_modelos.py
+python -m py_compile 01_probar_openai.py
+python -m py_compile 02_probar_gemini.py
+python -m py_compile 03_probar_claude.py
+python -m py_compile 04_comparar_modelos.py
 ```
 
-Qué haces en este paso:
+**✅ Validación del paso:**  
+Ningún comando debe mostrar errores.
 
-Sales del entorno virtual activo.
+**📌 Resultado esperado:**  
+Todos los scripts tienen sintaxis válida.
 
 ---
 
-## Tarea 19 — Opcional: eliminar entorno virtual
+### ✅ Paso 2. Valida las variables de entorno
 
-### Objetivo
+**📝 Descripción del paso:**  
+Vas a comprobar que las claves siguen cargando correctamente.
 
-Liberar espacio si ya no necesitas las dependencias instaladas.
-
-En Linux o macOS:
+**⚙️ Contenido del paso:**  
+Ejecuta:
 
 ```bash
-rm -rf .venv
+python 00_validar_entorno.py
 ```
 
-En Windows PowerShell:
-
-```powershell
-Remove-Item -Recurse -Force .venv
-```
-
-Qué haces en este paso:
-
-Eliminas el entorno virtual del proyecto.
-
----
-
-## Tarea 20 — Confirmar que `.env` no se subió a Git
-
-### Objetivo
-
-Evitar exposición accidental de credenciales.
-
-### Paso 1. Revisar estado de Git
-
-Si inicializaste un repositorio, ejecuta:
-
-```bash
-git status
-```
-
-Resultado esperado:
-
-`.env` no debe aparecer como archivo listo para commit.
-
----
-
-# 14. Criterios de aceptación
-
-La práctica se considera completada cuando tú puedes confirmar que:
-
-- Creaste el directorio `lab-01-00-01`.
-- Creaste y activaste el entorno virtual.
-- Instalaste todas las dependencias desde `requirements.txt`.
-- Creaste `.env` con tus API keys.
-- Creaste `.gitignore` para proteger credenciales.
-- Creaste `prompts_dataset.json` con 20 prompts.
-- Creaste todos los módulos Python requeridos.
-- Validaste la sintaxis de los archivos Python.
-- Ejecutaste `python main.py` correctamente.
-- Se generó `cost_comparison_report.csv`.
-- El CSV contiene 6 filas, una por modelo.
-- El reporte muestra tokens, latencia, costos y llamadas exitosas.
-- No escribiste API keys directamente en el código fuente.
-
----
-
-# 15. Resumen
-
-En esta práctica desarrollaste un comparador modular de costos para modelos comerciales de IA generativa. Preparaste el entorno desde cero, creaste un dataset de prompts, configuraste credenciales seguras, implementaste conteo de tokens por proveedor, ejecutaste llamadas reales a OpenAI, Gemini y Anthropic, calculaste costos estimados y exportaste un reporte comparativo en CSV.
-
-Este lab te ayuda a convertir la comparación conceptual de modelos comerciales en una herramienta práctica para tomar decisiones con datos. En lugar de elegir un modelo solo por popularidad, ahora puedes comparar costo, latencia, consumo de tokens y comportamiento real sobre un dataset específico.
-
----
-
-# 16. Estructura final esperada
-
-Al terminar, tu proyecto debe quedar así:
+**✅ Validación del paso:**  
+Debe mostrarse:
 
 ```text
-lab-01-00-01/
-├── .env
-├── .gitignore
-├── requirements.txt
-├── prompts_dataset.json
-├── config.py
-├── tokenizer.py
-├── api_executor.py
-├── cost_analyzer.py
-├── reporter.py
-├── main.py
-└── cost_comparison_report.csv
+Variables de entorno cargadas correctamente.
+No se muestran las claves por seguridad.
 ```
+
+**📌 Resultado esperado:**  
+Las claves de API están disponibles para los scripts.
+
+---
+
+### ✅ Paso 3. Valida la prueba individual por proveedor
+
+**📝 Descripción del paso:**  
+Vas a confirmar que cada proveedor responde por separado.
+
+**⚙️ Contenido del paso:**  
+Ejecuta:
+
+```bash
+python 01_probar_openai.py
+python 02_probar_gemini.py
+python 03_probar_claude.py
+```
+
+**✅ Validación del paso:**  
+Cada script debe mostrar tres respuestas.
+
+**📌 Resultado esperado:**  
+OpenAI, Gemini y Claude funcionan de manera independiente.
+
+---
+
+### ✅ Paso 4. Valida la comparación completa
+
+**📝 Descripción del paso:**  
+Vas a confirmar que la comparación integrada funciona.
+
+**⚙️ Contenido del paso:**  
+Ejecuta:
+
+```bash
+python 04_comparar_modelos.py
+```
+
+**✅ Validación del paso:**  
+Confirma que se genere el archivo:
+
+```text
+resultados_modelos.csv
+```
+
+**📌 Resultado esperado:**  
+Tienes un archivo CSV con los resultados de la comparación.
+
+---
+
+### ✅ Paso 5. Valida la matriz final
+
+**📝 Descripción del paso:**  
+Vas a revisar que la matriz sea consistente.
+
+**⚙️ Contenido del paso:**  
+En `Laboratorio_1_Matriz_Seleccion_Modelos.xlsx`, valida:
+
+1. Existen resultados para los tres proveedores.
+2. Existen resultados para los tres casos de uso.
+3. El costo mensual se calcula con solicitudes mensuales.
+4. La latencia proviene de la ejecución real.
+5. La recomendación final cita costo, latencia y riesgo.
+6. Las ventanas de contexto fueron consultadas en documentación oficial.
+7. Los precios fueron revisados antes de entregar.
+
+**✅ Validación del paso:**  
+Marca cada punto como cumplido.
+
+**📌 Resultado esperado:**  
+La matriz está lista para entrega.
+
+---
+
+### ✅ Paso 6. Guarda evidencias
+
+**📝 Descripción del paso:**  
+Vas a guardar los archivos que demuestran tu trabajo.
+
+**⚙️ Contenido del paso:**  
+Entrega los siguientes archivos:
+
+```text
+00_validar_entorno.py
+casos_prueba.py
+utils.py
+precios_modelos.py
+01_probar_openai.py
+02_probar_gemini.py
+03_probar_claude.py
+04_comparar_modelos.py
+resultados_modelos.csv
+Laboratorio_1_Matriz_Seleccion_Modelos.xlsx
+```
+
+No entregues el archivo:
+
+```text
+.env
+```
+
+**✅ Validación del paso:**  
+Confirma que `.env` no se incluya en la entrega.
+
+**📌 Resultado esperado:**  
+Tienes una entrega completa y segura.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 11 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2011%20de%20un%20laboratorio%20de%20IA%20generativa.%20Valid%C3%A9%20que%20los%20scripts%20compilan%2C%20que%20las%20variables%20de%20entorno%20cargan%2C%20que%20OpenAI%2C%20Gemini%20y%20Claude%20responden%2C%20que%20se%20genera%20el%20CSV%20comparativo%20y%20que%20la%20matriz%20final%20tiene%20datos%20consistentes.)
+
+---
+
+# 🏁 Resultado final esperado del laboratorio
+
+Al finalizar la práctica, debes contar con:
+
+1. Proyecto local creado en Windows.
+2. Entorno virtual Python funcional.
+3. Variables de entorno configuradas.
+4. Script de validación de entorno.
+5. Archivo con casos de uso y prompts.
+6. Script individual para OpenAI.
+7. Script individual para Gemini.
+8. Script individual para Claude.
+9. Script comparativo automatizado.
+10. Archivo `resultados_modelos.csv`.
+11. Matriz `Laboratorio_1_Matriz_Seleccion_Modelos.xlsx`.
+12. Recomendación técnica por caso de uso.
+13. Evidencia de latencia, tokens estimados y costo mensual.
+14. Identificación de riesgos y mitigaciones.
+15. Decisión final justificada.
+
+---
+
+# 📊 Criterios de evaluación sugeridos
+
+| Criterio | Ponderación |
+|---|---:|
+| Preparación correcta del ambiente local | 10% |
+| Configuración segura de API keys | 10% |
+| Ejecución correcta de pruebas por proveedor | 20% |
+| Medición de latencia y tokens | 15% |
+| Cálculo de costo mensual | 15% |
+| Construcción de matriz técnica | 10% |
+| Evaluación de privacidad y riesgos | 10% |
+| Recomendación final justificada | 10% |
+| Total | 100% |
+
+---
+
+# ⚠️ Errores comunes que debes evitar
+
+1. Escribir las API keys directamente en el código.
+2. Subir el archivo `.env` a un repositorio.
+3. Usar modelos sin confirmar que estén disponibles en la cuenta.
+4. Comparar proveedores con prompts diferentes.
+5. Mezclar tokens de entrada y salida.
+6. Usar precios desactualizados.
+7. Comparar solo costo e ignorar latencia.
+8. Ignorar privacidad en análisis documental.
+9. Considerar una sola ejecución como resultado definitivo.
+10. Recomendar un modelo sin justificar la decisión.
+
+---
+
+# Cierre de la práctica
+
+En este laboratorio construiste una comparación técnica aplicada entre OpenAI, Gemini y Claude. Preparaste un entorno local en Windows, configuraste claves de API de forma segura, ejecutaste pruebas reales con Python, mediste latencia, estimaste tokens, calculaste costos y documentaste riesgos.
+
+El resultado más importante no es solo el costo mensual estimado, sino la capacidad de justificar una decisión técnica considerando caso de uso, privacidad, ventana de contexto, operación, calidad observada y dependencia del proveedor.
+
+Esta práctica te prepara para tomar decisiones arquitectónicas más sólidas antes de implementar soluciones de IA generativa en escenarios reales.
+
+
+---
+
+<div align="center">
+<strong>Fin del Laboratorio 1</strong><br>
+IA Generativa · Selección técnica de modelos · OpenAI · Gemini · Claude
+</div>
