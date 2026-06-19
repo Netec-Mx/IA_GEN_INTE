@@ -1,146 +1,495 @@
----LAB_START---
-LAB_ID: 04-00-01
----MARKDOWN---
-# Pipeline de Auditoría de Seguridad con LLM para Commits de Git
+<div align="center">
 
-## 1. Metadatos
+# 🧪 Laboratorio 4
 
-| Campo | Detalle |
+## Pipeline de auditoría de seguridad con LLM para commits de Git
+
+![Nivel](https://img.shields.io/badge/Nivel-Intermedio--Alto-2563EB?style=flat-square)
+![Sistema](https://img.shields.io/badge/Sistema-Windows-0F766E?style=flat-square)
+![Editor](https://img.shields.io/badge/Editor-VS%20Code-7C3AED?style=flat-square)
+![Terminal](https://img.shields.io/badge/Terminal-Git%20Bash-475569?style=flat-square)
+![Lenguaje](https://img.shields.io/badge/Lenguaje-Python-CA8A04?style=flat-square)
+![Seguridad](https://img.shields.io/badge/Seguridad-OWASP%20Top%2010-DC2626?style=flat-square)
+
+</div>
+
+---
+
+> [!IMPORTANT]
+> En este laboratorio vas a construir un **pipeline de auditoría de seguridad asistido por LLM**. El sistema extraerá diffs de commits de Git, enviará el código a un modelo de IA con un prompt especializado en seguridad, validará la respuesta con Pydantic y generará un reporte Markdown con vulnerabilidades, severidad, categoría OWASP, recomendaciones y limitaciones.
+>
+> El código vulnerable que crearás es **intencionalmente inseguro** y solo sirve para análisis educativo. No lo ejecutes como aplicación real ni reutilices esos patrones en proyectos productivos.
+
+<table>
+<tr>
+<td width="25%"><strong>🎯 Enfoque</strong><br>Revisión de código con IA</td>
+<td width="25%"><strong>⏱️ Duración</strong><br>40 minutos</td>
+<td width="25%"><strong>🧠 Bloom</strong><br>Aplicar, analizar, evaluar y crear</td>
+<td width="25%"><strong>📦 Entregable</strong><br>Reporte Markdown + pipeline Python</td>
+</tr>
+</table>
+
+## 🧭 Sección 1. Información general de la práctica
+
+### 📌 Descripción general
+
+En esta práctica vas a construir un pipeline local en **Windows**, usando **Visual Studio Code** y **Git Bash**, para auditar commits de un repositorio Git con ayuda de un LLM.
+
+El flujo será progresivo. Primero prepararás el ambiente local y crearás un repositorio de ejemplo con vulnerabilidades controladas. Después definirás modelos Pydantic para representar commits, hallazgos y reportes. Luego extraerás diffs con GitPython, construirás un prompt especializado en seguridad, probarás el análisis de forma simulada sin consumir API y finalmente ejecutarás una auditoría real con un modelo de OpenAI usando salida estructurada.
+
+Al terminar, tendrás un sistema que puede leer los últimos commits, extraer metadata, enviar el diff al modelo, recibir hallazgos estructurados, clasificar riesgos por severidad y generar un reporte Markdown profesional.
+
+> [!NOTE]
+> Este laboratorio usa OpenAI como proveedor principal porque permite integrar de forma directa modelos Pydantic con respuestas estructuradas. Puedes extenderlo después a otros proveedores, pero la práctica base se mantiene enfocada para reducir complejidad en aula.
+
+---
+
+### 🎯 Objetivos de aprendizaje
+
+Al finalizar esta práctica, tú serás capaz de:
+
+1. Preparar un proyecto Python local para auditoría de código con IA generativa.
+2. Configurar variables de entorno de forma segura usando `.env`.
+3. Crear un repositorio Git de ejemplo con commits vulnerables controlados.
+4. Extraer diffs y metadata de commits usando GitPython.
+5. Modelar hallazgos de seguridad con Pydantic.
+6. Diseñar un prompt especializado para revisión de código con enfoque OWASP.
+7. Ejecutar una prueba local simulada sin consumir API.
+8. Implementar un motor de auditoría con OpenAI, salida estructurada y reintentos.
+9. Generar un reporte Markdown consolidado con severidad, recomendaciones y métricas.
+10. Evaluar críticamente los resultados del LLM identificando aciertos, falsos positivos y falsos negativos.
+11. Explicar por qué un LLM complementa, pero no reemplaza, herramientas SAST ni revisiones humanas.
+12. Proponer mejoras para llevar el pipeline hacia un flujo DevSecOps real.
+
+---
+
+### ✅ Prerrequisitos
+
+Antes de iniciar, asegúrate de cumplir con lo siguiente:
+
+1. Tener conocimientos básicos de Python.
+2. Saber crear y activar un entorno virtual.
+3. Conocer comandos básicos de Git: `git init`, `git add`, `git commit`, `git log` y `git diff`.
+4. Comprender qué es un commit y qué es un diff.
+5. Tener nociones básicas de JSON.
+6. Haber trabajado previamente con Pydantic o haber completado el laboratorio anterior de respuestas estructuradas.
+7. Tener una API Key de OpenAI activa.
+8. Tener acceso a internet.
+9. Tener instalado Git Bash en Windows.
+10. Tener instalado Visual Studio Code.
+
+---
+
+### 💻 Hardware
+
+| Recurso | Requisito mínimo | Recomendado |
+|---|---:|---:|
+| Equipo | Laptop o PC con Windows | Laptop o PC con Windows 11 |
+| Procesador | Intel Core i5 / Ryzen 5 | 4 núcleos o más |
+| Memoria RAM | 8 GB | 16 GB |
+| Almacenamiento libre | 1 GB | 2 GB |
+| GPU | No requerida | No requerida |
+| Internet | Requerido para consumir API | 20 Mbps o más |
+
+---
+
+### 🧰 Software
+
+| Software | Uso |
 |---|---|
-| **Duración estimada** | 40 minutos |
-| **Complejidad** | Media |
-| **Nivel Bloom** | Crear |
-| **Lab ID** | 04-00-01 |
-| **Módulo** | 4 — Revisión de Código con IA Generativa |
+| Windows 10 o Windows 11 | Sistema operativo base |
+| Visual Studio Code | Edición de código |
+| Git Bash | Ejecución de comandos |
+| Git 2.40 o superior | Creación y análisis de commits |
+| Python 3.11 o superior | Runtime del laboratorio |
+| pip | Instalación de dependencias |
+| OpenAI API Key | Consumo del modelo LLM |
+| Extensión Markdown Preview para VS Code | Visualización del reporte Markdown |
 
 ---
 
-## 2. Descripción General
+### 📋 Datos generales de la práctica
 
-En este laboratorio construirás un pipeline completo en Python que extrae automáticamente los diffs de los últimos N commits de un repositorio Git usando **GitPython**, los envía a un LLM (GPT-4o o Claude 3.5 Sonnet) con un prompt especializado en seguridad, y genera un reporte consolidado en Markdown clasificando las vulnerabilidades encontradas por severidad según el estándar OWASP Top 10.
-
-El laboratorio aplica directamente los conceptos de la lección 4.1: usarás los mismos patrones de prompting con temperatura baja para obtener respuestas deterministas, el rol de revisor experto en seguridad, y la capacidad de los modelos modernos para razonar sobre código Python vulnerable. Al finalizar, tendrás un artefacto funcional que puede configurarse como pre-commit hook en cualquier proyecto.
-
----
-
-## 3. Objetivos de Aprendizaje
-
-- [ ] Configurar un pipeline Python que use GitPython para extraer diffs de commits con su metadata completa (hash, autor, mensaje, timestamp).
-- [ ] Diseñar un prompt de sistema con role prompting y ejemplos few-shot que instruya a un LLM para identificar vulnerabilidades OWASP Top 10 y devolver resultados en JSON estructurado.
-- [ ] Implementar funciones de auditoría que parseen la respuesta del LLM, clasifiquen hallazgos por severidad y generen un reporte Markdown profesional.
-- [ ] Evaluar críticamente los casos donde el LLM falla (falsos positivos, falsos negativos) documentando las limitaciones observadas.
-
----
-
-## 4. Prerrequisitos
-
-### Conocimiento previo
-- Manejo básico de Git (commits, diffs, repositorios locales).
-- Haber completado Lab 01-00-01 (configuración de SDKs de OpenAI/Anthropic) y Lab 03-00-01 (prompt engineering).
-- Comprensión conceptual de OWASP Top 10 (SQL Injection, Path Traversal, Insecure Deserialization, Hardcoded Credentials, Missing Input Validation).
-- Python 3.11 instalado y operativo.
-
-### Acceso requerido
-- API Key válida de **OpenAI** (acceso a `gpt-4o`) **o** de **Anthropic** (acceso a `claude-3-5-sonnet-20241022`). Al menos una es obligatoria.
-- Git 2.40+ instalado y configurado (`git config --global user.email` y `user.name` definidos).
-- Conexión a internet estable (las llamadas a la API consumen aproximadamente $0.05–$0.15 USD para completar el lab completo).
-
-> ⚠️ **Aviso de costos**: Este lab consume tokens de APIs de pago. Estima un máximo de **$0.20 USD** si auditas los 5 commits con GPT-4o. Verifica tu límite de gasto en la consola del proveedor antes de iniciar.
+| Elemento | Detalle |
+|---|---|
+| Duración estimada | 40 minutos |
+| Complejidad | Intermedia - Alta |
+| Nivel de Bloom | Aplicar, analizar, evaluar y crear |
+| Ubicación recomendada | Después de la lección de revisión de código y prompting especializado |
+| Modalidad | Individual o equipos de 2 personas |
+| Sistema operativo | Windows |
+| Editor | Visual Studio Code |
+| Terminal | Git Bash |
+| Lenguaje | Python |
+| Proveedor principal | OpenAI |
+| Modelo sugerido | Definido por variable `OPENAI_MODEL` |
+| Entregable principal | Reporte Markdown de auditoría |
+| Entregable secundario | Scripts Python del pipeline |
+| Tipo de práctica | Técnica, aplicada y evaluativa |
 
 ---
 
-## 5. Entorno del Laboratorio
+## 🛡️ Consideraciones para estudiantes
 
-### Hardware mínimo requerido
+<table>
+<tr>
+<td><strong>🔐 Seguridad</strong><br>No subas `.env` ni claves reales.</td>
+<td><strong>💸 Costo</strong><br>Las llamadas al modelo pueden consumir saldo.</td>
+<td><strong>⚠️ Alcance</strong><br>El código vulnerable es solo educativo.</td>
+</tr>
+</table>
 
-| Componente | Mínimo | Recomendado |
+1. **No compartas tu API Key.** Debe quedarse únicamente en tu equipo local.
+2. **No pegues claves dentro del código.** Siempre usa `.env`.
+3. **No entregues el archivo `.env`.** Solo entrega scripts y reportes.
+4. **No ejecutes el código vulnerable como aplicación real.** Solo se analizará como texto dentro de commits.
+5. **No uses repositorios productivos con secretos reales.** Esta práctica usa un repositorio de ejemplo.
+6. **Los resultados del LLM pueden variar.** Un modelo puede detectar hallazgos distintos entre ejecuciones.
+7. **El LLM puede equivocarse.** Puede generar falsos positivos o falsos negativos.
+8. **El reporte generado no reemplaza una auditoría profesional.** Debe validarse con revisión humana y herramientas SAST.
+9. **Controla el costo.** Audita primero 1 commit antes de correr los 5 commits.
+10. **Mantén baja la temperatura.** En revisión técnica se busca consistencia, no creatividad.
+11. **Complementa con herramientas de seguridad.** Bandit, Semgrep y pip-audit pueden detectar patrones que el LLM omite.
+12. **Revisa la documentación del proveedor antes de impartir.** Los nombres de modelos, costos y límites pueden cambiar.
+
+---
+
+## 🔗 Fuentes oficiales que debes revisar antes de ejecutar
+
+> [!NOTE]
+> Los identificadores de modelos, límites, precios y capacidades cambian con frecuencia. Antes de impartir el laboratorio, valida los modelos disponibles y ajusta el valor de `OPENAI_MODEL` en el archivo `.env`.
+
+| Tema | Qué revisar | Fuente sugerida |
 |---|---|---|
-| RAM | 8 GB | 16 GB |
-| Almacenamiento libre | 500 MB | 1 GB |
-| CPU | 2 núcleos | 4 núcleos |
-| Red | 10 Mbps | 20 Mbps |
+| OpenAI | Modelo disponible, salida estructurada, límites y precio | Documentación oficial de OpenAI API |
+| OWASP Top 10 | Categorías y criterios de riesgo | OWASP Top 10 2021 |
+| GitPython | Uso de `Repo`, commits y diffs | Documentación oficial de GitPython |
+| Pydantic | Modelos, enums, validación y serialización | Documentación oficial de Pydantic |
+| Tenacity | Reintentos, backoff y errores transitorios | Documentación oficial de Tenacity |
+| Bandit / Semgrep | Herramientas SAST complementarias | Documentación oficial de cada herramienta |
 
-### Software y dependencias
+---
 
-| Paquete | Versión | Propósito |
-|---|---|---|
-| Python | 3.11.x | Runtime principal |
-| GitPython | 3.1.x | Extracción de diffs de Git |
-| openai | 1.35.x | SDK para GPT-4o |
-| anthropic | 0.28.x | SDK para Claude 3.5 Sonnet (alternativa) |
-| pydantic | 2.7.x | Validación de modelos de datos |
-| python-dotenv | 1.0.x | Gestión segura de API keys |
-| tenacity | 8.3.x | Reintentos automáticos en llamadas a la API |
+## 🚀 Sección 2. Desarrollo de la práctica
 
-### Configuración inicial del entorno
+---
 
-Ejecuta los siguientes comandos en tu terminal para preparar el entorno de trabajo:
+# 🧩 Tarea 1. Preparar el proyecto local en Windows
+
+## 🎯 Objetivo de la tarea
+
+Crear una carpeta de trabajo, abrirla en Visual Studio Code, preparar un entorno virtual de Python e instalar las dependencias necesarias para el pipeline de auditoría.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea la carpeta del laboratorio
+
+**📝 Descripción del paso:**  
+Vas a crear una carpeta local para guardar todos los archivos del laboratorio.
+
+**⚙️ Contenido del paso:**  
+Abre **Git Bash** y ejecuta:
 
 ```bash
-# 1. Crear directorio del laboratorio
-mkdir lab-04-security-auditor
-cd lab-04-security-auditor
-
-# 2. Crear y activar entorno virtual aislado
-python3.11 -m venv .venv
-
-# En Linux/macOS:
-source .venv/bin/activate
-
-# En Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-
-# 3. Instalar dependencias
-pip install --upgrade pip
-pip install gitpython==3.1.43 openai==1.35.3 anthropic==0.28.0 \
-            pydantic==2.7.4 python-dotenv==1.0.1 tenacity==8.3.0
-
-# 4. Verificar instalaciones
-python -c "import git; import openai; import pydantic; print('Dependencias OK')"
+mkdir -p ~/labs-ia-gen/lab-04-security-auditor
+cd ~/labs-ia-gen/lab-04-security-auditor
 ```
 
-### Configuración de credenciales
+**✅ Validación del paso:**  
+Ejecuta:
 
 ```bash
-# Crear archivo .env (NUNCA subir al repositorio)
-cat > .env << 'EOF'
-# Usar una o ambas según disponibilidad
-OPENAI_API_KEY=sk-...tu_clave_aqui...
-ANTHROPIC_API_KEY=sk-ant-...tu_clave_aqui...
+pwd
+```
 
-# Proveedor activo: "openai" o "anthropic"
-LLM_PROVIDER=openai
-EOF
+Debes estar dentro de una ruta similar a:
 
-# Crear .gitignore para proteger credenciales
+```text
+/c/Users/TU_USUARIO/labs-ia-gen/lab-04-security-auditor
+```
+
+**📌 Resultado esperado:**  
+Tienes una carpeta dedicada para el laboratorio 4.
+
+---
+
+### ✅ Paso 2. Abre la carpeta en Visual Studio Code
+
+**📝 Descripción del paso:**  
+Vas a abrir el proyecto desde Git Bash para trabajar con los archivos en VS Code.
+
+**⚙️ Contenido del paso:**
+
+```bash
+code .
+```
+
+Si `code .` no funciona, abre VS Code manualmente y selecciona:
+
+```text
+File > Open Folder > labs-ia-gen > lab-04-security-auditor
+```
+
+**✅ Validación del paso:**  
+Confirma que VS Code muestre la carpeta `lab-04-security-auditor`.
+
+**📌 Resultado esperado:**  
+El proyecto está abierto en Visual Studio Code.
+
+---
+
+### ✅ Paso 3. Crea y activa el entorno virtual
+
+**📝 Descripción del paso:**  
+Vas a aislar las dependencias de este laboratorio para evitar conflictos con otros proyectos.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python -m venv .venv
+source .venv/Scripts/activate
+```
+
+**✅ Validación del paso:**
+
+```bash
+python --version
+which python
+```
+
+Debes ver que Python se ejecuta desde `.venv`.
+
+**📌 Resultado esperado:**  
+Tienes un entorno virtual activo para la práctica.
+
+---
+
+### ✅ Paso 4. Crea el archivo `requirements.txt`
+
+**📝 Descripción del paso:**  
+Vas a declarar las librerías que usará el pipeline.
+
+**⚙️ Contenido del paso:**  
+Crea el archivo:
+
+```text
+requirements.txt
+```
+
+Agrega:
+
+```txt
+openai>=1.90,<2
+gitpython>=3.1,<4
+pydantic>=2.10,<3
+python-dotenv>=1.0,<2
+tenacity>=8.5,<10
+```
+
+**✅ Validación del paso:**
+
+```bash
+cat requirements.txt
+```
+
+**📌 Resultado esperado:**  
+Tienes declaradas las dependencias principales del laboratorio.
+
+---
+
+### ✅ Paso 5. Instala las dependencias
+
+**📝 Descripción del paso:**  
+Vas a instalar el SDK de OpenAI, GitPython, Pydantic, dotenv y tenacity.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -c "import openai, git, pydantic, dotenv, tenacity; print('Dependencias instaladas correctamente')"
+```
+
+**📌 Resultado esperado:**
+
+```text
+Dependencias instaladas correctamente
+```
+
+---
+
+### ✅ Paso 6. Crea el archivo `.gitignore`
+
+**📝 Descripción del paso:**  
+Vas a proteger archivos sensibles y temporales para evitar subirlos por accidente a un repositorio.
+
+**⚙️ Contenido del paso:**
+
+```bash
 cat > .gitignore << 'EOF'
 .env
 .venv/
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
 reports/
-*.egg-info/
-.DS_Store
+*.log
 EOF
 ```
 
-> 🔒 **Seguridad**: Verifica que `.env` aparece en `.gitignore` antes de hacer cualquier commit. Nunca hardcodees API keys en el código fuente.
+**✅ Validación del paso:**
+
+```bash
+cat .gitignore
+```
+
+**📌 Resultado esperado:**  
+El archivo `.gitignore` contiene `.env`, `.venv/` y `reports/`.
 
 ---
 
-## 6. Instrucciones Paso a Paso
+## 💬 Prompt de apoyo para explicar lo realizado
 
-### Paso 1: Crear el Repositorio Git de Ejemplo con Código Vulnerable
+[Explicar la Tarea 1 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%201%20de%20un%20laboratorio%20donde%20prepar%C3%A9%20un%20proyecto%20Python%20en%20Windows%20con%20VS%20Code%2C%20Git%20Bash%2C%20entorno%20virtual%2C%20requirements.txt%20y%20.gitignore%20para%20construir%20un%20pipeline%20de%20auditor%C3%ADa%20de%20seguridad%20con%20LLM.)
 
-**Objetivo**: Preparar un repositorio Git local con 5 commits que contengan código Python intencionalmente vulnerable, simulando un historial de desarrollo real con deuda de seguridad.
+---
 
-#### Instrucciones
+# 🧩 Tarea 2. Configurar credenciales y parámetros del modelo
 
-**1.1** Crea el repositorio y la estructura de directorios:
+## 🎯 Objetivo de la tarea
+
+Crear un archivo `.env` para configurar la API Key, el modelo y parámetros básicos de ejecución sin escribir secretos dentro del código.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `.env`
+
+**📝 Descripción del paso:**  
+Vas a guardar la clave de OpenAI y el nombre del modelo en variables de entorno.
+
+**⚙️ Contenido del paso:**
 
 ```bash
-# Dentro de lab-04-security-auditor/
+cat > .env << 'EOF'
+OPENAI_API_KEY=pega_aqui_tu_api_key_de_openai
+OPENAI_MODEL=gpt-4o-mini
+MAX_COMMITS_DEFAULT=3
+EOF
+```
+
+**🔧 Qué debes cambiar:**  
+Reemplaza `pega_aqui_tu_api_key_de_openai` por tu API Key real.
+
+**✅ Validación del paso:**
+
+```bash
+cat .env
+```
+
+**📌 Resultado esperado:**  
+Ves las variables configuradas. No compartas ni entregues este archivo.
+
+---
+
+### ✅ Paso 2. Crea un script para validar el entorno
+
+**📝 Descripción del paso:**  
+Vas a confirmar que Python puede leer la API Key y el modelo desde `.env` sin imprimir la clave completa.
+
+**⚙️ Contenido del paso:**  
+Crea el archivo `00_validar_entorno.py` con este contenido:
+
+```python
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+api_key = os.getenv("OPENAI_API_KEY")
+model = os.getenv("OPENAI_MODEL", "")
+
+if not api_key or api_key.startswith("pega_aqui"):
+    print("Falta configurar OPENAI_API_KEY en el archivo .env")
+    raise SystemExit(1)
+
+if not model:
+    print("Falta configurar OPENAI_MODEL en el archivo .env")
+    raise SystemExit(1)
+
+print("Variables de entorno cargadas correctamente.")
+print("OPENAI_API_KEY: configurada, no se muestra por seguridad.")
+print(f"OPENAI_MODEL: {model}")
+```
+
+**✅ Validación del paso:**
+
+```bash
+python 00_validar_entorno.py
+```
+
+**📌 Resultado esperado:**
+
+```text
+Variables de entorno cargadas correctamente.
+OPENAI_API_KEY: configurada, no se muestra por seguridad.
+OPENAI_MODEL: gpt-4o-mini
+```
+
+---
+
+### ✅ Paso 3. Verifica que `.env` esté protegido
+
+**📝 Descripción del paso:**  
+Vas a confirmar que `.env` está dentro de `.gitignore`.
+
+**⚙️ Contenido del paso:**
+
+```bash
+grep -n "^.env$" .gitignore
+```
+
+**✅ Validación del paso:**  
+El comando debe devolver una línea con `.env`.
+
+**📌 Resultado esperado:**  
+El archivo de credenciales está protegido contra commits accidentales.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 2 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%202%20de%20un%20laboratorio%20donde%20configur%C3%A9%20un%20archivo%20.env%20con%20OPENAI_API_KEY%2C%20OPENAI_MODEL%20y%20valid%C3%A9%20que%20Python%20pueda%20leer%20las%20variables%20sin%20exponer%20secretos.)
+
+---
+
+# 🧩 Tarea 3. Crear un repositorio Git vulnerable de ejemplo
+
+## 🎯 Objetivo de la tarea
+
+Crear un repositorio Git local con 5 commits que contengan vulnerabilidades controladas para que el pipeline pueda auditarlas.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea e inicializa el repositorio vulnerable
+
+**📝 Descripción del paso:**  
+Vas a crear un repositorio independiente dentro del laboratorio. Este repositorio será usado como objeto de análisis.
+
+**⚙️ Contenido del paso:**
+
+```bash
 mkdir vulnerable_repo
 cd vulnerable_repo
 git init
@@ -148,7 +497,23 @@ git config user.email "lab-student@example.com"
 git config user.name "Lab Student"
 ```
 
-**1.2** Crea el **Commit 1** — SQL Injection:
+**✅ Validación del paso:**
+
+```bash
+git status
+```
+
+**📌 Resultado esperado:**  
+Git indica que estás en un repositorio vacío o recién inicializado.
+
+---
+
+### ✅ Paso 2. Crea el Commit 1 con SQL Injection
+
+**📝 Descripción del paso:**  
+Vas a crear código vulnerable por concatenación directa de entradas en consultas SQL.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 cat > db_utils.py << 'EOF'
@@ -160,10 +525,8 @@ def get_db_connection():
     return conn
 
 def get_user_by_id(user_id):
-    """Obtiene un usuario por su ID desde la base de datos."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # VULNERABILIDAD: SQL Injection - concatenación directa de entrada del usuario
     query = "SELECT * FROM users WHERE id = " + user_id
     cursor.execute(query)
     result = cursor.fetchone()
@@ -171,10 +534,8 @@ def get_user_by_id(user_id):
     return result
 
 def get_user_by_name(username):
-    """Busca usuarios por nombre."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # VULNERABILIDAD: SQL Injection con formato de string
     query = f"SELECT * FROM users WHERE username = '{username}'"
     cursor.execute(query)
     results = cursor.fetchall()
@@ -186,948 +547,826 @@ git add db_utils.py
 git commit -m "feat: add database utility functions for user lookup"
 ```
 
-**1.3** Crea el **Commit 2** — Hardcoded Credentials:
+**✅ Validación del paso:**
+
+```bash
+git log --oneline
+```
+
+**📌 Resultado esperado:**  
+Existe 1 commit en el historial.
+
+---
+
+### ✅ Paso 3. Crea el Commit 2 con credenciales hardcodeadas
+
+**📝 Descripción del paso:**  
+Vas a crear un archivo de configuración con secretos ficticios escritos en código.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 cat > config.py << 'EOF'
-# config.py - Configuración de la aplicación
-import boto3
+# config.py - Configuración insegura de ejemplo
 
-# VULNERABILIDAD: Credenciales hardcodeadas en código fuente
-AWS_ACCESS_KEY = "AKIAIOSFODNN7EXAMPLE"
-AWS_SECRET_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-DB_PASSWORD = "SuperSecretPassword123!"
-ADMIN_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.hardcoded"
-
-def get_s3_client():
-    """Crea cliente S3 con credenciales hardcodeadas."""
-    return boto3.client(
-        "s3",
-        aws_access_key_id=AWS_ACCESS_KEY,
-        aws_secret_access_key=AWS_SECRET_KEY,
-        region_name="us-east-1"
-    )
+AWS_ACCESS_KEY = "EXAMPLE_AWS_ACCESS_KEY_DO_NOT_USE"
+AWS_SECRET_KEY = "EXAMPLE_AWS_SECRET_KEY_DO_NOT_USE"
+DB_PASSWORD = "EXAMPLE_DB_PASSWORD_DO_NOT_USE"
+ADMIN_TOKEN = "EXAMPLE_ADMIN_TOKEN_DO_NOT_USE"
 
 def get_db_config():
     return {
         "host": "prod-db.internal",
         "port": 5432,
         "database": "production",
+        "user": "admin",
         "password": DB_PASSWORD,
-        "user": "admin"
     }
 EOF
 
 git add config.py
-git commit -m "feat: add AWS S3 client configuration and DB settings"
+git commit -m "feat: add application configuration values"
 ```
 
-**1.4** Crea el **Commit 3** — Path Traversal:
+**✅ Validación del paso:**
+
+```bash
+git log --oneline | wc -l
+```
+
+**📌 Resultado esperado:**  
+El resultado debe ser `2`.
+
+---
+
+### ✅ Paso 4. Crea el Commit 3 con Path Traversal
+
+**📝 Descripción del paso:**  
+Vas a crear funciones que leen archivos usando rutas formadas directamente con entradas del usuario.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 cat > file_handler.py << 'EOF'
-# file_handler.py - Manejo de archivos del usuario
+# file_handler.py - Manejo inseguro de archivos
 import os
 
-UPLOAD_DIR = "/var/app/uploads"
+UPLOAD_DIR = "uploads"
+REPORTS_DIR = "reports"
 
 def read_user_file(filename):
-    """Lee un archivo subido por el usuario."""
-    # VULNERABILIDAD: Path Traversal - sin sanitización del nombre de archivo
     file_path = os.path.join(UPLOAD_DIR, filename)
-    with open(file_path, "r") as f:
-        return f.read()
+    with open(file_path, "r", encoding="utf-8") as file:
+        return file.read()
 
 def get_report(report_name):
-    """Descarga un reporte por nombre."""
-    # VULNERABILIDAD: Path Traversal permite acceder a /etc/passwd con ../../etc/passwd
-    base_dir = "/var/app/reports"
-    full_path = base_dir + "/" + report_name
-    with open(full_path, "rb") as f:
-        return f.read()
-
-def save_user_upload(filename, content):
-    """Guarda un archivo subido por el usuario."""
-    # Sin validación de extensión ni sanitización
-    dest = os.path.join(UPLOAD_DIR, filename)
-    with open(dest, "w") as f:
-        f.write(content)
-    return dest
+    full_path = REPORTS_DIR + "/" + report_name
+    with open(full_path, "rb") as file:
+        return file.read()
 EOF
 
 git add file_handler.py
-git commit -m "feat: implement file upload and report download handlers"
+git commit -m "feat: implement file reading and report download"
 ```
 
-**1.5** Crea el **Commit 4** — Insecure Deserialization:
+**✅ Validación del paso:**
+
+```bash
+git log --oneline | wc -l
+```
+
+**📌 Resultado esperado:**  
+El resultado debe ser `3`.
+
+---
+
+### ✅ Paso 5. Crea el Commit 4 con deserialización insegura
+
+**📝 Descripción del paso:**  
+Vas a crear funciones que usan `pickle.loads()` sobre datos que podrían provenir del cliente.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 cat > session_manager.py << 'EOF'
-# session_manager.py - Gestión de sesiones de usuario
-import pickle
+# session_manager.py - Gestión insegura de sesiones
 import base64
+import pickle
 
 def load_session(session_data: str):
-    """Carga una sesión de usuario desde datos codificados en base64."""
-    # VULNERABILIDAD: Insecure Deserialization - pickle con datos no confiables
-    # Un atacante puede enviar un payload pickle malicioso para ejecutar código arbitrario
     raw_data = base64.b64decode(session_data)
     session = pickle.loads(raw_data)
     return session
 
-def save_session(session_obj) -> str:
-    """Serializa la sesión del usuario para almacenamiento en cookie."""
-    # VULNERABILIDAD: Usar pickle para serializar datos que van al cliente
-    serialized = pickle.dumps(session_obj)
-    return base64.b64encode(serialized).decode("utf-8")
-
 def restore_user_preferences(cookie_value: str) -> dict:
-    """Restaura preferencias del usuario desde cookie."""
-    # VULNERABILIDAD: Deserialización directa de cookie del cliente
     data = base64.b64decode(cookie_value)
     prefs = pickle.loads(data)
     return prefs
 EOF
 
 git add session_manager.py
-git commit -m "feat: add session management with cookie-based persistence"
+git commit -m "feat: add cookie based session persistence"
 ```
 
-**1.6** Crea el **Commit 5** — Missing Input Validation:
+**✅ Validación del paso:**
+
+```bash
+git log --oneline | wc -l
+```
+
+**📌 Resultado esperado:**  
+El resultado debe ser `4`.
+
+---
+
+### ✅ Paso 6. Crea el Commit 5 con Command Injection
+
+**📝 Descripción del paso:**  
+Vas a crear funciones que envían entrada del usuario a comandos del sistema.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 cat > api_handlers.py << 'EOF'
-# api_handlers.py - Handlers de la API REST
-import subprocess
+# api_handlers.py - Handlers inseguros de API
 import os
+import subprocess
 
 def process_user_input(data: dict):
-    """Procesa entrada del usuario para generar reportes."""
-    # VULNERABILIDAD: Sin validación de tipos ni rangos
     user_id = data["user_id"]
-    page_size = data["page_size"]
     output_format = data["format"]
-
-    # VULNERABILIDAD: Command Injection - entrada del usuario en subprocess
     cmd = f"generate_report.sh {user_id} {output_format}"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return result.stdout
 
 def resize_image(image_path: str, width: str, height: str):
-    """Redimensiona una imagen usando ImageMagick."""
-    # VULNERABILIDAD: Command Injection con parámetros del usuario
     os.system(f"convert {image_path} -resize {width}x{height} output.jpg")
-
-def get_paginated_results(table: str, page: int, size: int):
-    """Obtiene resultados paginados de una tabla."""
-    import sqlite3
-    conn = sqlite3.connect("app.db")
-    # VULNERABILIDAD: Sin validación de 'table', permite inyección
-    query = f"SELECT * FROM {table} LIMIT {size} OFFSET {page * size}"
-    return conn.execute(query).fetchall()
 EOF
 
 git add api_handlers.py
-git commit -m "feat: add REST API handlers with pagination and image processing"
+git commit -m "feat: add report generation and image processing handlers"
 ```
 
-**1.7** Verifica el historial de commits:
+**✅ Validación del paso:**
 
 ```bash
 git log --oneline
 ```
 
-#### Salida esperada
-
-```
-a3f9c21 feat: add REST API handlers with pagination and image processing
-b7e2d18 feat: add session management with cookie-based persistence
-c1a4f09 feat: implement file upload and report download handlers
-d8b3e52 feat: add AWS S3 client configuration and DB settings
-e5c9a11 feat: add database utility functions for user lookup
-```
-
-*(Los hashes serán diferentes en tu máquina; eso es normal.)*
-
-#### Verificación
-
-```bash
-# Confirmar que hay exactamente 5 commits
-git log --oneline | wc -l
-# Debe imprimir: 5
-
-# Confirmar que los archivos vulnerables existen
-ls *.py
-# Debe listar: db_utils.py config.py file_handler.py session_manager.py api_handlers.py
-```
+**📌 Resultado esperado:**  
+Debes ver 5 commits. Los hashes serán diferentes en cada equipo.
 
 ---
 
-### Paso 2: Definir los Modelos de Datos con Pydantic
+### ✅ Paso 7. Regresa al directorio principal del laboratorio
 
-**Objetivo**: Crear las estructuras de datos tipadas que representarán un diff de commit, una vulnerabilidad encontrada y el reporte de auditoría completo.
+**📝 Descripción del paso:**  
+Vas a regresar a la carpeta donde crearás el pipeline de auditoría.
 
-#### Instrucciones
-
-**2.1** Regresa al directorio principal del lab y crea el archivo `models.py`:
+**⚙️ Contenido del paso:**
 
 ```bash
-cd ..  # Volver a lab-04-security-auditor/
+cd ..
 ```
 
+**✅ Validación del paso:**
+
+```bash
+pwd
+ls
+```
+
+**📌 Resultado esperado:**  
+Debes ver la carpeta `vulnerable_repo` dentro del laboratorio.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 3 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%203%20de%20un%20laboratorio%20donde%20cre%C3%A9%20un%20repositorio%20Git%20local%20con%205%20commits%20vulnerables%3A%20SQL%20Injection%2C%20credenciales%20hardcodeadas%2C%20Path%20Traversal%2C%20deserializaci%C3%B3n%20insegura%20y%20Command%20Injection.)
+
+---
+
+# 🧩 Tarea 4. Definir los modelos Pydantic del pipeline
+
+## 🎯 Objetivo de la tarea
+
+Crear los modelos de datos que representarán commits, vulnerabilidades, resultados del LLM y reportes de auditoría.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `models.py`
+
+**📝 Descripción del paso:**  
+Vas a centralizar las estructuras de datos del pipeline.
+
+**⚙️ Contenido del paso:**  
+Crea el archivo `models.py` y agrega:
+
 ```python
-# models.py
-"""
-Modelos de datos Pydantic v2 para el pipeline de auditoría de seguridad.
-"""
+from __future__ import annotations
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from pydantic import BaseModel, Field
 
-
 class Severidad(str, Enum):
-    """Niveles de severidad para vulnerabilidades de seguridad."""
     CRITICA = "CRITICA"
     ALTA = "ALTA"
     MEDIA = "MEDIA"
     BAJA = "BAJA"
     INFORMATIVA = "INFORMATIVA"
 
-
 class CategoriaOWASP(str, Enum):
-    """Categorías OWASP Top 10 2021 relevantes para Python."""
     A01_BROKEN_ACCESS_CONTROL = "A01:2021 - Broken Access Control"
     A02_CRYPTOGRAPHIC_FAILURES = "A02:2021 - Cryptographic Failures"
     A03_INJECTION = "A03:2021 - Injection"
     A04_INSECURE_DESIGN = "A04:2021 - Insecure Design"
     A05_SECURITY_MISCONFIGURATION = "A05:2021 - Security Misconfiguration"
-    A06_VULNERABLE_COMPONENTS = "A06:2021 - Vulnerable and Outdated Components"
-    A07_AUTH_FAILURES = "A07:2021 - Identification and Authentication Failures"
     A08_INTEGRITY_FAILURES = "A08:2021 - Software and Data Integrity Failures"
-    A09_LOGGING_FAILURES = "A09:2021 - Security Logging and Monitoring Failures"
-    A10_SSRF = "A10:2021 - Server-Side Request Forgery"
     DESCONOCIDA = "Desconocida"
 
-
 class Vulnerabilidad(BaseModel):
-    """Representa una vulnerabilidad encontrada en el código."""
-    tipo: str = Field(..., description="Nombre técnico de la vulnerabilidad (ej: SQL Injection)")
-    categoria_owasp: CategoriaOWASP = Field(
-        default=CategoriaOWASP.DESCONOCIDA,
-        description="Categoría OWASP Top 10 correspondiente"
-    )
-    severidad: Severidad = Field(..., description="Nivel de severidad")
-    linea_afectada: Optional[int] = Field(
-        default=None,
-        description="Número de línea aproximado en el diff"
-    )
-    descripcion: str = Field(..., description="Descripción técnica de la vulnerabilidad")
-    codigo_vulnerable: Optional[str] = Field(
-        default=None,
-        description="Fragmento de código vulnerable"
-    )
-    recomendacion: str = Field(..., description="Cómo remediar la vulnerabilidad")
-    confianza: float = Field(
-        default=0.8,
-        ge=0.0,
-        le=1.0,
-        description="Nivel de confianza del LLM en este hallazgo (0.0-1.0)"
-    )
-
+    tipo: str = Field(description="Nombre técnico de la vulnerabilidad.")
+    categoria_owasp: CategoriaOWASP = Field(description="Categoría OWASP asociada.")
+    severidad: Severidad = Field(description="Severidad del hallazgo.")
+    archivo: str | None = Field(default=None, description="Archivo afectado.")
+    linea_afectada: int | None = Field(default=None, description="Línea aproximada afectada.")
+    descripcion: str = Field(description="Explicación técnica del hallazgo.")
+    codigo_vulnerable: str | None = Field(default=None, description="Fragmento vulnerable.")
+    recomendacion: str = Field(description="Recomendación de corrección.")
+    confianza: float = Field(default=0.8, ge=0.0, le=1.0, description="Confianza del hallazgo.")
 
 class CommitDiff(BaseModel):
-    """Representa el diff de un commit con su metadata."""
-    commit_hash: str = Field(..., description="Hash SHA completo del commit")
-    hash_corto: str = Field(..., description="Primeros 8 caracteres del hash")
-    autor: str = Field(..., description="Nombre del autor del commit")
-    email_autor: str = Field(default="", description="Email del autor")
-    mensaje: str = Field(..., description="Mensaje del commit")
-    timestamp: datetime = Field(..., description="Fecha y hora del commit")
-    diff_texto: str = Field(..., description="Contenido completo del diff")
-    archivos_modificados: list[str] = Field(
-        default_factory=list,
-        description="Lista de archivos modificados en el commit"
-    )
+    commit_hash: str
+    hash_corto: str
+    autor: str
+    email_autor: str = ""
+    mensaje: str
+    timestamp: datetime
+    diff_texto: str
+    archivos_modificados: list[str] = Field(default_factory=list)
 
+class AuditLLMOutput(BaseModel):
+    vulnerabilidades: list[Vulnerabilidad] = Field(default_factory=list)
+    resumen_ejecutivo: str = ""
+    puntuacion_riesgo: float = Field(default=0.0, ge=0.0, le=10.0)
 
 class AuditReport(BaseModel):
-    """Reporte de auditoría de seguridad para un commit."""
-    commit: CommitDiff = Field(..., description="Información del commit auditado")
-    vulnerabilidades: list[Vulnerabilidad] = Field(
-        default_factory=list,
-        description="Lista de vulnerabilidades encontradas"
-    )
-    resumen_ejecutivo: str = Field(
-        default="",
-        description="Resumen en lenguaje natural del análisis"
-    )
-    puntuacion_riesgo: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=10.0,
-        description="Puntuación de riesgo global del commit (0-10)"
-    )
-    llm_proveedor: str = Field(default="openai", description="Proveedor LLM usado")
-    llm_modelo: str = Field(default="gpt-4o", description="Modelo LLM usado")
-    error_auditoria: Optional[str] = Field(
-        default=None,
-        description="Mensaje de error si la auditoría falló"
-    )
+    commit: CommitDiff
+    vulnerabilidades: list[Vulnerabilidad] = Field(default_factory=list)
+    resumen_ejecutivo: str = ""
+    puntuacion_riesgo: float = Field(default=0.0, ge=0.0, le=10.0)
+    llm_proveedor: str = "openai"
+    llm_modelo: str = ""
+    error_auditoria: str | None = None
 
     @property
     def total_por_severidad(self) -> dict[str, int]:
-        """Cuenta vulnerabilidades agrupadas por severidad."""
-        conteo = {s.value: 0 for s in Severidad}
+        conteo = {severidad.value: 0 for severidad in Severidad}
         for vuln in self.vulnerabilidades:
             conteo[vuln.severidad.value] += 1
         return conteo
 ```
 
-#### Verificación
+**✅ Validación del paso:**
 
 ```bash
-python -c "from models import CommitDiff, AuditReport, Vulnerabilidad, Severidad; print('Modelos Pydantic OK')"
+python -m py_compile models.py
 ```
+
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
 
 ---
 
-### Paso 3: Implementar la Extracción de Diffs con GitPython
+### ✅ Paso 2. Valida una vulnerabilidad de prueba
 
-**Objetivo**: Crear la función `get_commit_diffs` que usa GitPython para extraer el diff de los últimos N commits con toda la metadata necesaria.
+**📝 Descripción del paso:**  
+Vas a confirmar que Pydantic acepta una vulnerabilidad válida y rechaza valores fuera de rango.
 
-#### Instrucciones
+**⚙️ Contenido del paso:**
 
-**3.1** Crea el archivo `git_extractor.py`:
+```bash
+python -c "
+from models import Vulnerabilidad, Severidad, CategoriaOWASP
+v = Vulnerabilidad(
+    tipo='SQL Injection',
+    categoria_owasp=CategoriaOWASP.A03_INJECTION,
+    severidad=Severidad.CRITICA,
+    archivo='db_utils.py',
+    linea_afectada=12,
+    descripcion='Consulta SQL construida con concatenación de entrada del usuario.',
+    codigo_vulnerable='query = \"SELECT * FROM users WHERE id = \" + user_id',
+    recomendacion='Usa consultas parametrizadas.',
+    confianza=0.95,
+)
+print(v.model_dump_json(indent=2))
+"
+```
+
+**✅ Validación del paso:**  
+Debes ver un JSON con la vulnerabilidad.
+
+**📌 Resultado esperado:**  
+El modelo Pydantic está funcionando correctamente.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 4 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%204%20de%20un%20laboratorio%20donde%20defin%C3%AD%20modelos%20Pydantic%20para%20representar%20commits%2C%20vulnerabilidades%2C%20salidas%20del%20LLM%20y%20reportes%20de%20auditor%C3%ADa%20de%20seguridad.)
+
+---
+
+# 🧩 Tarea 5. Extraer diffs de commits con GitPython
+
+## 🎯 Objetivo de la tarea
+
+Crear un módulo que lea los últimos commits del repositorio vulnerable y extraiga su metadata y diff de código.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `git_extractor.py`
+
+**📝 Descripción del paso:**  
+Vas a implementar funciones para abrir un repositorio Git y recuperar diffs.
+
+**⚙️ Contenido del paso:**
 
 ```python
-# git_extractor.py
-"""
-Módulo para extraer diffs de commits usando GitPython.
-"""
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
-
 import git
-from git import Repo, InvalidGitRepositoryError
-
+from git import InvalidGitRepositoryError, Repo
 from models import CommitDiff
 
 logger = logging.getLogger(__name__)
 
-
-def get_commit_diffs(
-    repo_path: str,
-    n_commits: int = 5,
-    branch: str = "HEAD"
-) -> list[CommitDiff]:
-    """
-    Extrae los diffs de los últimos N commits de un repositorio Git.
-
-    Args:
-        repo_path: Ruta absoluta o relativa al repositorio Git.
-        n_commits: Número de commits a analizar (desde el más reciente).
-        branch: Rama o referencia desde la cual contar los commits.
-
-    Returns:
-        Lista de CommitDiff ordenada del más reciente al más antiguo.
-
-    Raises:
-        InvalidGitRepositoryError: Si la ruta no es un repositorio Git válido.
-        ValueError: Si n_commits es menor o igual a 0.
-    """
+def get_commit_diffs(repo_path: str, n_commits: int = 3, branch: str = "HEAD") -> list[CommitDiff]:
     if n_commits <= 0:
-        raise ValueError(f"n_commits debe ser mayor a 0, se recibió: {n_commits}")
-
+        raise ValueError("n_commits debe ser mayor que 0")
     repo_path_obj = Path(repo_path).resolve()
     if not repo_path_obj.exists():
         raise FileNotFoundError(f"Ruta no encontrada: {repo_path_obj}")
-
     try:
         repo = Repo(str(repo_path_obj))
-    except InvalidGitRepositoryError:
-        raise InvalidGitRepositoryError(
-            f"'{repo_path_obj}' no es un repositorio Git válido. "
-            "Asegúrate de haber ejecutado 'git init' en ese directorio."
-        )
-
-    if repo.bare:
-        raise ValueError("No se puede analizar un repositorio bare.")
-
-    commits_lista = list(repo.iter_commits(branch, max_count=n_commits))
-    logger.info(f"Encontrados {len(commits_lista)} commits en {repo_path_obj}")
-
-    result: list[CommitDiff] = []
-
-    for commit in commits_lista:
-        diff_texto = _extraer_diff_texto(repo, commit)
+    except InvalidGitRepositoryError as exc:
+        raise InvalidGitRepositoryError(f"La ruta no es un repositorio Git válido: {repo_path_obj}") from exc
+    commits = list(repo.iter_commits(branch, max_count=n_commits))
+    resultados: list[CommitDiff] = []
+    for commit in commits:
+        diff_texto = _extraer_diff_texto(commit)
         archivos = _extraer_archivos_modificados(commit)
-
-        # Convertir timestamp de Git (Unix epoch) a datetime con timezone
-        commit_dt = datetime.fromtimestamp(
-            commit.committed_date,
-            tz=timezone.utc
-        )
-
-        commit_diff = CommitDiff(
+        timestamp = datetime.fromtimestamp(commit.committed_date, tz=timezone.utc)
+        resultados.append(CommitDiff(
             commit_hash=commit.hexsha,
             hash_corto=commit.hexsha[:8],
             autor=commit.author.name or "Desconocido",
             email_autor=commit.author.email or "",
             mensaje=commit.message.strip(),
-            timestamp=commit_dt,
+            timestamp=timestamp,
             diff_texto=diff_texto,
-            archivos_modificados=archivos
-        )
-        result.append(commit_diff)
+            archivos_modificados=archivos,
+        ))
+    return resultados
 
-    logger.info(f"Extracción completada: {len(result)} CommitDiff generados.")
-    return result
-
-
-def _extraer_diff_texto(repo: Repo, commit: git.Commit) -> str:
-    """
-    Extrae el texto del diff para un commit dado.
-    Para el primer commit (sin padre), muestra el contenido completo de los archivos.
-    """
-    try:
-        if commit.parents:
-            # Commit normal: diff contra su padre
-            parent = commit.parents[0]
-            diffs = parent.diff(commit, create_patch=True)
-        else:
-            # Primer commit del repositorio: diff contra árbol vacío
-            diffs = commit.diff(git.NULL_TREE, create_patch=True)
-
-        partes = []
-        for diff_item in diffs:
-            try:
-                patch = diff_item.diff
-                if isinstance(patch, bytes):
-                    patch = patch.decode("utf-8", errors="replace")
-                partes.append(
-                    f"--- Archivo: {diff_item.b_path or diff_item.a_path} ---\n{patch}"
-                )
-            except Exception as e:
-                logger.warning(f"No se pudo decodificar diff para archivo: {e}")
-                partes.append(f"--- Archivo: {diff_item.b_path} --- [Error al decodificar]\n")
-
-        return "\n".join(partes) if partes else "[Sin cambios de código detectados]"
-
-    except Exception as e:
-        logger.error(f"Error extrayendo diff del commit {commit.hexsha[:8]}: {e}")
-        return f"[Error al extraer diff: {str(e)}]"
-
+def _extraer_diff_texto(commit: git.Commit) -> str:
+    if commit.parents:
+        diffs = commit.parents[0].diff(commit, create_patch=True)
+    else:
+        diffs = commit.diff(git.NULL_TREE, create_patch=True)
+    partes: list[str] = []
+    for diff_item in diffs:
+        archivo = diff_item.b_path or diff_item.a_path or "archivo_desconocido"
+        patch = diff_item.diff
+        if isinstance(patch, bytes):
+            patch = patch.decode("utf-8", errors="replace")
+        partes.append(f"--- Archivo: {archivo} ---\n{patch}")
+    return "\n".join(partes) if partes else "[Sin cambios detectados]"
 
 def _extraer_archivos_modificados(commit: git.Commit) -> list[str]:
-    """Retorna la lista de archivos modificados en el commit."""
     archivos = set()
-    try:
-        if commit.parents:
-            for diff_item in commit.parents[0].diff(commit):
-                if diff_item.b_path:
-                    archivos.add(diff_item.b_path)
-                if diff_item.a_path:
-                    archivos.add(diff_item.a_path)
-        else:
-            for blob in commit.tree.traverse():
-                if hasattr(blob, "path"):
-                    archivos.add(blob.path)
-    except Exception as e:
-        logger.warning(f"Error listando archivos del commit: {e}")
-
+    if commit.parents:
+        for diff_item in commit.parents[0].diff(commit):
+            if diff_item.a_path:
+                archivos.add(diff_item.a_path)
+            if diff_item.b_path:
+                archivos.add(diff_item.b_path)
+    else:
+        for item in commit.tree.traverse():
+            if hasattr(item, "path"):
+                archivos.add(item.path)
     return sorted(archivos)
 ```
 
-#### Verificación
+**✅ Validación del paso:**
+
+```bash
+python -m py_compile git_extractor.py
+```
+
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
+
+---
+
+### ✅ Paso 2. Prueba la extracción de commits
+
+**📝 Descripción del paso:**  
+Vas a comprobar que el extractor puede leer los últimos commits del repositorio vulnerable.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 python -c "
 from git_extractor import get_commit_diffs
-diffs = get_commit_diffs('./vulnerable_repo', n_commits=3)
-for d in diffs:
-    print(f'[{d.hash_corto}] {d.mensaje[:50]} | Archivos: {d.archivos_modificados}')
+commits = get_commit_diffs('./vulnerable_repo', n_commits=3)
+for commit in commits:
+    print(f'[{commit.hash_corto}] {commit.mensaje}')
+    print('Archivos:', commit.archivos_modificados)
+    print('Diff chars:', len(commit.diff_texto))
+    print('-' * 60)
 "
 ```
 
-#### Salida esperada
+**✅ Validación del paso:**  
+Debes ver 3 commits, del más reciente al más antiguo.
 
-```
-[a3f9c21] feat: add REST API handlers with pagination | Archivos: ['api_handlers.py']
-[b7e2d18] feat: add session management with cookie-ba | Archivos: ['session_manager.py']
-[c1a4f09] feat: implement file upload and report down | Archivos: ['file_handler.py']
-```
+**📌 Resultado esperado:**  
+GitPython puede extraer metadata y diff del repositorio local.
 
 ---
 
-### Paso 4: Construir el Prompt de Seguridad con Few-Shot
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Objetivo**: Diseñar la función `build_security_prompt` que construye un prompt especializado en OWASP con ejemplos few-shot y formato de respuesta JSON estricto.
+[Explicar la Tarea 5 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%205%20de%20un%20laboratorio%20donde%20us%C3%A9%20GitPython%20para%20extraer%20los%20%C3%BAltimos%20commits%20de%20un%20repositorio%2C%20incluyendo%20hash%2C%20autor%2C%20mensaje%2C%20fecha%2C%20archivos%20modificados%20y%20diff%20de%20c%C3%B3digo.)
 
-#### Instrucciones
+---
 
-**4.1** Crea el archivo `prompt_builder.py`:
+# 🧩 Tarea 6. Construir el prompt de auditoría de seguridad
+
+## 🎯 Objetivo de la tarea
+
+Crear un prompt especializado que indique al LLM cómo analizar código, clasificar vulnerabilidades y producir una salida compatible con los modelos Pydantic.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `prompt_builder.py`
+
+**📝 Descripción del paso:**  
+Vas a separar el prompt del resto del código para poder ajustarlo fácilmente.
+
+**⚙️ Contenido del paso:**
 
 ```python
-# prompt_builder.py
+SYSTEM_PROMPT_SEGURIDAD = """
+Eres un auditor senior de seguridad de aplicaciones especializado en Python.
+Tu tarea es revisar diffs de commits de Git e identificar vulnerabilidades reales.
+No inventes vulnerabilidades que no estén respaldadas por el diff.
+Clasifica los hallazgos usando OWASP Top 10 2021 cuando aplique.
+
+Categorías frecuentes:
+- A03:2021 - Injection: SQL Injection, Command Injection.
+- A02:2021 - Cryptographic Failures: secretos o credenciales hardcodeadas.
+- A01:2021 - Broken Access Control: Path Traversal.
+- A08:2021 - Software and Data Integrity Failures: deserialización insegura.
+- A04:2021 - Insecure Design: ausencia de validaciones importantes.
+
+Criterios de severidad:
+- CRITICA: explotable remotamente con impacto severo.
+- ALTA: impacto importante, aunque requiera condiciones específicas.
+- MEDIA: riesgo relevante con impacto o explotación limitada.
+- BAJA: mala práctica con impacto bajo.
+- INFORMATIVA: observación técnica sin vulnerabilidad directa.
 """
-Constructor de prompts especializados en auditoría de seguridad de código.
-Aplica role prompting y few-shot examples para maximizar la precisión del LLM.
-"""
-
-SYSTEM_PROMPT_SEGURIDAD = """Eres un experto en seguridad de aplicaciones con 15 años de experiencia \
-en auditorías de código Python. Tienes certificaciones OSCP, CEH y eres coautor de guías OWASP. \
-Tu especialidad es identificar vulnerabilidades críticas en código Python antes de que lleguen a producción.
-
-## Tu Misión
-Analizar el diff de un commit de Git e identificar TODAS las vulnerabilidades de seguridad presentes, \
-clasificándolas según OWASP Top 10 2021.
-
-## Categorías OWASP que debes detectar en Python
-- **A03:2021 - Injection**: SQL Injection, Command Injection, LDAP Injection, Template Injection
-- **A02:2021 - Cryptographic Failures**: Credenciales hardcodeadas, claves débiles, datos sensibles en texto plano
-- **A01:2021 - Broken Access Control**: Path Traversal, acceso a recursos sin autorización
-- **A08:2021 - Software and Data Integrity Failures**: Insecure Deserialization (pickle, yaml.load, marshal)
-- **A04:2021 - Insecure Design**: Missing input validation, lógica de negocio insegura
-- **A05:2021 - Security Misconfiguration**: Debug mode en producción, permisos excesivos
-
-## Formato de Respuesta OBLIGATORIO
-Debes responder ÚNICAMENTE con un objeto JSON válido siguiendo este esquema exacto. \
-No incluyas texto antes ni después del JSON:
-
-```json
-{
-  "vulnerabilidades": [
-    {
-      "tipo": "string (nombre técnico, ej: SQL Injection)",
-      "categoria_owasp": "string (ej: A03:2021 - Injection)",
-      "severidad": "CRITICA|ALTA|MEDIA|BAJA|INFORMATIVA",
-      "linea_afectada": "integer o null",
-      "descripcion": "string (explicación técnica detallada de por qué es vulnerable)",
-      "codigo_vulnerable": "string (fragmento exacto del código vulnerable)",
-      "recomendacion": "string (cómo corregirlo con ejemplo de código seguro)",
-      "confianza": "float entre 0.0 y 1.0"
-    }
-  ],
-  "resumen_ejecutivo": "string (2-3 oraciones resumiendo el riesgo general del commit)",
-  "puntuacion_riesgo": "float entre 0.0 y 10.0 (0=sin riesgo, 10=riesgo máximo)"
-}
-```
-
-## Criterios de Severidad
-- **CRITICA (9-10)**: Explotable remotamente, impacto total en confidencialidad/integridad/disponibilidad
-- **ALTA (7-8)**: Explotable con condiciones específicas, impacto significativo
-- **MEDIA (4-6)**: Requiere privilegios o condiciones especiales para explotar
-- **BAJA (1-3)**: Difícil de explotar, impacto limitado
-- **INFORMATIVA**: Mala práctica sin impacto de seguridad directo
-
-## Reglas Importantes
-1. Si NO encuentras vulnerabilidades, devuelve `"vulnerabilidades": []` con `"puntuacion_riesgo": 0.0`
-2. NO inventes vulnerabilidades que no estén en el código (evita falsos positivos)
-3. Reporta tu nivel de confianza honestamente (usa valores bajos si hay ambigüedad)
-4. El campo `codigo_vulnerable` debe contener el fragmento EXACTO del diff
-5. Las recomendaciones deben incluir código Python seguro como ejemplo"""
-
-
-FEW_SHOT_EJEMPLOS = """
-## Ejemplos de Análisis (Few-Shot)
-
-### Ejemplo 1: SQL Injection detectada
-**Diff de entrada:**
-```
-+def buscar_producto(nombre):
-+    query = "SELECT * FROM productos WHERE nombre = '" + nombre + "'"
-+    return db.execute(query)
-```
-
-**Respuesta correcta:**
-```json
-{
-  "vulnerabilidades": [
-    {
-      "tipo": "SQL Injection",
-      "categoria_owasp": "A03:2021 - Injection",
-      "severidad": "CRITICA",
-      "linea_afectada": 2,
-      "descripcion": "La función concatena directamente la entrada del usuario en la query SQL sin sanitización. Un atacante puede inyectar SQL arbitrario, por ejemplo: nombre = \"' OR '1'='1\" para obtener todos los registros, o usar UNION para extraer datos de otras tablas.",
-      "codigo_vulnerable": "query = \"SELECT * FROM productos WHERE nombre = '\" + nombre + \"'\"",
-      "recomendacion": "Usar consultas parametrizadas: `query = 'SELECT * FROM productos WHERE nombre = ?'; db.execute(query, (nombre,))`",
-      "confianza": 0.99
-    }
-  ],
-  "resumen_ejecutivo": "El commit introduce una vulnerabilidad crítica de SQL Injection que permite a cualquier usuario no autenticado leer, modificar o eliminar datos de la base de datos.",
-  "puntuacion_riesgo": 9.5
-}
-```
-
-### Ejemplo 2: Código sin vulnerabilidades
-**Diff de entrada:**
-```
-+def calcular_descuento(precio: float, porcentaje: float) -> float:
-+    if not (0 <= porcentaje <= 100):
-+        raise ValueError("El porcentaje debe estar entre 0 y 100")
-+    return precio * (1 - porcentaje / 100)
-```
-
-**Respuesta correcta:**
-```json
-{
-  "vulnerabilidades": [],
-  "resumen_ejecutivo": "El commit implementa una función de cálculo con validación de entrada adecuada. No se identificaron vulnerabilidades de seguridad.",
-  "puntuacion_riesgo": 0.0
-}
-```
-"""
-
-
-def build_security_prompt(diff: str, incluir_few_shot: bool = True) -> str:
-    """
-    Construye el prompt de usuario para auditoría de seguridad de un diff.
-
-    Args:
-        diff: Texto del diff del commit a analizar.
-        incluir_few_shot: Si True, incluye ejemplos few-shot en el prompt.
-
-    Returns:
-        String con el prompt completo listo para enviar al LLM.
-    """
-    # Truncar diffs muy largos para evitar exceder la ventana de contexto
-    # GPT-4o tiene 128K tokens; 1 token ≈ 4 caracteres, limitamos a ~100K chars
-    MAX_DIFF_CHARS = 80_000
-    if len(diff) > MAX_DIFF_CHARS:
-        diff_truncado = diff[:MAX_DIFF_CHARS] + "\n\n[... DIFF TRUNCADO POR LONGITUD ...]"
-    else:
-        diff_truncado = diff
-
-    partes = []
-
-    if incluir_few_shot:
-        partes.append(FEW_SHOT_EJEMPLOS)
-
-    partes.append(f"""
-## Diff a Analizar
-
-Analiza el siguiente diff de Git e identifica todas las vulnerabilidades de seguridad presentes.
-Recuerda: responde ÚNICAMENTE con el objeto JSON, sin texto adicional.
-
-```diff
-{diff_truncado}
-```
-""")
-
-    return "\n".join(partes)
-
 
 def get_system_prompt() -> str:
-    """Retorna el prompt de sistema para el LLM."""
-    return SYSTEM_PROMPT_SEGURIDAD
+    return SYSTEM_PROMPT_SEGURIDAD.strip()
+
+def build_security_prompt(diff: str, archivos: list[str]) -> str:
+    max_chars = 40_000
+    if len(diff) > max_chars:
+        diff = diff[:max_chars] + "\n\n[DIFF TRUNCADO POR LONGITUD]"
+    archivos_txt = ", ".join(archivos) if archivos else "No especificados"
+    
+    # Almacenamos los bloques de código en variables para no romper el f-string
+    inicio_bloque = "```diff"
+    fin_bloque = "```"
+    
+    return f"""
+Analiza el siguiente diff de Git.
+
+Archivos modificados:
+{archivos_txt}
+
+Identifica vulnerabilidades de seguridad introducidas o evidenciadas por el cambio.
+Para cada vulnerabilidad, incluye tipo, categoria_owasp, severidad, archivo, linea_afectada, descripcion, codigo_vulnerable, recomendacion y confianza.
+
+Diff:
+{inicio_bloque}
+{diff}
+{fin_bloque}
+""".strip()
 ```
 
-#### Verificación
+**✅ Validación del paso:**
+
+```bash
+python -m py_compile prompt_builder.py
+```
+
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
+
+---
+
+### ✅ Paso 2. Prueba la construcción del prompt
+
+**📝 Descripción del paso:**  
+Vas a validar que el prompt incluya el diff y los archivos modificados.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 python -c "
 from prompt_builder import build_security_prompt, get_system_prompt
-prompt = build_security_prompt('+ query = \"SELECT * FROM users WHERE id = \" + user_id')
-print(f'System prompt: {len(get_system_prompt())} caracteres')
-print(f'User prompt: {len(prompt)} caracteres')
-print('Prompt builder OK')
+prompt = build_security_prompt('+ query = \"SELECT * FROM users WHERE id = \" + user_id', ['db_utils.py'])
+print('System prompt chars:', len(get_system_prompt()))
+print('User prompt chars:', len(prompt))
+print(prompt[:500])
 "
 ```
 
+**✅ Validación del paso:**  
+Debes ver el inicio del prompt y la referencia a `db_utils.py`.
+
+**📌 Resultado esperado:**  
+El constructor de prompts está listo para usarse con el motor LLM.
+
 ---
 
-### Paso 5: Implementar el Motor de Auditoría con Soporte Multi-Proveedor
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Objetivo**: Crear la función `audit_commit` que llama al LLM, parsea la respuesta JSON y construye un `AuditReport` validado con Pydantic. Incluir manejo de errores robusto y reintentos con `tenacity`.
+[Explicar la Tarea 6 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%206%20de%20un%20laboratorio%20donde%20constru%C3%AD%20un%20prompt%20especializado%20para%20auditor%C3%ADa%20de%20seguridad%20de%20commits%20con%20enfoque%20OWASP%20Top%2010%20y%20revisi%C3%B3n%20defensiva%20de%20c%C3%B3digo.)
 
-#### Instrucciones
+---
 
-**5.1** Crea el archivo `auditor_engine.py`:
+# 🧩 Tarea 7. Probar una auditoría simulada sin consumir API
+
+## 🎯 Objetivo de la tarea
+
+Validar el flujo de datos con una respuesta simulada antes de llamar al modelo real. Esto reduce errores, costo y dependencia de red.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `fake_auditor.py`
+
+**📝 Descripción del paso:**  
+Vas a crear una función local que simula la respuesta del LLM para un commit vulnerable.
+
+**⚙️ Contenido del paso:**
 
 ```python
-# auditor_engine.py
-"""
-Motor de auditoría de seguridad: llama al LLM y parsea los resultados.
-Soporta OpenAI (GPT-4o) y Anthropic (Claude 3.5 Sonnet).
-"""
-import json
+from models import AuditLLMOutput, CategoriaOWASP, Severidad, Vulnerabilidad
+
+
+def fake_audit_diff(diff: str) -> AuditLLMOutput:
+    if "subprocess.run" in diff or "os.system" in diff:
+        return AuditLLMOutput(
+            vulnerabilidades=[
+                Vulnerabilidad(
+                    tipo="Command Injection",
+                    categoria_owasp=CategoriaOWASP.A03_INJECTION,
+                    severidad=Severidad.CRITICA,
+                    archivo="api_handlers.py",
+                    linea_afectada=None,
+                    descripcion="El código construye comandos del sistema con entrada del usuario y los ejecuta con shell=True u os.system.",
+                    codigo_vulnerable="subprocess.run(cmd, shell=True, capture_output=True, text=True)",
+                    recomendacion="Evita shell=True y usa listas de argumentos validados. Valida user_id y output_format antes de ejecutar cualquier comando.",
+                    confianza=0.95,
+                )
+            ],
+            resumen_ejecutivo="El commit introduce ejecución de comandos con entrada controlada por el usuario.",
+            puntuacion_riesgo=9.5,
+        )
+    return AuditLLMOutput(
+        vulnerabilidades=[],
+        resumen_ejecutivo="No se detectaron vulnerabilidades en la simulación.",
+        puntuacion_riesgo=0.0,
+    )
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -m py_compile fake_auditor.py
+```
+
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
+
+---
+
+### ✅ Paso 2. Prueba la auditoría simulada con el commit más reciente
+
+**📝 Descripción del paso:**  
+Vas a extraer el último commit y auditarlo con la función falsa.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python -c "
+from fake_auditor import fake_audit_diff
+from git_extractor import get_commit_diffs
+commit = get_commit_diffs('./vulnerable_repo', n_commits=1)[0]
+resultado = fake_audit_diff(commit.diff_texto)
+print(resultado.model_dump_json(indent=2))
+"
+```
+
+**✅ Validación del paso:**  
+Debes ver un JSON con una vulnerabilidad de tipo `Command Injection`.
+
+**📌 Resultado esperado:**  
+El flujo local de extracción y validación funciona sin consumir API.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 7 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%207%20de%20un%20laboratorio%20donde%20cre%C3%A9%20una%20auditor%C3%ADa%20simulada%20sin%20consumir%20API%20para%20validar%20el%20flujo%20de%20extracci%C3%B3n%20de%20diffs%2C%20modelos%20Pydantic%20y%20hallazgos%20de%20seguridad.)
+
+---
+
+# 🧩 Tarea 8. Implementar el motor de auditoría con OpenAI y salida estructurada
+
+## 🎯 Objetivo de la tarea
+
+Crear el motor que llama al LLM, fuerza una salida estructurada validada por Pydantic y maneja errores transitorios con reintentos.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `auditor_engine.py`
+
+**📝 Descripción del paso:**  
+Vas a implementar la llamada real al modelo. El resultado se convertirá directamente en un objeto `AuditLLMOutput` validado.
+
+**⚙️ Contenido del paso:**
+
+```python
 import logging
 import os
-import re
-from typing import Optional
-
 from dotenv import load_dotenv
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-)
-
-from models import AuditReport, CommitDiff, Vulnerabilidad, Severidad, CategoriaOWASP
+from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, RateLimitError
+from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_random_exponential
+from models import AuditLLMOutput, AuditReport, CommitDiff
 from prompt_builder import build_security_prompt, get_system_prompt
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-# ── Configuración del proveedor ──────────────────────────────────────────────
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").lower()
+class AuditorConfigurationError(RuntimeError):
+    pass
 
-
-def _get_openai_client():
-    """Inicializa el cliente OpenAI de forma lazy."""
-    from openai import OpenAI
+def get_openai_client() -> OpenAI:
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise EnvironmentError(
-            "OPENAI_API_KEY no está configurada. "
-            "Añádela al archivo .env o como variable de entorno."
-        )
+    if not api_key or api_key.startswith("pega_aqui"):
+        raise AuditorConfigurationError("OPENAI_API_KEY no está configurada correctamente en .env")
     return OpenAI(api_key=api_key)
 
-
-def _get_anthropic_client():
-    """Inicializa el cliente Anthropic de forma lazy."""
-    import anthropic
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise EnvironmentError(
-            "ANTHROPIC_API_KEY no está configurada. "
-            "Añádela al archivo .env o como variable de entorno."
-        )
-    return anthropic.Anthropic(api_key=api_key)
-
-
-# ── Llamadas al LLM con reintentos ───────────────────────────────────────────
-
 @retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-    retry=retry_if_exception_type(Exception),
+    wait=wait_random_exponential(multiplier=1, min=2, max=30),
+    stop=stop_after_attempt(4),
+    retry=retry_if_exception_type((RateLimitError, APIStatusError, APITimeoutError, APIConnectionError)),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
 )
-def _llamar_openai(system_prompt: str, user_prompt: str) -> str:
-    """Llama a GPT-4o con temperatura baja para respuestas deterministas."""
-    client = _get_openai_client()
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        temperature=0.1,   # Baja temperatura: análisis técnico consistente
-        max_tokens=2048,
+def call_openai_structured(system_prompt: str, user_prompt: str) -> AuditLLMOutput:
+    client = get_openai_client()
+    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    response = client.beta.chat.completions.parse(
+        model=model,
+        temperature=0.1,
+        max_tokens=1800,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
+        response_format=AuditLLMOutput,
     )
-    return response.choices[0].message.content or ""
-
-
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-    retry=retry_if_exception_type(Exception),
-    reraise=True,
-)
-def _llamar_anthropic(system_prompt: str, user_prompt: str) -> str:
-    """Llama a Claude 3.5 Sonnet con temperatura baja."""
-    client = _get_anthropic_client()
-    message = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=2048,
-        temperature=0.1,
-        system=system_prompt,
-        messages=[
-            {"role": "user", "content": user_prompt}
-        ],
-    )
-    return message.content[0].text if message.content else ""
-
-
-def _llamar_llm(system_prompt: str, user_prompt: str) -> tuple[str, str, str]:
-    """
-    Llama al LLM configurado y retorna (respuesta_texto, proveedor, modelo).
-    """
-    if LLM_PROVIDER == "anthropic":
-        return _llamar_anthropic(system_prompt, user_prompt), "anthropic", "claude-3-5-sonnet-20241022"
-    else:
-        return _llamar_openai(system_prompt, user_prompt), "openai", "gpt-4o"
-
-
-# ── Parsing de la respuesta JSON ─────────────────────────────────────────────
-
-def _extraer_json_de_respuesta(texto: str) -> dict:
-    """
-    Extrae y parsea el JSON de la respuesta del LLM.
-    Maneja casos donde el LLM incluye texto adicional o bloques de código.
-    """
-    # Intentar parseo directo
-    texto_limpio = texto.strip()
-    try:
-        return json.loads(texto_limpio)
-    except json.JSONDecodeError:
-        pass
-
-    # Buscar JSON dentro de bloques de código ```json ... ```
-    patron_json_block = r"```(?:json)?\s*(\{.*?\})\s*```"
-    match = re.search(patron_json_block, texto_limpio, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    # Buscar el primer objeto JSON en el texto
-    patron_objeto = r"\{.*\}"
-    match = re.search(patron_objeto, texto_limpio, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(0))
-        except json.JSONDecodeError:
-            pass
-
-    raise ValueError(
-        f"No se pudo extraer JSON válido de la respuesta del LLM.\n"
-        f"Primeros 500 caracteres de la respuesta:\n{texto[:500]}"
-    )
-
-
-def _construir_vulnerabilidad(vuln_dict: dict) -> Optional[Vulnerabilidad]:
-    """
-    Construye un objeto Vulnerabilidad desde un diccionario del LLM.
-    Aplica valores por defecto para campos faltantes o inválidos.
-    """
-    try:
-        # Normalizar severidad
-        severidad_str = str(vuln_dict.get("severidad", "MEDIA")).upper()
-        try:
-            severidad = Severidad(severidad_str)
-        except ValueError:
-            logger.warning(f"Severidad desconocida '{severidad_str}', usando MEDIA")
-            severidad = Severidad.MEDIA
-
-        # Normalizar categoría OWASP
-        categoria_str = vuln_dict.get("categoria_owasp", "Desconocida")
-        categoria = CategoriaOWASP.DESCONOCIDA
-        for cat in CategoriaOWASP:
-            if cat.value.lower() in categoria_str.lower() or categoria_str.lower() in cat.value.lower():
-                categoria = cat
-                break
-
-        return Vulnerabilidad(
-            tipo=vuln_dict.get("tipo", "Vulnerabilidad desconocida"),
-            categoria_owasp=categoria,
-            severidad=severidad,
-            linea_afectada=vuln_dict.get("linea_afectada"),
-            descripcion=vuln_dict.get("descripcion", "Sin descripción"),
-            codigo_vulnerable=vuln_dict.get("codigo_vulnerable"),
-            recomendacion=vuln_dict.get("recomendacion", "Revisar manualmente"),
-            confianza=float(vuln_dict.get("confianza", 0.7)),
-        )
-    except Exception as e:
-        logger.error(f"Error construyendo Vulnerabilidad desde dict: {e}\nDict: {vuln_dict}")
-        return None
-
-
-# ── Función principal de auditoría ───────────────────────────────────────────
+    parsed = response.choices[0].message.parsed
+    if parsed is None:
+        raise RuntimeError("El modelo no devolvió una salida estructurada parseable.")
+    return parsed
 
 def audit_commit(commit_diff: CommitDiff) -> AuditReport:
-    """
-    Audita un commit usando el LLM configurado.
-
-    Args:
-        commit_diff: Objeto CommitDiff con el diff y metadata del commit.
-
-    Returns:
-        AuditReport con las vulnerabilidades encontradas y el reporte.
-    """
-    logger.info(
-        f"Auditando commit [{commit_diff.hash_corto}]: {commit_diff.mensaje[:60]}"
-    )
-
+    logger.info("Auditando commit %s", commit_diff.hash_corto)
     system_prompt = get_system_prompt()
-    user_prompt = build_security_prompt(commit_diff.diff_texto, incluir_few_shot=True)
-
+    user_prompt = build_security_prompt(commit_diff.diff_texto, commit_diff.archivos_modificados)
+    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     try:
-        respuesta_texto, proveedor, modelo = _llamar_llm(system_prompt, user_prompt)
-        logger.debug(f"Respuesta del LLM ({len(respuesta_texto)} chars) recibida.")
-
-        datos_json = _extraer_json_de_respuesta(respuesta_texto)
-
-        # Construir lista de vulnerabilidades
-        vulnerabilidades = []
-        for vuln_dict in datos_json.get("vulnerabilidades", []):
-            vuln = _construir_vulnerabilidad(vuln_dict)
-            if vuln:
-                vulnerabilidades.append(vuln)
-
-        puntuacion = float(datos_json.get("puntuacion_riesgo", 0.0))
-        puntuacion = max(0.0, min(10.0, puntuacion))  # Clamp entre 0 y 10
-
-        reporte = AuditReport(
+        output = call_openai_structured(system_prompt, user_prompt)
+        return AuditReport(
             commit=commit_diff,
-            vulnerabilidades=vulnerabilidades,
-            resumen_ejecutivo=datos_json.get("resumen_ejecutivo", ""),
-            puntuacion_riesgo=puntuacion,
-            llm_proveedor=proveedor,
-            llm_modelo=modelo,
+            vulnerabilidades=output.vulnerabilidades,
+            resumen_ejecutivo=output.resumen_ejecutivo,
+            puntuacion_riesgo=output.puntuacion_riesgo,
+            llm_proveedor="openai",
+            llm_modelo=model,
         )
-
-        logger.info(
-            f"Commit [{commit_diff.hash_corto}]: "
-            f"{len(vulnerabilidades)} vulnerabilidades, "
-            f"riesgo={puntuacion:.1f}/10"
-        )
-        return reporte
-
-    except Exception as e:
-        logger.error(f"Error auditando commit [{commit_diff.hash_corto}]: {e}")
+    except Exception as exc:
+        logger.error("Error auditando commit %s: %s", commit_diff.hash_corto, exc)
         return AuditReport(
             commit=commit_diff,
             vulnerabilidades=[],
-            resumen_ejecutivo="",
+            resumen_ejecutivo="La auditoría falló para este commit.",
             puntuacion_riesgo=0.0,
-            llm_proveedor=LLM_PROVIDER,
-            llm_modelo="desconocido",
-            error_auditoria=str(e),
+            llm_proveedor="openai",
+            llm_modelo=model,
+            error_auditoria=str(exc),
         )
 ```
 
-#### Verificación
+**✅ Validación del paso:**
 
 ```bash
-python -c "
-import os
-os.environ.setdefault('LLM_PROVIDER', 'openai')
-from auditor_engine import _extraer_json_de_respuesta
-test_json = '{\"vulnerabilidades\": [], \"resumen_ejecutivo\": \"OK\", \"puntuacion_riesgo\": 0.0}'
-result = _extraer_json_de_respuesta(test_json)
-assert result['puntuacion_riesgo'] == 0.0
-print('Parsing JSON: OK')
-"
+python -m py_compile auditor_engine.py
 ```
+
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
 
 ---
 
-### Paso 6: Generar el Reporte Consolidado en Markdown
+### ✅ Paso 2. Prueba una auditoría real de un solo commit
 
-**Objetivo**: Implementar `generate_markdown_report` que convierte la lista de `AuditReport` en un documento Markdown profesional con tabla de vulnerabilidades, estadísticas por severidad y recomendaciones priorizadas.
+**📝 Descripción del paso:**  
+Vas a probar el motor con el commit más reciente antes de auditar todo el repositorio.
 
-#### Instrucciones
+**⚙️ Contenido del paso:**
 
-**6.1** Crea el archivo `report_generator.py`:
+```bash
+python -c "
+import logging
+from auditor_engine import audit_commit
+from git_extractor import get_commit_diffs
+logging.basicConfig(level=logging.INFO)
+commit = get_commit_diffs('./vulnerable_repo', n_commits=1)[0]
+report = audit_commit(commit)
+print(report.model_dump_json(indent=2))
+"
+```
 
-```python
-# report_generator.py
-"""
-Generador de reportes Markdown consolidados de auditoría de seguridad.
-"""
+**✅ Validación del paso:**  
+Debes obtener un reporte JSON con `commit`, `vulnerabilidades`, `resumen_ejecutivo` y `puntuacion_riesgo`.
+
+**📌 Resultado esperado:**  
+El modelo detecta al menos una vulnerabilidad relacionada con Command Injection en el commit más reciente.
+
+> [!WARNING]
+> Si no detecta la vulnerabilidad, no significa automáticamente que el código esté bien. Registra el caso como posible falso negativo.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 8 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%208%20de%20un%20laboratorio%20donde%20implement%C3%A9%20un%20motor%20de%20auditor%C3%ADa%20con%20OpenAI%2C%20salida%20estructurada%20con%20Pydantic%2C%20temperatura%20baja%20y%20reintentos%20con%20backoff%20exponencial.)
+
+---
+
+# 🧩 Tarea 9. Generar un reporte Markdown profesional
+
+## 🎯 Objetivo de la tarea
+
+Crear un generador de reportes que consolide las auditorías por commit, muestre métricas globales y documente limitaciones.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `report_generator.py`
+
+**📝 Descripción del paso:**  
+Vas a transformar los objetos `AuditReport` en un documento Markdown legible.
+
+**⚙️ Contenido del paso:**
+
+````python
 from datetime import datetime, timezone
 from models import AuditReport, Severidad
 
 
-# Iconos de severidad para el reporte visual
 ICONOS_SEVERIDAD = {
     Severidad.CRITICA: "🔴",
     Severidad.ALTA: "🟠",
@@ -1145,626 +1384,790 @@ ORDEN_SEVERIDAD = [
 ]
 
 
+def md_text(valor) -> str:
+    """
+    Escapa texto para celdas de tabla Markdown.
+    Evita que pipes, saltos de línea o valores None rompan la tabla.
+    """
+    if valor is None:
+        return "N/A"
+
+    texto = str(valor)
+    texto = texto.replace("|", r"\|")
+    texto = texto.replace("\r", "")
+    texto = texto.replace("\n", "<br>")
+    return texto
+
+
+def md_code_inline(valor) -> str:
+    """
+    Formatea texto como código inline seguro.
+    """
+    if valor is None or valor == "":
+        return "`N/A`"
+
+    texto = str(valor)
+    texto = texto.replace("`", r"\`")
+    return f"`{texto}`"
+
+
+def fenced_code(codigo: str, lenguaje: str = "python") -> str:
+    """
+    Genera un bloque de código Markdown seguro para el reporte.
+    Usa ~~~ en lugar de ``` para evitar conflictos al documentar este archivo en README.md.
+    """
+    if not codigo:
+        return ""
+
+    return f"~~~{lenguaje}\n{codigo.rstrip()}\n~~~"
+
+
 def generate_markdown_report(audits: list[AuditReport]) -> str:
-    """
-    Genera un reporte Markdown consolidado de todas las auditorías.
-
-    Args:
-        audits: Lista de AuditReport, uno por commit auditado.
-
-    Returns:
-        String con el reporte completo en formato Markdown.
-    """
     ahora = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    secciones = []
 
-    # ── Encabezado ──────────────────────────────────────────────────────────
-    secciones.append(f"""# 🔐 Reporte de Auditoría de Seguridad
+    partes: list[str] = []
 
-**Generado el:** {ahora}
-**Commits analizados:** {len(audits)}
-**Proveedor LLM:** {audits[0].llm_proveedor if audits else "N/A"} / {audits[0].llm_modelo if audits else "N/A"}
+    total_vulnerabilidades = sum(len(a.vulnerabilidades) for a in audits)
+    max_riesgo = max((a.puntuacion_riesgo for a in audits), default=0.0)
+    errores = [a for a in audits if a.error_auditoria]
+
+    conteo = {s: 0 for s in Severidad}
+
+    for audit in audits:
+        for vuln in audit.vulnerabilidades:
+            conteo[vuln.severidad] += 1
+
+    partes.append(
+        f"""# 🔐 Reporte de Auditoría de Seguridad con LLM
+
+**Generado:** {ahora}  
+**Commits analizados:** {len(audits)}  
+**Total de vulnerabilidades:** {total_vulnerabilidades}  
+**Riesgo máximo:** {max_riesgo:.1f} / 10.0  
+**Errores de auditoría:** {len(errores)}
 
 ---
-""")
 
-    # ── Resumen Ejecutivo Global ─────────────────────────────────────────────
-    total_vulns = sum(len(a.vulnerabilidades) for a in audits)
-    conteo_global = {s: 0 for s in Severidad}
-    for audit in audits:
-        for vuln in audit.vulnerabilidades:
-            conteo_global[vuln.severidad] += 1
-
-    commits_con_errores = [a for a in audits if a.error_auditoria]
-    puntuacion_max = max((a.puntuacion_riesgo for a in audits), default=0.0)
-
-    secciones.append(f"""## 📊 Resumen Ejecutivo
-
-| Métrica | Valor |
-|---|---|
-| Total de vulnerabilidades | **{total_vulns}** |
-| Commits con errores de auditoría | {len(commits_con_errores)} |
-| Puntuación de riesgo máxima | {puntuacion_max:.1f} / 10.0 |
-
-### Distribución por Severidad
+## 📊 Resumen por severidad
 
 | Severidad | Cantidad |
-|---|---|
-""")
+|---|---:|
+"""
+    )
 
-    for sev in ORDEN_SEVERIDAD:
-        icono = ICONOS_SEVERIDAD[sev]
-        count = conteo_global[sev]
-        secciones.append(f"| {icono} **{sev.value}** | {count} |\n")
-
-    secciones.append("\n---\n")
-
-    # ── Tabla Completa de Vulnerabilidades ───────────────────────────────────
-    secciones.append("## 🗂️ Tabla Completa de Vulnerabilidades\n\n")
-
-    todas_vulns = []
-    for audit in audits:
-        for vuln in audit.vulnerabilidades:
-            todas_vulns.append((audit.commit.hash_corto, audit.commit.mensaje[:40], vuln))
-
-    # Ordenar por severidad (más críticas primero)
-    orden_map = {s: i for i, s in enumerate(ORDEN_SEVERIDAD)}
-    todas_vulns.sort(key=lambda x: (orden_map.get(x[2].severidad, 99), -x[2].confianza))
-
-    if todas_vulns:
-        secciones.append(
-            "| Commit | Tipo | OWASP | Severidad | Confianza | Archivo/Línea |\n"
-            "|---|---|---|---|---|---|\n"
+    for severidad in ORDEN_SEVERIDAD:
+        partes.append(
+            f"| {ICONOS_SEVERIDAD[severidad]} {md_text(severidad.value)} | {conteo[severidad]} |\n"
         )
-        for hash_corto, msg, vuln in todas_vulns:
-            icono = ICONOS_SEVERIDAD[vuln.severidad]
-            linea = f"L{vuln.linea_afectada}" if vuln.linea_afectada else "N/A"
-            confianza_pct = f"{vuln.confianza * 100:.0f}%"
-            secciones.append(
-                f"| `{hash_corto}` | {vuln.tipo} | {vuln.categoria_owasp.value} | "
-                f"{icono} {vuln.severidad.value} | {confianza_pct} | {linea} |\n"
+
+    partes.append(
+        """
+
+---
+
+## 🗂️ Tabla consolidada de vulnerabilidades
+
+"""
+    )
+
+    filas = [
+        (audit, vuln)
+        for audit in audits
+        for vuln in audit.vulnerabilidades
+    ]
+
+    if filas:
+        partes.append(
+            "| Commit | Archivo | Tipo | OWASP | Severidad | Confianza |\n"
+            "|---|---|---|---|---|---:|\n"
+        )
+
+        for audit, vuln in filas:
+            icono = ICONOS_SEVERIDAD.get(vuln.severidad, "⚪")
+
+            partes.append(
+                f"| {md_code_inline(audit.commit.hash_corto)} "
+                f"| {md_code_inline(vuln.archivo or 'N/A')} "
+                f"| {md_text(vuln.tipo)} "
+                f"| {md_text(vuln.categoria_owasp.value)} "
+                f"| {icono} {md_text(vuln.severidad.value)} "
+                f"| {vuln.confianza:.2f} |\n"
             )
     else:
-        secciones.append("*No se encontraron vulnerabilidades en los commits analizados.*\n")
+        partes.append("No se encontraron vulnerabilidades.\n")
 
-    secciones.append("\n---\n")
+    partes.append(
+        """
 
-    # ── Detalle por Commit ───────────────────────────────────────────────────
-    secciones.append("## 🔍 Análisis Detallado por Commit\n\n")
+---
+
+## 🔍 Análisis detallado por commit
+
+"""
+    )
 
     for audit in audits:
         commit = audit.commit
-        icono_riesgo = "🔴" if audit.puntuacion_riesgo >= 7 else ("🟠" if audit.puntuacion_riesgo >= 4 else "🟢")
 
-        secciones.append(f"""### {icono_riesgo} Commit `{commit.hash_corto}` — {commit.mensaje[:60]}
+        if audit.puntuacion_riesgo >= 7:
+            riesgo_icono = "🔴"
+        elif audit.puntuacion_riesgo >= 4:
+            riesgo_icono = "🟠"
+        else:
+            riesgo_icono = "🟢"
+
+        archivos_modificados = ", ".join(
+            md_code_inline(archivo)
+            for archivo in commit.archivos_modificados
+        )
+
+        partes.append(
+            f"""### {riesgo_icono} Commit {md_code_inline(commit.hash_corto)} — {md_text(commit.mensaje)}
 
 | Campo | Valor |
 |---|---|
-| **Hash completo** | `{commit.commit_hash}` |
-| **Autor** | {commit.autor} ({commit.email_autor}) |
-| **Fecha** | {commit.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")} |
-| **Archivos modificados** | {", ".join(f"`{f}`" for f in commit.archivos_modificados) or "N/A"} |
-| **Puntuación de riesgo** | {audit.puntuacion_riesgo:.1f} / 10.0 |
-| **Vulnerabilidades encontradas** | {len(audit.vulnerabilidades)} |
+| Hash completo | {md_code_inline(commit.commit_hash)} |
+| Autor | {md_text(commit.autor)} ({md_text(commit.email_autor)}) |
+| Fecha | {commit.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')} |
+| Archivos modificados | {archivos_modificados or "N/A"} |
+| Puntuación de riesgo | {audit.puntuacion_riesgo:.1f} / 10.0 |
+| Vulnerabilidades | {len(audit.vulnerabilidades)} |
 
-""")
+"""
+        )
 
         if audit.error_auditoria:
-            secciones.append(f"> ⚠️ **Error durante la auditoría:** `{audit.error_auditoria}`\n\n")
+            partes.append(
+                f"> ⚠️ Error de auditoría: {md_code_inline(audit.error_auditoria)}\n\n"
+            )
             continue
 
         if audit.resumen_ejecutivo:
-            secciones.append(f"**Resumen:** {audit.resumen_ejecutivo}\n\n")
+            partes.append(
+                f"**Resumen ejecutivo:** {audit.resumen_ejecutivo}\n\n"
+            )
 
         if not audit.vulnerabilidades:
-            secciones.append("✅ No se detectaron vulnerabilidades en este commit.\n\n")
-        else:
-            for i, vuln in enumerate(audit.vulnerabilidades, 1):
-                icono = ICONOS_SEVERIDAD[vuln.severidad]
-                secciones.append(f"""#### {icono} Vulnerabilidad {i}: {vuln.tipo}
+            partes.append(
+                "✅ No se detectaron vulnerabilidades en este commit.\n\n"
+            )
 
-- **Severidad:** {vuln.severidad.value}
-- **Categoría OWASP:** {vuln.categoria_owasp.value}
-- **Línea afectada:** {vuln.linea_afectada or "No especificada"}
-- **Confianza del LLM:** {vuln.confianza * 100:.0f}%
+        for i, vuln in enumerate(audit.vulnerabilidades, start=1):
+            icono = ICONOS_SEVERIDAD.get(vuln.severidad, "⚪")
 
-**Descripción:**
+            partes.append(
+                f"""#### {icono} Vulnerabilidad {i}: {md_text(vuln.tipo)}
+
+- **Archivo:** {md_code_inline(vuln.archivo or "No especificado")}
+- **Severidad:** {md_text(vuln.severidad.value)}
+- **Categoría OWASP:** {md_text(vuln.categoria_owasp.value)}
+- **Línea afectada:** {md_text(vuln.linea_afectada or "No especificada")}
+- **Confianza:** {vuln.confianza:.2f}
+
+**Descripción:**  
 {vuln.descripcion}
 
-""")
-                if vuln.codigo_vulnerable:
-                    secciones.append(f"""**Código vulnerable:**
-```python
-{vuln.codigo_vulnerable}
-```
+"""
+            )
 
-""")
-                secciones.append(f"""**Recomendación:**
+            if vuln.codigo_vulnerable:
+                partes.append(
+                    "**Código vulnerable:**\n\n"
+                    f"{fenced_code(vuln.codigo_vulnerable, 'python')}\n\n"
+                )
+
+            if vuln.recomendacion:
+                partes.append(
+                    f"""**Recomendación:**  
 {vuln.recomendacion}
 
-""")
+"""
+                )
 
-        secciones.append("---\n\n")
+    partes.append(
+        """---
 
-    # ── Recomendaciones Priorizadas ──────────────────────────────────────────
-    secciones.append("## 🎯 Recomendaciones Priorizadas\n\n")
+## ⚠️ Limitaciones de la auditoría con LLM
 
-    vulns_criticas_altas = [
-        (hash_corto, vuln)
-        for hash_corto, _, vuln in todas_vulns
-        if vuln.severidad in (Severidad.CRITICA, Severidad.ALTA)
-    ]
+Este reporte fue generado por IA generativa y debe ser revisado por una persona con criterio técnico.
 
-    if vulns_criticas_altas:
-        secciones.append("Las siguientes vulnerabilidades requieren atención **inmediata**:\n\n")
-        for i, (hash_corto, vuln) in enumerate(vulns_criticas_altas, 1):
-            icono = ICONOS_SEVERIDAD[vuln.severidad]
-            secciones.append(
-                f"{i}. {icono} **[`{hash_corto}`] {vuln.tipo}** "
-                f"({vuln.categoria_owasp.value}): {vuln.recomendacion[:150]}...\n\n"
-            )
-    else:
-        secciones.append("✅ No se identificaron vulnerabilidades críticas o altas que requieran atención inmediata.\n\n")
-
-    # ── Advertencia sobre Limitaciones de la IA ──────────────────────────────
-    secciones.append("""---
-
-## ⚠️ Limitaciones y Consideraciones
-
-> **Este reporte fue generado por un modelo de IA Generativa y NO reemplaza una auditoría de seguridad profesional.**
-
-### Limitaciones conocidas de la auditoría con LLM:
-
-| Limitación | Descripción | Mitigación recomendada |
+| Limitación | Riesgo | Mitigación |
 |---|---|---|
-| **Falsos positivos** | El LLM puede reportar vulnerabilidades en código que en realidad es seguro por contexto | Verificar manualmente cada hallazgo antes de actuar |
-| **Falsos negativos** | Vulnerabilidades complejas o de lógica de negocio pueden no ser detectadas | Complementar con herramientas SAST (Bandit, Semgrep) |
-| **Alucinaciones** | El modelo puede inventar detalles de vulnerabilidades que no existen | Validar el fragmento de código citado existe en el diff real |
-| **Contexto limitado** | El análisis es por commit, sin visión del sistema completo | Realizar revisiones de arquitectura periódicas |
-| **Versiones de dependencias** | No analiza CVEs en dependencias de terceros | Usar `pip-audit` o Dependabot complementariamente |
-
-### Herramientas complementarias recomendadas:
-- **Bandit**: `pip install bandit && bandit -r ./tu_proyecto`
-- **Semgrep**: `semgrep --config=p/python-security ./tu_proyecto`
-- **pip-audit**: `pip install pip-audit && pip-audit`
-""")
-
-    return "".join(secciones)
-```
-
-#### Verificación
-
-```bash
-python -c "
-from report_generator import generate_markdown_report
-from models import AuditReport, CommitDiff
-from datetime import datetime, timezone
-
-# Crear un reporte de prueba mínimo
-commit = CommitDiff(
-    commit_hash='abc123def456',
-    hash_corto='abc123de',
-    autor='Test User',
-    mensaje='test commit',
-    timestamp=datetime.now(tz=timezone.utc),
-    diff_texto='+ print(\"hello\")',
-)
-audit = AuditReport(commit=commit, llm_proveedor='openai', llm_modelo='gpt-4o')
-reporte = generate_markdown_report([audit])
-assert '# 🔐 Reporte de Auditoría de Seguridad' in reporte
-print('Report generator OK')
-"
-```
+| Falsos positivos | El modelo puede reportar hallazgos que no son explotables en el contexto real | Revisar manualmente cada hallazgo |
+| Falsos negativos | El modelo puede omitir vulnerabilidades reales | Complementar con Bandit, Semgrep y revisión humana |
+| Contexto limitado | El análisis por commit no entiende toda la arquitectura | Revisar módulos completos y flujos críticos |
+| Variabilidad del modelo | Dos ejecuciones pueden producir diferencias | Usar temperatura baja y salida estructurada |
+| Costos y límites | Auditar muchos commits puede consumir saldo | Limitar commits, truncar diffs y auditar por lotes |
 
 ---
 
-### Paso 7: Ensamblar el Script Principal y Ejecutar la Auditoría
+## 🧰 Herramientas complementarias sugeridas
 
-**Objetivo**: Crear el script orquestador `security_auditor.py` que integra todos los módulos, ejecuta la auditoría de los 3 commits más recientes y guarda el reporte.
+**Bandit**
 
-#### Instrucciones
+~~~bash
+pip install bandit
+bandit -r vulnerable_repo
+~~~
 
-**7.1** Crea el archivo `security_auditor.py`:
+**Semgrep**
+
+~~~bash
+semgrep --config=p/python vulnerable_repo
+~~~
+
+**Compilación del generador**
+
+~~~bash
+python -m py_compile report_generator.py
+~~~
+
+---
+
+## ✅ Cierre del reporte
+
+Usa este reporte como punto de partida para priorizar remediaciones, no como veredicto final de seguridad.
+"""
+    )
+
+    return "".join(partes).strip()
+````
+
+**✅ Validación del paso:**
+
+```bash
+python -m py_compile report_generator.py
+```
+
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
+
+---
+
+### ✅ Paso 2. Prueba el generador con datos simulados
+
+**📝 Descripción del paso:**  
+Vas a crear un reporte mínimo para confirmar que el generador produce Markdown válido.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python -c "
+from datetime import datetime, timezone
+from models import AuditReport, CommitDiff
+from report_generator import generate_markdown_report
+commit = CommitDiff(commit_hash='abc123', hash_corto='abc123', autor='Lab Student', email_autor='lab@example.com', mensaje='test commit', timestamp=datetime.now(tz=timezone.utc), diff_texto='+ print(\"test\")', archivos_modificados=['test.py'])
+report = AuditReport(commit=commit, resumen_ejecutivo='Prueba local', puntuacion_riesgo=0.0)
+markdown = generate_markdown_report([report])
+print(markdown[:800])
+"
+```
+
+**✅ Validación del paso:**  
+El texto debe iniciar con `# 🔐 Reporte de Auditoría de Seguridad con LLM`.
+
+**📌 Resultado esperado:**  
+El generador de reportes funciona correctamente.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 9 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%209%20de%20un%20laboratorio%20donde%20cre%C3%A9%20un%20generador%20de%20reportes%20Markdown%20para%20auditor%C3%ADas%20de%20seguridad%20con%20LLM%2C%20incluyendo%20resumen%20por%20severidad%2C%20tabla%20de%20vulnerabilidades%2C%20detalle%20por%20commit%20y%20limitaciones.)
+
+---
+
+# 🧩 Tarea 10. Ensamblar el pipeline principal
+
+## 🎯 Objetivo de la tarea
+
+Crear el script principal que orquesta extracción de commits, auditoría con LLM y generación de reporte Markdown.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `security_auditor.py`
+
+**📝 Descripción del paso:**  
+Vas a construir el punto de entrada del laboratorio.
+
+**⚙️ Contenido del paso:**
 
 ```python
-#!/usr/bin/env python3
-# security_auditor.py
-"""
-Pipeline principal de auditoría de seguridad con LLM.
-
-Uso:
-    python security_auditor.py --repo ./vulnerable_repo --commits 3
-    python security_auditor.py --repo ./vulnerable_repo --commits 5 --output mi_reporte.md
-"""
 import argparse
 import logging
+import os
 import sys
 import time
 from pathlib import Path
-
 from dotenv import load_dotenv
-
-from git_extractor import get_commit_diffs
 from auditor_engine import audit_commit
+from git_extractor import get_commit_diffs
 from report_generator import generate_markdown_report
 
-# Configurar logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
+load_dotenv()
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", handlers=[logging.StreamHandler(sys.stdout)])
 logger = logging.getLogger("security_auditor")
 
-load_dotenv()
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Pipeline de auditoría de seguridad con LLM para commits de Git")
+    parser.add_argument("--repo", default="./vulnerable_repo", help="Ruta al repositorio Git que quieres auditar.")
+    parser.add_argument("--commits", type=int, default=int(os.getenv("MAX_COMMITS_DEFAULT", "3")), help="Número de commits a auditar desde el más reciente.")
+    parser.add_argument("--output", default="", help="Ruta del reporte Markdown de salida.")
+    return parser.parse_args()
 
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Pipeline de auditoría de seguridad con LLM para commits de Git"
-    )
-    parser.add_argument(
-        "--repo",
-        type=str,
-        default="./vulnerable_repo",
-        help="Ruta al repositorio Git a auditar (default: ./vulnerable_repo)",
-    )
-    parser.add_argument(
-        "--commits",
-        type=int,
-        default=3,
-        help="Número de commits a auditar desde el más reciente (default: 3)",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="",
-        help="Ruta del archivo de salida Markdown (default: reports/audit_TIMESTAMP.md)",
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Mostrar logs de debug",
-    )
-    args = parser.parse_args()
-
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-
-    print("\n" + "═" * 60)
+def main() -> int:
+    args = parse_args()
+    print("\n" + "═" * 70)
     print("  🔐 Pipeline de Auditoría de Seguridad con LLM")
-    print("═" * 60)
+    print("═" * 70)
     print(f"  Repositorio : {args.repo}")
     print(f"  Commits     : {args.commits}")
-    print("═" * 60 + "\n")
-
-    # ── Paso 1: Extraer diffs ────────────────────────────────────────────────
-    logger.info("Extrayendo diffs del repositorio Git...")
+    print("═" * 70 + "\n")
     try:
         commit_diffs = get_commit_diffs(args.repo, n_commits=args.commits)
-    except Exception as e:
-        logger.error(f"Error al extraer diffs: {e}")
-        sys.exit(1)
-
+    except Exception as exc:
+        logger.error("No se pudieron extraer commits: %s", exc)
+        return 1
     if not commit_diffs:
         logger.warning("No se encontraron commits para auditar.")
-        sys.exit(0)
-
-    print(f"✅ {len(commit_diffs)} commits extraídos correctamente.\n")
-
-    # ── Paso 2: Auditar cada commit ──────────────────────────────────────────
+        return 0
+    print(f"✅ Commits extraídos: {len(commit_diffs)}\n")
     audit_reports = []
-    for i, commit_diff in enumerate(commit_diffs, 1):
-        print(f"🔍 [{i}/{len(commit_diffs)}] Auditando: [{commit_diff.hash_corto}] {commit_diff.mensaje[:55]}")
-        inicio = time.time()
-
+    for index, commit_diff in enumerate(commit_diffs, start=1):
+        print(f"🔍 [{index}/{len(commit_diffs)}] Auditando commit `{commit_diff.hash_corto}`: {commit_diff.mensaje}")
+        inicio = time.perf_counter()
         report = audit_commit(commit_diff)
-        elapsed = time.time() - inicio
-
-        vulns_count = len(report.vulnerabilidades)
-        riesgo = report.puntuacion_riesgo
-
-        if report.error_auditoria:
-            print(f"   ⚠️  Error: {report.error_auditoria[:80]}")
-        else:
-            icono = "🔴" if riesgo >= 7 else ("🟠" if riesgo >= 4 else "🟢")
-            print(f"   {icono} Riesgo: {riesgo:.1f}/10 | Vulnerabilidades: {vulns_count} | {elapsed:.1f}s")
-
+        elapsed = time.perf_counter() - inicio
         audit_reports.append(report)
-
-        # Pequeña pausa entre llamadas para evitar rate limiting
-        if i < len(commit_diffs):
-            time.sleep(1.0)
-
-    # ── Paso 3: Generar reporte Markdown ─────────────────────────────────────
-    logger.info("Generando reporte Markdown consolidado...")
-    reporte_md = generate_markdown_report(audit_reports)
-
-    # Determinar ruta de salida
+        if report.error_auditoria:
+            print(f"   ⚠️ Error: {report.error_auditoria[:120]}")
+        else:
+            icono = "🔴" if report.puntuacion_riesgo >= 7 else "🟠" if report.puntuacion_riesgo >= 4 else "🟢"
+            print(f"   {icono} Riesgo: {report.puntuacion_riesgo:.1f}/10 | Vulnerabilidades: {len(report.vulnerabilidades)} | Tiempo: {elapsed:.1f}s")
+        if index < len(commit_diffs):
+            time.sleep(1)
+    markdown = generate_markdown_report(audit_reports)
     if args.output:
         output_path = Path(args.output)
     else:
-        reports_dir = Path("reports")
-        reports_dir.mkdir(exist_ok=True)
+        output_dir = Path("reports")
+        output_dir.mkdir(exist_ok=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        output_path = reports_dir / f"audit_{timestamp}.md"
-
+        output_path = output_dir / f"audit_{timestamp}.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(reporte_md, encoding="utf-8")
-
-    # ── Resumen final ────────────────────────────────────────────────────────
-    total_vulns = sum(len(r.vulnerabilidades) for r in audit_reports)
-    print("\n" + "═" * 60)
+    output_path.write_text(markdown, encoding="utf-8")
+    total_vulns = sum(len(report.vulnerabilidades) for report in audit_reports)
+    print("\n" + "═" * 70)
     print("  ✅ Auditoría completada")
-    print("═" * 60)
-    print(f"  Commits auditados     : {len(audit_reports)}")
-    print(f"  Total vulnerabilidades: {total_vulns}")
-    print(f"  Reporte guardado en   : {output_path.resolve()}")
-    print("═" * 60 + "\n")
-
+    print("═" * 70)
+    print(f"  Commits auditados      : {len(audit_reports)}")
+    print(f"  Vulnerabilidades       : {total_vulns}")
+    print(f"  Reporte generado       : {output_path.resolve()}")
+    print("═" * 70 + "\n")
     return 0
 
-
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
 ```
 
-**7.2** Ejecuta la auditoría con los 3 commits más recientes:
+**✅ Validación del paso:**
 
 ```bash
-python security_auditor.py --repo ./vulnerable_repo --commits 3
+python -m py_compile security_auditor.py
 ```
 
-#### Salida esperada
-
-```
-════════════════════════════════════════════════════════════
-  🔐 Pipeline de Auditoría de Seguridad con LLM
-════════════════════════════════════════════════════════════
-  Repositorio : ./vulnerable_repo
-  Commits     : 3
-════════════════════════════════════════════════════════════
-
-✅ 3 commits extraídos correctamente.
-
-🔍 [1/3] Auditando: [a3f9c21] feat: add REST API handlers with paginati
-   🔴 Riesgo: 9.2/10 | Vulnerabilidades: 3 | 8.4s
-🔍 [2/3] Auditando: [b7e2d18] feat: add session management with cookie-b
-   🔴 Riesgo: 9.5/10 | Vulnerabilidades: 2 | 7.1s
-🔍 [3/3] Auditando: [c1a4f09] feat: implement file upload and report down
-   🔴 Riesgo: 8.8/10 | Vulnerabilidades: 3 | 7.8s
-
-════════════════════════════════════════════════════════════
-  ✅ Auditoría completada
-════════════════════════════════════════════════════════════
-  Commits auditados     : 3
-  Total vulnerabilidades: 8
-  Reporte guardado en   : /ruta/a/tu/lab/reports/audit_20241201_143022.md
-════════════════════════════════════════════════════════════
-```
-
-> ⏱️ **Nota**: Los tiempos por commit dependen de la latencia de la API. Espera entre 5–15 segundos por commit.
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
 
 ---
 
-### Paso 8: Configurar como Pre-commit Hook (Opcional)
+### ✅ Paso 2. Ejecuta la auditoría de 1 commit
 
-**Objetivo**: Configurar el pipeline como hook de Git para que se ejecute automáticamente antes de cada commit.
+**📝 Descripción del paso:**  
+Vas a probar una ejecución pequeña para controlar costo y validar funcionamiento.
 
-#### Instrucciones
-
-**8.1** Crea el script del hook en el repositorio vulnerable:
+**⚙️ Contenido del paso:**
 
 ```bash
-# Crear el hook pre-commit en el repositorio de ejemplo
-cat > vulnerable_repo/.git/hooks/pre-commit << 'HOOK'
-#!/bin/bash
-# pre-commit hook: Auditoría de seguridad automática con LLM
-# Analiza solo el último commit (el que se está a punto de crear)
+python security_auditor.py --repo ./vulnerable_repo --commits 1 --output reports/audit_1_commit.md
+```
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-AUDITOR="$SCRIPT_DIR/security_auditor.py"
-REPO_DIR="$(pwd)"
+**✅ Validación del paso:**
 
-echo "🔐 Ejecutando auditoría de seguridad pre-commit..."
+```bash
+ls reports
+```
 
-# Activar entorno virtual si existe
-if [ -f "$SCRIPT_DIR/.venv/bin/activate" ]; then
-    source "$SCRIPT_DIR/.venv/bin/activate"
-fi
+**📌 Resultado esperado:**  
+Existe el archivo `audit_1_commit.md`.
 
-# Ejecutar auditoría del último commit staged
-python "$AUDITOR" --repo "$REPO_DIR" --commits 1 --output /tmp/pre-commit-audit.md
+---
 
-EXIT_CODE=$?
+### ✅ Paso 3. Abre el reporte en VS Code
 
-if [ $EXIT_CODE -ne 0 ]; then
-    echo "❌ Error en la auditoría. Revisa el log."
-    exit 1
-fi
+**📝 Descripción del paso:**  
+Vas a revisar visualmente el reporte generado.
 
-echo "📄 Reporte guardado en: /tmp/pre-commit-audit.md"
-echo "⚠️  Revisa el reporte antes de hacer push a producción."
-# Para bloquear el commit si hay vulnerabilidades críticas, cambiar la siguiente línea a: exit 1
-exit 0
-HOOK
+**⚙️ Contenido del paso:**
 
-chmod +x vulnerable_repo/.git/hooks/pre-commit
-echo "✅ Pre-commit hook configurado correctamente."
+```bash
+code reports/audit_1_commit.md
+```
+
+En VS Code, abre la vista previa de Markdown con `Ctrl + Shift + V`.
+
+**✅ Validación del paso:**  
+El reporte debe mostrar resumen, tabla de severidad y análisis por commit.
+
+**📌 Resultado esperado:**  
+Puedes leer el reporte Markdown de forma clara.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 10 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2010%20de%20un%20laboratorio%20donde%20ensambl%C3%A9%20un%20pipeline%20principal%20que%20extrae%20commits%20de%20Git%2C%20los%20audita%20con%20un%20LLM%20y%20genera%20un%20reporte%20Markdown%20de%20seguridad.)
+
+---
+
+# 🧩 Tarea 11. Ejecutar la auditoría completa y evaluar resultados
+
+## 🎯 Objetivo de la tarea
+
+Auditar los 5 commits vulnerables, revisar el reporte generado y comparar hallazgos esperados contra hallazgos detectados por el LLM.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Ejecuta la auditoría completa
+
+**📝 Descripción del paso:**  
+Vas a analizar los 5 commits del repositorio vulnerable.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python security_auditor.py --repo ./vulnerable_repo --commits 5 --output reports/audit_completa.md
+```
+
+**✅ Validación del paso:**
+
+```bash
+test -f reports/audit_completa.md && echo "Reporte generado correctamente"
+```
+
+**📌 Resultado esperado:**
+
+```text
+Reporte generado correctamente
 ```
 
 ---
 
-## 7. Validación y Pruebas
+### ✅ Paso 2. Verifica la estructura del reporte
 
-### Prueba 1: Verificar detección de SQL Injection
+**📝 Descripción del paso:**  
+Vas a comprobar que el reporte contiene las secciones esperadas.
 
-```bash
-# Auditar específicamente el commit con SQL Injection (el más antiguo)
-python security_auditor.py --repo ./vulnerable_repo --commits 5 \
-  --output reports/full_audit.md
-
-# Verificar que el reporte menciona SQL Injection
-grep -i "SQL Injection" reports/full_audit.md && echo "✅ SQL Injection detectado" \
-  || echo "❌ SQL Injection NO detectado (posible falso negativo)"
-```
-
-### Prueba 2: Verificar detección de Hardcoded Credentials
-
-```bash
-grep -i "hardcoded\|credential\|AWS_SECRET\|contraseña" reports/full_audit.md \
-  && echo "✅ Credenciales hardcodeadas detectadas" \
-  || echo "❌ Credenciales NO detectadas"
-```
-
-### Prueba 3: Verificar estructura del reporte
+**⚙️ Contenido del paso:**
 
 ```bash
 python -c "
-reporte = open('reports/full_audit.md').read()
-checks = [
-    ('Encabezado principal', '# 🔐 Reporte de Auditoría'),
-    ('Tabla de vulnerabilidades', '## 🗂️ Tabla Completa'),
-    ('Análisis por commit', '## 🔍 Análisis Detallado'),
-    ('Recomendaciones', '## 🎯 Recomendaciones'),
-    ('Advertencia limitaciones', '## ⚠️ Limitaciones'),
-]
-for nombre, patron in checks:
-    estado = '✅' if patron in reporte else '❌'
-    print(f'{estado} {nombre}')
+from pathlib import Path
+reporte = Path('reports/audit_completa.md').read_text(encoding='utf-8')
+checks = ['# 🔐 Reporte de Auditoría de Seguridad con LLM', '## 📊 Resumen por severidad', '## 🗂️ Tabla consolidada de vulnerabilidades', '## 🔍 Análisis detallado por commit', '## ⚠️ Limitaciones de la auditoría con LLM']
+for check in checks:
+    print(('✅' if check in reporte else '❌'), check)
 "
 ```
 
-### Prueba 4: Auditar los 5 commits y documentar fallos
+**✅ Validación del paso:**  
+Todas las líneas deben iniciar con ✅.
 
-```bash
-# Ejecutar auditoría completa
-python security_auditor.py --repo ./vulnerable_repo --commits 5 \
-  --output reports/audit_completa.md --verbose
+**📌 Resultado esperado:**  
+La estructura del reporte es correcta.
 
-# Contar vulnerabilidades encontradas vs. esperadas (5 commits, ~10 vulnerabilidades)
-python -c "
-reporte = open('reports/audit_completa.md').read()
-import re
-vulns = re.findall(r'Vulnerabilidad \d+:', reporte)
-print(f'Vulnerabilidades reportadas: {len(vulns)}')
-print(f'Esperadas (mínimo): 5 (una por commit)')
-print(f'Cobertura estimada: {min(100, len(vulns)/5*100):.0f}%')
-"
-```
+---
 
-**Tabla de resultados esperados vs. observados** (completa durante el lab):
+### ✅ Paso 3. Crea una tabla de evaluación manual
 
-| Commit | Vulnerabilidad Esperada | Detectada por LLM | Severidad Reportada | Notas |
+**📝 Descripción del paso:**  
+Vas a documentar si el LLM detectó las vulnerabilidades esperadas.
+
+**⚙️ Contenido del paso:**  
+Crea el archivo `evaluacion_hallazgos.md` y complétalo con base en `reports/audit_completa.md`:
+
+```markdown
+# Evaluación de hallazgos esperados vs. detectados
+
+| Commit / Archivo | Vulnerabilidad esperada | ¿Detectada por el LLM? | Severidad reportada | Comentario |
 |---|---|---|---|---|
-| `e5c9a11` | SQL Injection | ✅/❌ | — | |
-| `d8b3e52` | Hardcoded Credentials | ✅/❌ | — | |
-| `c1a4f09` | Path Traversal | ✅/❌ | — | |
-| `b7e2d18` | Insecure Deserialization | ✅/❌ | — | |
-| `a3f9c21` | Command Injection | ✅/❌ | — | |
+| db_utils.py | SQL Injection | Sí/No/Parcial | — | — |
+| config.py | Credenciales hardcodeadas | Sí/No/Parcial | — | — |
+| file_handler.py | Path Traversal | Sí/No/Parcial | — | — |
+| session_manager.py | Insecure Deserialization | Sí/No/Parcial | — | — |
+| api_handlers.py | Command Injection | Sí/No/Parcial | — | — |
+
+## Observaciones
+
+- Posibles falsos positivos:
+- Posibles falsos negativos:
+- Hallazgos mejor explicados:
+- Hallazgos que requieren revisión humana:
+- Mejoras sugeridas al prompt:
+```
+
+**✅ Validación del paso:**  
+La tabla debe tener una fila por cada vulnerabilidad esperada.
+
+**📌 Resultado esperado:**  
+Tienes una evaluación crítica, no solo un reporte automático.
 
 ---
 
-## 8. Solución de Problemas
+### ✅ Paso 4. Busca hallazgos clave en el reporte
 
-### Problema 1: `JSONDecodeError` — El LLM no devuelve JSON válido
+**📝 Descripción del paso:**  
+Vas a usar búsquedas simples para ubicar vulnerabilidades específicas.
 
-**Síntoma:**
+**⚙️ Contenido del paso:**
+
+```bash
+grep -i "SQL Injection\|Command Injection\|Path Traversal\|pickle\|credential\|credencial" reports/audit_completa.md
 ```
-ValueError: No se pudo extraer JSON válido de la respuesta del LLM.
-Primeros 500 caracteres de la respuesta:
-Claro, aquí está mi análisis del código...
-```
 
-**Causa:**
-El LLM ignoró la instrucción de responder únicamente con JSON y añadió texto introductorio. Esto ocurre con mayor frecuencia cuando el diff es muy largo o cuando el modelo recibe un contexto confuso.
+**✅ Validación del paso:**  
+El comando debe mostrar líneas relacionadas con varias vulnerabilidades.
 
-**Solución:**
-1. Verifica que el `SYSTEM_PROMPT_SEGURIDAD` en `prompt_builder.py` incluye la instrucción `"responde ÚNICAMENTE con el objeto JSON"`.
-2. Reduce el tamaño del diff truncando a menos caracteres: en `build_security_prompt`, cambia `MAX_DIFF_CHARS = 80_000` a `MAX_DIFF_CHARS = 40_000`.
-3. Añade `response_format={"type": "json_object"}` al llamado de OpenAI (solo disponible en GPT-4o y gpt-3.5-turbo-1106+):
-```python
-response = client.chat.completions.create(
-    model="gpt-4o",
-    temperature=0.1,
-    max_tokens=2048,
-    response_format={"type": "json_object"},  # ← Añadir esta línea
-    messages=[...]
-)
-```
-4. Si el problema persiste, activa `--verbose` para ver la respuesta completa del LLM y ajusta el prompt manualmente.
+**📌 Resultado esperado:**  
+Puedes confirmar de forma rápida si el LLM reportó hallazgos clave.
 
 ---
 
-### Problema 2: `InvalidGitRepositoryError` al ejecutar el pipeline
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Síntoma:**
-```
-git.exc.InvalidGitRepositoryError: /ruta/a/vulnerable_repo es un repositorio inválido
-```
-o
-```
-FileNotFoundError: Ruta no encontrada: /ruta/a/vulnerable_repo
-```
-
-**Causa:**
-La ruta al repositorio es incorrecta, el directorio no existe, o el repositorio no fue inicializado correctamente en el Paso 1 (falta el `git init`).
-
-**Solución:**
-1. Verifica que el directorio existe y tiene un subdirectorio `.git`:
-```bash
-ls -la vulnerable_repo/
-ls -la vulnerable_repo/.git/
-```
-2. Confirma la ruta absoluta y úsala explícitamente:
-```bash
-pwd  # Obtener directorio actual
-python security_auditor.py --repo $(pwd)/vulnerable_repo --commits 3
-```
-3. Si el directorio `.git` no existe, repite el Paso 1 completo:
-```bash
-rm -rf vulnerable_repo/
-# Volver a ejecutar los comandos del Paso 1
-```
-4. Verifica que hay al menos 1 commit en el repositorio:
-```bash
-cd vulnerable_repo && git log --oneline && cd ..
-```
+[Explicar la Tarea 11 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2011%20de%20un%20laboratorio%20donde%20ejecut%C3%A9%20una%20auditor%C3%ADa%20completa%20de%205%20commits%20vulnerables%2C%20revis%C3%A9%20el%20reporte%20Markdown%20y%20compar%C3%A9%20hallazgos%20esperados%20contra%20hallazgos%20detectados%20por%20el%20LLM.)
 
 ---
 
-## 9. Limpieza del Entorno
+# 🧩 Tarea 12. Validar funcionamiento y preparar entrega
 
-Una vez completado el laboratorio, ejecuta los siguientes comandos para limpiar los recursos generados:
+## 🎯 Objetivo de la tarea
+
+Confirmar que todos los scripts compilan, que el reporte existe, que las evidencias son seguras y que no se entrega ningún secreto.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Valida que todos los scripts compilen
+
+**📝 Descripción del paso:**  
+Vas a verificar que los archivos Python no tengan errores de sintaxis.
+
+**⚙️ Contenido del paso:**
 
 ```bash
-# 1. Desactivar el entorno virtual
+python -m py_compile 00_validar_entorno.py
+python -m py_compile models.py
+python -m py_compile git_extractor.py
+python -m py_compile prompt_builder.py
+python -m py_compile fake_auditor.py
+python -m py_compile auditor_engine.py
+python -m py_compile report_generator.py
+python -m py_compile security_auditor.py
+```
+
+**✅ Validación del paso:**  
+Ningún comando debe mostrar errores.
+
+**📌 Resultado esperado:**  
+Todos los scripts tienen sintaxis válida.
+
+---
+
+### ✅ Paso 2. Valida las variables de entorno
+
+**📝 Descripción del paso:**  
+Vas a comprobar que el ambiente sigue cargando la configuración.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python 00_validar_entorno.py
+```
+
+**✅ Validación del paso:**  
+Debe mostrarse que la API Key está configurada sin imprimirla completa.
+
+**📌 Resultado esperado:**  
+El ambiente está listo para ejecutar el pipeline.
+
+---
+
+### ✅ Paso 3. Valida que no entregas `.env`
+
+**📝 Descripción del paso:**  
+Vas a confirmar que no incluyes secretos en la entrega.
+
+**⚙️ Contenido del paso:**
+
+```bash
+ls -la
+```
+
+Entrega estos archivos:
+
+```text
+requirements.txt
+00_validar_entorno.py
+models.py
+git_extractor.py
+prompt_builder.py
+fake_auditor.py
+auditor_engine.py
+report_generator.py
+security_auditor.py
+reports/audit_completa.md
+evaluacion_hallazgos.md
+```
+
+No entregues:
+
+```text
+.env
+.venv/
+```
+
+**✅ Validación del paso:**  
+Confirma manualmente que `.env` no se incluye en la entrega.
+
+**📌 Resultado esperado:**  
+La entrega es funcional y segura.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 12 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2012%20de%20un%20laboratorio%20donde%20valid%C3%A9%20que%20todos%20los%20scripts%20compilan%2C%20que%20el%20pipeline%20funciona%2C%20que%20el%20reporte%20Markdown%20existe%20y%20que%20no%20entrego%20archivos%20sensibles%20como%20.env.)
+
+---
+
+# 🧪 Reto opcional. Analizar cambios staged como pre-commit
+
+> [!WARNING]
+> Este reto es opcional. Un hook `pre-commit` analiza cambios antes de crear el commit, por lo que no debe analizar “el último commit existente”. Debe analizar el contenido staged con `git diff --cached`.
+
+## 🎯 Objetivo del reto
+
+Extender el pipeline para analizar cambios staged antes de crear un commit.
+
+## 🛠️ Idea de implementación
+
+1. Crear una función nueva que ejecute:
+
+```bash
+git diff --cached
+```
+
+2. Convertir ese diff en un objeto similar a `CommitDiff`.
+3. Ejecutar `audit_commit()` o una función equivalente sobre ese diff.
+4. Generar un reporte en `reports/pre_commit_audit.md`.
+5. Decidir si el hook solo avisa o bloquea el commit.
+
+## ✅ Criterio de éxito
+
+El hook debe auditar cambios staged y no commits existentes.
+
+---
+
+# 🏁 Resultado final esperado del laboratorio
+
+Al finalizar la práctica, debes contar con:
+
+1. Proyecto local creado en Windows.
+2. Entorno virtual Python funcional.
+3. Variables de entorno configuradas de forma segura.
+4. Repositorio Git vulnerable de ejemplo con 5 commits.
+5. Modelos Pydantic para commits, vulnerabilidades y reportes.
+6. Extractor de diffs con GitPython.
+7. Constructor de prompts de seguridad.
+8. Auditor simulado sin consumo de API.
+9. Motor real de auditoría con OpenAI y salida estructurada.
+10. Generador de reporte Markdown.
+11. Script principal `security_auditor.py`.
+12. Reporte `reports/audit_completa.md`.
+13. Archivo `evaluacion_hallazgos.md` con análisis de precisión.
+14. Identificación de falsos positivos y falsos negativos.
+15. Conclusión sobre el valor y límites del LLM para revisión de código.
+
+---
+
+# 📊 Criterios de evaluación sugeridos
+
+| Criterio | Ponderación |
+|---|---:|
+| Preparación correcta del ambiente local | 10% |
+| Configuración segura de credenciales | 10% |
+| Creación correcta del repositorio vulnerable | 10% |
+| Modelado Pydantic correcto | 10% |
+| Extracción de commits y diffs | 10% |
+| Prompt de auditoría de seguridad | 10% |
+| Motor LLM con salida estructurada y reintentos | 15% |
+| Reporte Markdown generado | 10% |
+| Evaluación de hallazgos esperados vs. detectados | 10% |
+| Reflexión sobre limitaciones del LLM | 5% |
+| Total | 100% |
+
+---
+
+# ⚠️ Errores comunes que debes evitar
+
+1. Pegar la API Key directamente en código Python.
+2. Entregar el archivo `.env`.
+3. Ejecutar la auditoría completa antes de probar 1 commit.
+4. Confundir commits existentes con cambios staged.
+5. Confiar ciegamente en el LLM sin revisión humana.
+6. Considerar que un reporte del LLM equivale a una auditoría profesional.
+7. No documentar falsos positivos y falsos negativos.
+8. Usar un modelo no disponible en tu cuenta.
+9. Olvidar activar el entorno virtual.
+10. Auditar repositorios reales con secretos productivos.
+11. No revisar costos ni límites antes de ejecutar varias pruebas.
+12. Omitir el reporte de evaluación manual.
+
+---
+
+# 🧹 Limpieza del entorno
+
+Cuando termines la práctica, puedes limpiar archivos temporales.
+
+```bash
+# Desactivar entorno virtual
 deactivate
 
-# 2. (Opcional) Eliminar el repositorio vulnerable de ejemplo
-# PRECAUCIÓN: Solo si no necesitas los archivos para revisión posterior
-rm -rf vulnerable_repo/
-
-# 3. (Opcional) Eliminar los reportes generados
+# Opcional: eliminar reportes generados
 rm -rf reports/
 
-# 4. (Opcional) Eliminar el entorno virtual para liberar espacio (~500 MB)
+# Opcional: eliminar entorno virtual
 rm -rf .venv/
 
-# 5. Verificar que el archivo .env NO está en ningún repositorio Git
-# Si accidentalmente hiciste git init en lab-04-security-auditor/:
-git status  # Verificar que .env aparece como "untracked" o en .gitignore
+# Opcional: eliminar repositorio vulnerable de ejemplo
+rm -rf vulnerable_repo/
 ```
 
-> 🔒 **Importante**: Si compartiste la carpeta del lab o subiste código a GitHub, verifica en `git log --all -- .env` que el archivo `.env` nunca fue commiteado. Si lo fue, rota inmediatamente las API keys afectadas en las consolas de OpenAI/Anthropic.
+> [!IMPORTANT]
+> Si subiste accidentalmente `.env` a un repositorio remoto, rota inmediatamente tu API Key desde la consola del proveedor.
 
 ---
 
-## 10. Resumen
+# Cierre de la práctica
 
-En este laboratorio construiste un **pipeline completo de auditoría de seguridad con LLM** que integra los siguientes componentes:
+En este laboratorio construiste un pipeline completo de auditoría de seguridad asistido por IA generativa. Preparaste un ambiente local en Windows, configuraste credenciales de forma segura, creaste un repositorio Git vulnerable, extrajiste diffs de commits, diseñaste modelos Pydantic, construiste un prompt especializado, ejecutaste auditorías con salida estructurada y generaste un reporte Markdown profesional.
 
-| Componente | Archivo | Tecnología |
-|---|---|---|
-| Extracción de diffs | `git_extractor.py` | GitPython 3.1.x |
-| Modelos de datos | `models.py` |
+El aprendizaje principal es que un LLM puede aportar valor como copiloto de revisión de código, especialmente para explicar riesgos y proponer recomendaciones. Sin embargo, también aprendiste que sus resultados deben validarse, porque puede cometer errores, omitir hallazgos o reportar vulnerabilidades fuera de contexto.
+
+La práctica te deja una base sólida para evolucionar hacia un flujo DevSecOps más completo, combinando LLMs con herramientas SAST, revisión humana, políticas de seguridad y automatización controlada.
