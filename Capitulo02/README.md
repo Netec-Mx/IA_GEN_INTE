@@ -1,217 +1,142 @@
-# Crear el boilerplate de una arquitectura en FastAPI que implemente un "Router de Modelos" para optimizar la carga de trabajo según la complejidad del prompt.
+<div align="center">
+            
+# 🧪 Laboratorio 2. Router de Modelos con FastAPI
 
-## 1. Metadatos
+![Nivel](https://img.shields.io/badge/Nivel-Intermedio-blue)
+![Duración](https://img.shields.io/badge/Duración-45_min-green)
+![Stack](https://img.shields.io/badge/Stack-FastAPI_+_Python-purple)
+![Costo](https://img.shields.io/badge/Costo_API-0_USD-lightgrey)
 
-| Campo | Detalle |
+</div>
+
+---
+
+## 1. Información general
+
+### 📌 Descripción general
+
+En esta práctica vas a construir una API con **FastAPI** que implementa un **Router de Modelos**. Este router recibe una solicitud de chat, analiza la complejidad del prompt y decide qué tipo de modelo debería atenderlo.
+
+La práctica se ejecuta en **Windows**, usando **Visual Studio Code** y **Git Bash**. No consumirás APIs reales de OpenAI, Gemini ni Claude; trabajarás con **mocks** para validar la arquitectura sin costo. Esto permite concentrarte en los componentes base de una solución GenAI: API, contratos, configuración, clasificación, despacho, observabilidad básica y pruebas.
+
+El servicio implementará tres rutas principales:
+
+| Endpoint | Método | Propósito |
+|---|---|---|
+| `/v1/health` | GET | Validar estado general del servicio |
+| `/v1/router/status` | GET | Consultar configuración activa del router |
+| `/v1/chat/complete` | POST | Enviar un prompt y recibir una respuesta simulada |
+
+> [!NOTE]
+> Esta práctica no busca conectar todavía modelos reales. El objetivo es construir una base arquitectónica sólida para que después puedas reemplazar los mocks por SDKs reales.
+
+---
+
+### 🧠 Objetivos de aprendizaje
+
+Al finalizar esta práctica, tú serás capaz de:
+
+1. Crear una API base con FastAPI siguiendo una estructura profesional de carpetas.
+2. Diseñar contratos de entrada y salida usando Pydantic.
+3. Implementar una capa de configuración centralizada con `pydantic-settings`.
+4. Clasificar prompts según complejidad usando reglas heurísticas.
+5. Implementar un despachador de modelos usando el patrón **Strategy**.
+6. Simular proveedores de modelos: OpenAI, Gemini y Claude.
+7. Validar endpoints con `curl` desde Git Bash.
+8. Documentar riesgos técnicos y puntos de extensión en el código.
+9. Probar el comportamiento de una API GenAI sin consumir APIs de pago.
+10. Preparar una base lista para evolucionar hacia integración real con proveedores.
+
+---
+
+### ✅ Prerrequisitos
+
+- Conocimientos básicos de Python.
+- Conocimientos básicos de APIs REST.
+- Familiaridad con JSON.
+- Uso básico de Visual Studio Code.
+- Uso básico de Git Bash.
+- Haber revisado el módulo sobre componentes de una solución GenAI.
+- Haber completado o revisado la práctica #1 sobre selección técnica de modelos.
+
+---
+
+### 🖥️ Hardware
+
+| Recurso | Requisito mínimo |
 |---|---|
-| **Duración estimada** | 45 minutos |
-| **Complejidad** | Media |
-| **Nivel Bloom** | Crear |
-| **Módulo** | 2 — Componentes de una Solución GenAI |
-| **Lección de referencia** | 2.1 — Componentes de una Solución GenAI |
-| **Costo API estimado** | $0.00 USD (se usan mocks; no se consumen APIs de pago) |
+| Sistema operativo | Windows 10 o Windows 11 |
+| Procesador | Intel Core i5, AMD Ryzen 5 o equivalente |
+| Memoria RAM | 8 GB mínimo |
+| Almacenamiento | 1 GB libre |
+| GPU | No requerida |
+| Internet | Requerido para instalar dependencias |
 
 ---
 
-## 2. Descripción General
+### 🧰 Software
 
-En la Lección 2.1 aprendiste que una solución GenAI productiva está compuesta por capas con responsabilidades bien delimitadas: orquestación, motor de prompts, modelo de lenguaje y observabilidad. En esta práctica materializarás esos conceptos construyendo el **boilerplate** de un servicio FastAPI que actúa como **Router de Modelos**: una capa de orquestación que clasifica la complejidad de cada prompt entrante y despacha la solicitud al LLM más adecuado según criterios de costo y capacidad.
+| Software | Uso |
+|---|---|
+| Visual Studio Code | Edición del proyecto |
+| Git Bash | Ejecución de comandos |
+| Python 3.11 o superior | Lenguaje base del laboratorio |
+| pip | Instalación de dependencias |
+| FastAPI | Framework de API |
+| Uvicorn | Servidor ASGI |
+| Pydantic v2 | Validación de contratos |
+| pydantic-settings | Carga de configuración desde `.env` |
+| python-dotenv | Soporte de variables de entorno |
+| curl | Pruebas HTTP desde terminal |
 
-El servicio será completamente funcional y testeable con `curl`. La integración real con APIs de pago (OpenAI, Anthropic, Google) se simula mediante mocks, lo que permite validar toda la arquitectura sin incurrir en costos.
-
----
-
-## 3. Objetivos de Aprendizaje
-
-Al finalizar esta práctica serás capaz de:
-
-- [ ] Diseñar e implementar la estructura de archivos de un servicio FastAPI siguiendo el principio de separación de responsabilidades de la arquitectura GenAI.
-- [ ] Aplicar el patrón de diseño **Strategy** para seleccionar dinámicamente el modelo LLM más adecuado según la complejidad clasificada del prompt.
-- [ ] Modelar contratos de API robustos utilizando **Pydantic v2** para requests, responses y configuración interna del router.
-- [ ] Documentar riesgos arquitectónicos y puntos de extensión mediante comentarios estructurados `TODO` / `RISK` en el código.
-- [ ] Verificar el comportamiento del router mediante pruebas con `curl` y el endpoint de estado.
-
----
-
-## 4. Prerrequisitos
-
-### Conocimiento previo
-- Python intermedio: clases, herencia, decoradores y manejo de excepciones.
-- Conceptos básicos de APIs REST: métodos HTTP, códigos de estado y JSON.
-- Haber revisado la Lección 2.1 (componentes de una solución GenAI).
-- Conocimiento básico de FastAPI o Flask (al nivel de crear un endpoint `GET`/`POST`).
-
-### Acceso y cuentas
-- **No se requieren API keys** para esta práctica (todo es mock).
-- Acceso a terminal con permisos para crear directorios e instalar paquetes Python.
-- Conexión a internet para descargar dependencias de PyPI.
+> [!TIP]
+> FastAPI recomienda crear un entorno virtual antes de instalar dependencias. Su instalación estándar puede hacerse con `pip install "fastapi[standard]"`, y Uvicorn puede instalarse también con el extra `uvicorn[standard]`.
 
 ---
 
-## 5. Entorno del Laboratorio
+### 📊 Datos de la práctica
 
-### Hardware mínimo requerido
-
-| Recurso | Mínimo | Recomendado |
-|---|---|---|
-| CPU | 4 núcleos | 8 núcleos |
-| RAM | 8 GB | 16 GB |
-| Disco libre | 500 MB | 2 GB |
-| Red | No requerida durante ejecución | — |
-
-### Software requerido
-
-| Paquete | Versión | Uso |
-|---|---|---|
-| Python | 3.11.x | Lenguaje base |
-| FastAPI | 0.111.x | Framework web |
-| uvicorn | 0.30.x | Servidor ASGI |
-| Pydantic | 2.7.x | Validación de datos |
-| python-dotenv | 1.0.x | Gestión de variables de entorno |
-| httpx | 0.27.x | Cliente HTTP (para pruebas internas) |
-
-### Configuración inicial del entorno
-
-Ejecuta los siguientes comandos en tu terminal para preparar el entorno aislado:
-
-```bash
-# 1. Crear el directorio del proyecto
-mkdir lab-02-model-router
-cd lab-02-model-router
-
-# 2. Crear y activar el entorno virtual
-python3.11 -m venv .venv
-
-# En macOS/Linux:
-source .venv/bin/activate
-
-# En Windows (PowerShell):
-# .venv\Scripts\Activate.ps1
-
-# 3. Verificar la versión de Python activa
-python --version
-# Esperado: Python 3.11.x
-
-# 4. Actualizar pip
-pip install --upgrade pip
-
-# 5. Instalar dependencias
-pip install "fastapi==0.111.0" "uvicorn[standard]==0.30.1" \
-            "pydantic==2.7.4" "python-dotenv==1.0.1" \
-            "httpx==0.27.0"
-
-# 6. Verificar instalaciones clave
-python -c "import fastapi, pydantic; print(f'FastAPI {fastapi.__version__} | Pydantic {pydantic.__version__}')"
-# Esperado: FastAPI 0.111.0 | Pydantic 2.7.4
-```
-
-> ⚠️ **Seguridad de credenciales**: aunque esta práctica no usa API keys reales, crearemos el archivo `.env` y `.gitignore` desde el inicio para establecer el hábito correcto. **Nunca** agregues credenciales directamente en el código.
+| Elemento | Detalle |
+|---|---|
+| Duración estimada | 45 minutos |
+| Complejidad | Intermedia |
+| Nivel de Bloom | Crear, aplicar, analizar y validar |
+| Capítulo | Capítulo 2 |
+| Lección de referencia | 2.1 — Componentes de una solución GenAI |
+| Modalidad | Individual o equipos de 2 personas |
+| Sistema operativo | Windows |
+| Editor | Visual Studio Code |
+| Terminal | Git Bash |
+| Lenguaje | Python |
+| Framework | FastAPI |
+| Proveedores simulados | OpenAI, Gemini y Claude |
+| Costo API estimado | 0 USD |
+| Entregable principal | Proyecto FastAPI funcional |
+| Entregable secundario | Evidencias de pruebas con `curl` |
 
 ---
 
-## 6. Desarrollo Paso a Paso
+## 2. Consideraciones para estudiantes
 
-### Paso 1 — Crear la estructura de archivos del proyecto
+1. **No uses API keys reales en esta práctica.** Todo funcionará con mocks.
+2. **No subas el archivo `.env` a Git.** Aunque no tendrá claves reales, se mantiene la buena práctica.
+3. **Ejecuta todos los comandos desde Git Bash**, no desde PowerShell, para mantener consistencia.
+4. **Mantén activo el entorno virtual** antes de ejecutar Python o instalar dependencias.
+5. **Copia los archivos completos**, no fragmentos incompletos.
+6. **Valida cada tarea antes de avanzar.** Si una tarea falla, las siguientes pueden fallar también.
+7. **No cambies nombres de carpetas o archivos** salvo que también actualices los imports.
+8. **El estado `degraded` en `/v1/health` es esperado**, porque el laboratorio usa mocks y no APIs reales.
+9. **Los modelos configurados son nombres de referencia.** No se consumen APIs reales, pero representan cómo se mapearía una arquitectura productiva.
+10. **La práctica prioriza arquitectura, contratos y flujo**, no calidad real de respuesta del modelo.
 
-**Objetivo:** Establecer la arquitectura de directorios que refleja la separación de responsabilidades de la Lección 2.1.
+---
 
-#### Instrucciones
+## 3. Estructura final esperada
 
-1. Desde el directorio `lab-02-model-router`, ejecuta los siguientes comandos para crear la estructura completa:
-
-```bash
-# Crear la estructura de directorios
-mkdir -p config routers services models
-
-# Crear todos los archivos necesarios (vacíos por ahora)
-touch main.py
-touch config/__init__.py config/settings.py
-touch routers/__init__.py routers/llm_router.py
-touch services/__init__.py services/complexity_classifier.py services/model_dispatcher.py
-touch models/__init__.py models/schemas.py
-touch .env .gitignore requirements.txt
-```
-
-2. Crea el archivo `.gitignore` con el siguiente contenido:
-
-```bash
-cat > .gitignore << 'EOF'
-# Entorno virtual
-.venv/
-venv/
-env/
-
-# Variables de entorno y secretos — NUNCA commitear API keys
-.env
-.env.*
-!.env.example
-
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-
-# Pytest
-.pytest_cache/
-htmlcov/
-.coverage
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-
-# Logs
-*.log
-logs/
-EOF
-```
-
-3. Crea el archivo `.env` con valores de ejemplo (sin keys reales):
-
-```bash
-cat > .env << 'EOF'
-# Configuración del Router de Modelos
-# En producción, estas variables contendrían las API keys reales
-APP_NAME="Model Router Service"
-APP_VERSION="0.1.0"
-ENVIRONMENT="development"
-
-# API Keys (vacías en esta práctica — se usan mocks)
-OPENAI_API_KEY=""
-ANTHROPIC_API_KEY=""
-GOOGLE_API_KEY=""
-
-# Configuración del router
-DEFAULT_SIMPLE_MODEL="gpt-4o-mini"
-DEFAULT_MEDIUM_MODEL="gpt-4o"
-DEFAULT_COMPLEX_MODEL="claude-3-5-sonnet-20241022"
-
-# Umbrales de clasificación (en tokens aproximados)
-SIMPLE_MAX_TOKENS=50
-MEDIUM_MAX_TOKENS=200
-EOF
-```
-
-4. Genera el archivo `requirements.txt`:
-
-```bash
-cat > requirements.txt << 'EOF'
-fastapi==0.111.0
-uvicorn[standard]==0.30.1
-pydantic==2.7.4
-python-dotenv==1.0.1
-httpx==0.27.0
-EOF
-```
-
-#### Salida esperada
-
-```
+```text
 lab-02-model-router/
 ├── .env
+├── .env.example
 ├── .gitignore
 ├── main.py
 ├── requirements.txt
@@ -230,270 +155,461 @@ lab-02-model-router/
     └── model_dispatcher.py
 ```
 
-#### Verificación
+---
+
+# Tarea 1. Preparar el proyecto local en Windows
+
+## Objetivo de la tarea
+
+Crear la carpeta del proyecto, abrirla en Visual Studio Code y preparar un entorno virtual de Python usando Git Bash.
+
+## Paso 1. Crear la carpeta del laboratorio
+
+### Descripción
+Vas a crear una carpeta local donde guardarás todo el código del Router de Modelos.
+- Abre GitBash y ejecuta el siguiente comando.
+### Contenido
 
 ```bash
-# Verificar la estructura con tree (o find si tree no está disponible)
-find . -not -path './.venv/*' -not -path './__pycache__/*' | sort
+mkdir -p ~/labs-ia-gen/lab-02-model-router
+cd ~/labs-ia-gen/lab-02-model-router
 ```
+
+### Validación
+
+```bash
+pwd
+```
+
+Debes ver una ruta similar a:
+
+```text
+/c/Users/TU_USUARIO/labs-ia-gen/lab-02-model-router
+```
+
+### Resultado esperado
+Tienes una carpeta dedicada para la práctica #2.
 
 ---
 
-### Paso 2 — Implementar la configuración centralizada (`config/settings.py`)
+## Paso 2. Abrir el proyecto en Visual Studio Code
 
-**Objetivo:** Crear una capa de configuración tipada con Pydantic v2 que centralice todos los parámetros del servicio, siguiendo el principio de configuración externalizada.
+### Descripción
+Vas a abrir la carpeta del laboratorio directamente desde la terminal.
 
-#### Instrucciones
+### Contenido
 
-1. Abre `config/settings.py` y escribe el siguiente código:
+```bash
+code .
+```
+
+Si el comando no funciona, abre VS Code manualmente y selecciona:
+
+```text
+File > Open Folder > labs-ia-gen > lab-02-model-router
+```
+
+### Validación
+Confirma que VS Code muestre la carpeta `lab-02-model-router`.
+
+### Resultado esperado
+El proyecto está abierto en Visual Studio Code.
+
+---
+
+## Paso 3. Crear el entorno virtual
+
+### Descripción
+Vas a crear un entorno aislado para instalar dependencias sin afectar otros proyectos.
+
+### Contenido
+
+```bash
+python -m venv .venv
+source .venv/Scripts/activate
+```
+
+### Validación
+
+```bash
+python --version
+which python
+```
+
+### Resultado esperado
+El entorno virtual está activo y la ruta de Python apunta a `.venv`.
+
+---
+
+## Paso 4. Crear el archivo de dependencias
+
+### Descripción
+Vas a definir las librerías necesarias para construir la API.
+
+### Contenido
+Crea el archivo `requirements.txt` con:
+
+```txt
+fastapi[standard]
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+httpx
+```
+
+### Qué puedes ajustar
+Para ambientes empresariales o cursos con control estricto de versiones, puedes congelar versiones después de instalar:
+
+```bash
+pip freeze > requirements.lock.txt
+```
+
+### Validación
+Confirma que `requirements.txt` exista en la raíz del proyecto.
+
+### Resultado esperado
+Tienes declaradas las dependencias principales del laboratorio.
+
+---
+
+## Paso 5. Instalar dependencias
+
+### Descripción
+Vas a instalar FastAPI, Uvicorn, Pydantic y librerías de soporte.
+
+### Contenido
+
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### Validación
+
+```bash
+python -c "import fastapi, pydantic; print('FastAPI:', fastapi.__version__); print('Pydantic:', pydantic.__version__)"
+```
+
+### Resultado esperado
+La terminal muestra las versiones instaladas de FastAPI y Pydantic sin errores.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 1 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%201%20de%20un%20laboratorio%20de%20FastAPI%20para%20un%20Router%20de%20Modelos.%20Cre%C3%A9%20una%20carpeta%20en%20Windows%2C%20abr%C3%AD%20el%20proyecto%20en%20Visual%20Studio%20Code%2C%20cre%C3%A9%20un%20entorno%20virtual%20con%20Git%20Bash%20e%20instal%C3%A9%20dependencias%20como%20FastAPI%2C%20Uvicorn%2C%20Pydantic%20y%20pydantic-settings.)
+
+---
+
+# Tarea 2. Crear la estructura del proyecto
+
+## Objetivo de la tarea
+
+Crear los directorios y archivos base del servicio para separar responsabilidades entre configuración, modelos, rutas y servicios.
+
+## Paso 1. Crear carpetas y archivos
+
+### Descripción
+Vas a construir la estructura inicial del proyecto FastAPI.
+
+### Contenido
+
+```bash
+mkdir -p config models routers services
+
+touch main.py
+touch config/__init__.py config/settings.py
+touch models/__init__.py models/schemas.py
+touch routers/__init__.py routers/llm_router.py
+touch services/__init__.py services/complexity_classifier.py services/model_dispatcher.py
+touch .env .env.example .gitignore
+```
+
+### Validación
+
+```bash
+find . -maxdepth 3 -type f | sort
+```
+
+### Resultado esperado
+La terminal muestra los archivos principales del proyecto.
+
+---
+
+## Paso 2. Crear `.gitignore`
+
+### Descripción
+Vas a evitar que archivos sensibles, temporales o del entorno virtual se suban a Git.
+
+### Contenido
+Crea el archivo `.gitignore` con este contenido:
+
+```gitignore
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Pruebas y cobertura
+.pytest_cache/
+htmlcov/
+.coverage
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+logs/
+```
+
+### Validación
+
+```bash
+cat .gitignore
+```
+
+Confirma que `.env` aparece en el archivo.
+
+### Resultado esperado
+El proyecto protege archivos sensibles y temporales.
+
+---
+
+## Paso 3. Crear `.env.example`
+
+### Descripción
+Vas a crear una plantilla de configuración segura que sí puede compartirse.
+
+### Contenido
+Crea el archivo `.env.example` con este contenido:
+
+```env
+APP_NAME="Model Router Service"
+APP_VERSION="0.1.0"
+ENVIRONMENT="development"
+
+# Esta práctica usa mocks. No agregues API keys reales.
+OPENAI_API_KEY=""
+GEMINI_API_KEY=""
+ANTHROPIC_API_KEY=""
+
+DEFAULT_SIMPLE_MODEL="openai-fast-mock"
+DEFAULT_MEDIUM_MODEL="gemini-balanced-mock"
+DEFAULT_COMPLEX_MODEL="claude-reasoning-mock"
+
+SIMPLE_MAX_TOKENS=50
+MEDIUM_MAX_TOKENS=200
+```
+
+### Validación
+
+```bash
+cat .env.example
+```
+
+### Resultado esperado
+Tienes una plantilla de configuración compartible.
+
+---
+
+## Paso 4. Crear `.env` local
+
+### Descripción
+Vas a crear el archivo real de configuración que usará la aplicación local.
+
+### Contenido
+
+```bash
+cp .env.example .env
+```
+
+### Validación
+
+```bash
+ls -la .env .env.example
+```
+
+### Resultado esperado
+Existen `.env` y `.env.example`. Solo `.env.example` debe compartirse.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 2 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%202%20de%20un%20laboratorio%20FastAPI.%20Cre%C3%A9%20la%20estructura%20del%20proyecto%20con%20carpetas%20config%2C%20models%2C%20routers%20y%20services%2C%20agregu%C3%A9%20.gitignore%2C%20.env.example%20y%20.env%20para%20configurar%20un%20Router%20de%20Modelos%20con%20mocks.)
+
+---
+
+# Tarea 3. Implementar configuración centralizada
+
+## Objetivo de la tarea
+
+Crear una capa de configuración tipada que cargue variables desde `.env` usando `pydantic-settings`.
+
+## Paso 1. Crear `config/settings.py`
+
+### Descripción
+Vas a centralizar la configuración del servicio en una clase validada.
+
+### Contenido
+Abre `config/settings.py` y agrega:
 
 ```python
-# config/settings.py
-"""
-Configuración centralizada del Model Router Service.
-
-Usa Pydantic BaseSettings para cargar y validar variables de entorno
-automáticamente desde el archivo .env. Esto garantiza que el servicio
-falle rápido (fail-fast) si falta alguna configuración crítica.
-
-Patrón aplicado: Configuration Object (centraliza toda la config en un lugar)
-"""
-
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
 from functools import lru_cache
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class RouterSettings(BaseSettings):
-    """
-    Configuración del servicio con validación automática via Pydantic v2.
-
-    Todas las variables se cargan desde el archivo .env o variables
-    de entorno del sistema operativo.
-    """
+    """Configuración centralizada del Router de Modelos."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore"  # Ignora variables de entorno no declaradas aquí
+        extra="ignore",
     )
 
-    # --- Metadatos del servicio ---
-    app_name: str = Field(default="Model Router Service", description="Nombre del servicio")
-    app_version: str = Field(default="0.1.0", description="Versión semántica del servicio")
-    environment: str = Field(default="development", description="Entorno de ejecución")
+    app_name: str = Field(default="Model Router Service")
+    app_version: str = Field(default="0.1.0")
+    environment: str = Field(default="development")
 
-    # --- API Keys (vacías en modo mock) ---
-    # RISK: En producción, rotar estas keys periódicamente y usar un secrets manager
-    # (AWS Secrets Manager, GCP Secret Manager, HashiCorp Vault) en lugar de .env
-    openai_api_key: str = Field(default="", description="API Key de OpenAI")
-    anthropic_api_key: str = Field(default="", description="API Key de Anthropic")
-    google_api_key: str = Field(default="", description="API Key de Google AI")
+    openai_api_key: str = Field(default="")
+    gemini_api_key: str = Field(default="")
+    anthropic_api_key: str = Field(default="")
 
-    # --- Modelos por nivel de complejidad ---
-    # TODO: Hacer esta configuración dinámica vía endpoint admin para cambiar
-    # modelos en caliente sin reiniciar el servicio
-    default_simple_model: str = Field(
-        default="gpt-4o-mini",
-        description="Modelo para prompts simples (< 50 tokens)"
-    )
-    default_medium_model: str = Field(
-        default="gpt-4o",
-        description="Modelo para prompts de complejidad media (50-200 tokens)"
-    )
-    default_complex_model: str = Field(
-        default="claude-3-5-sonnet-20241022",
-        description="Modelo para prompts complejos (> 200 tokens)"
-    )
+    default_simple_model: str = Field(default="openai-fast-mock")
+    default_medium_model: str = Field(default="gemini-balanced-mock")
+    default_complex_model: str = Field(default="claude-reasoning-mock")
 
-    # --- Umbrales del clasificador ---
-    simple_max_tokens: int = Field(
-        default=50,
-        ge=1,
-        description="Límite superior de tokens para clasificar como SIMPLE"
-    )
-    medium_max_tokens: int = Field(
-        default=200,
-        ge=1,
-        description="Límite superior de tokens para clasificar como MEDIUM"
-    )
+    simple_max_tokens: int = Field(default=50, ge=1)
+    medium_max_tokens: int = Field(default=200, ge=1)
+
+    @model_validator(mode="after")
+    def validate_thresholds(self) -> "RouterSettings":
+        if self.medium_max_tokens <= self.simple_max_tokens:
+            raise ValueError("MEDIUM_MAX_TOKENS debe ser mayor que SIMPLE_MAX_TOKENS")
+        return self
 
     @property
     def is_mock_mode(self) -> bool:
-        """
-        Retorna True si ninguna API key está configurada.
-        El servicio operará con respuestas simuladas en este caso.
-        """
-        return not any([self.openai_api_key, self.anthropic_api_key, self.google_api_key])
+        """Retorna True cuando no hay API keys reales configuradas."""
+        return not any([
+            self.openai_api_key,
+            self.gemini_api_key,
+            self.anthropic_api_key,
+        ])
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> RouterSettings:
-    """
-    Retorna la instancia singleton de configuración.
-
-    El decorador @lru_cache garantiza que el archivo .env se lea
-    una sola vez durante el ciclo de vida del proceso.
-
-    TODO: Invalidar el cache en tests unitarios usando
-    get_settings.cache_clear() para inyectar configuración de prueba.
-    """
+    """Devuelve una única instancia cacheada de configuración."""
     return RouterSettings()
 ```
 
-2. Instala `pydantic-settings` (necesario para `BaseSettings` en Pydantic v2):
+### Qué puedes ajustar
+Puedes modificar estos valores en `.env`:
+
+```env
+DEFAULT_SIMPLE_MODEL="openai-fast-mock"
+DEFAULT_MEDIUM_MODEL="gemini-balanced-mock"
+DEFAULT_COMPLEX_MODEL="claude-reasoning-mock"
+SIMPLE_MAX_TOKENS=50
+MEDIUM_MAX_TOKENS=200
+```
+
+### Validación
 
 ```bash
-pip install "pydantic-settings==2.3.4"
-echo "pydantic-settings==2.3.4" >> requirements.txt
+python -c "from config.settings import get_settings; s=get_settings(); print(s.app_name, s.environment, s.is_mock_mode)"
 ```
 
-#### Verificación
+### Resultado esperado
 
-```bash
-python -c "
-from config.settings import get_settings
-s = get_settings()
-print(f'App: {s.app_name} v{s.app_version}')
-print(f'Entorno: {s.environment}')
-print(f'Modo mock: {s.is_mock_mode}')
-print(f'Modelo simple: {s.default_simple_model}')
-print(f'Modelo complejo: {s.default_complex_model}')
-"
+```text
+Model Router Service development True
 ```
 
-**Salida esperada:**
-```
-App: Model Router Service v0.1.0
-Entorno: development
-Modo mock: True
-Modelo simple: gpt-4o-mini
-Modelo complejo: claude-3-5-sonnet-20241022
-```
+## Prompt de apoyo
+
+[Explicar la Tarea 3 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%203%20de%20un%20laboratorio%20FastAPI.%20Implement%C3%A9%20una%20configuraci%C3%B3n%20centralizada%20con%20pydantic-settings%2C%20cargu%C3%A9%20variables%20desde%20.env%2C%20valid%C3%A9%20umbrales%20de%20clasificaci%C3%B3n%20y%20detect%C3%A9%20si%20el%20servicio%20opera%20en%20modo%20mock.)
 
 ---
 
-### Paso 3 — Definir los esquemas Pydantic (`models/schemas.py`)
+# Tarea 4. Definir contratos de API con Pydantic
 
-**Objetivo:** Modelar los contratos de la API con Pydantic v2. Estos esquemas son el "lenguaje común" entre la capa de presentación y la capa de orquestación.
+## Objetivo de la tarea
 
-#### Instrucciones
+Crear los modelos de datos que validarán las solicitudes, respuestas y decisiones internas del Router de Modelos.
 
-1. Abre `models/schemas.py` y escribe:
+## Paso 1. Crear `models/schemas.py`
+
+### Descripción
+Vas a definir los contratos de entrada y salida del servicio.
+
+### Contenido
+Abre `models/schemas.py` y agrega:
 
 ```python
-# models/schemas.py
-"""
-Contratos de la API definidos con Pydantic v2.
-
-Estos modelos actúan como la capa de validación entre la solicitud HTTP
-y la lógica de negocio. Siguiendo los principios de la Lección 2.1,
-cada modelo tiene una responsabilidad única y bien delimitada.
-
-Principio aplicado: Fail-fast validation — si el dato de entrada no cumple
-el contrato, Pydantic lanza un error antes de que llegue a la lógica de negocio.
-"""
-
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, Literal
+from datetime import datetime, timezone
 from enum import Enum
-from datetime import datetime
+from typing import Literal
+from pydantic import BaseModel, Field, field_validator
 
-
-# --- Enumeraciones de dominio ---
 
 class ComplexityLevel(str, Enum):
-    """
-    Niveles de complejidad que el clasificador puede asignar a un prompt.
-    Usar un Enum garantiza que solo valores válidos circulen por el sistema.
-    """
     SIMPLE = "SIMPLE"
     MEDIUM = "MEDIUM"
     COMPLEX = "COMPLEX"
 
 
 class ModelProvider(str, Enum):
-    """Proveedores de LLM soportados por el router."""
     OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    GOOGLE = "google"
-    MOCK = "mock"  # Proveedor especial para entornos sin API keys
+    GEMINI = "gemini"
+    CLAUDE = "claude"
+    MOCK = "mock"
 
-
-# --- Modelos de Request ---
 
 class ChatMessage(BaseModel):
-    """Representa un turno individual en el historial de conversación."""
-    role: Literal["user", "assistant", "system"]
+    role: Literal["system", "user", "assistant"]
     content: str = Field(min_length=1, max_length=32_000)
 
 
 class ChatCompleteRequest(BaseModel):
-    """
-    Contrato de entrada para el endpoint POST /v1/chat/complete.
-
-    El campo 'messages' sigue la convención de la API de OpenAI para
-    maximizar la compatibilidad con distintos proveedores.
-    """
-    messages: list[ChatMessage] = Field(
-        min_length=1,
-        description="Lista de mensajes del historial de conversación"
-    )
-    max_tokens: Optional[int] = Field(
-        default=512,
-        ge=1,
-        le=4096,
-        description="Número máximo de tokens en la respuesta"
-    )
-    temperature: Optional[float] = Field(
-        default=0.7,
-        ge=0.0,
-        le=2.0,
-        description="Temperatura de muestreo del modelo"
-    )
-    # TODO: Añadir campo 'user_id' para implementar rate limiting por usuario
-    # y auditoría de uso en la capa de observabilidad
+    messages: list[ChatMessage] = Field(min_length=1)
+    max_tokens: int = Field(default=512, ge=1, le=4096)
+    temperature: float = Field(default=0.2, ge=0.0, le=2.0)
 
     @field_validator("messages")
     @classmethod
     def validate_last_message_is_user(cls, messages: list[ChatMessage]) -> list[ChatMessage]:
-        """
-        Valida que el último mensaje sea del usuario.
-        Esto previene errores silenciosos donde se envía un historial
-        mal formado al LLM.
-        """
-        if messages and messages[-1].role != "user":
-            raise ValueError(
-                "El último mensaje del historial debe ser del rol 'user'. "
-                f"Se recibió: '{messages[-1].role}'"
-            )
+        if messages[-1].role != "user":
+            raise ValueError("El último mensaje debe tener role='user'.")
         return messages
 
 
-# --- Modelos de clasificación interna ---
-
 class ClassificationResult(BaseModel):
-    """
-    Resultado interno del clasificador de complejidad.
-    Este modelo circula entre la capa de orquestación y el despachador.
-    No se expone directamente en la API pública.
-    """
     level: ComplexityLevel
     estimated_tokens: int = Field(ge=0)
-    reasoning: str = Field(description="Explicación legible de por qué se asignó este nivel")
-    detected_keywords: list[str] = Field(
-        default_factory=list,
-        description="Palabras clave de complejidad detectadas en el prompt"
-    )
-    selected_model: str = Field(description="Nombre del modelo seleccionado para este nivel")
+    reasoning: str
+    detected_keywords: list[str] = Field(default_factory=list)
+    selected_model: str
     provider: ModelProvider
 
 
-# --- Modelos de Response ---
-
 class RouterDecision(BaseModel):
-    """Metadatos de la decisión de routing incluidos en la respuesta."""
     complexity_level: ComplexityLevel
     model_used: str
     provider: ModelProvider
@@ -502,419 +618,346 @@ class RouterDecision(BaseModel):
 
 
 class ChatCompleteResponse(BaseModel):
-    """
-    Contrato de salida para el endpoint POST /v1/chat/complete.
-
-    Incluye tanto la respuesta del modelo como los metadatos de routing,
-    lo que permite al cliente entender qué modelo respondió y por qué.
-    """
-    request_id: str = Field(description="UUID único de la solicitud para trazabilidad")
-    content: str = Field(description="Texto generado por el modelo")
+    request_id: str
+    content: str
     router_decision: RouterDecision
-    tokens_used: Optional[int] = Field(
-        default=None,
-        description="Tokens consumidos (None en modo mock)"
-    )
-    latency_ms: Optional[float] = Field(
-        default=None,
-        description="Latencia de la llamada al LLM en milisegundos"
-    )
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    is_mock: bool = Field(
-        default=False,
-        description="True si la respuesta fue generada por el mock (sin LLM real)"
-    )
+    tokens_used: int | None = None
+    latency_ms: float | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    is_mock: bool = True
 
 
 class RouterStatusResponse(BaseModel):
-    """Respuesta del endpoint GET /v1/router/status."""
     service_name: str
     version: str
     environment: str
-    mode: Literal["live", "mock"]
-    configured_models: dict[str, str] = Field(
-        description="Mapa de nivel de complejidad → modelo configurado"
-    )
-    thresholds: dict[str, int] = Field(
-        description="Umbrales de tokens para cada nivel de complejidad"
-    )
-    total_requests_served: int = Field(default=0)
+    mode: Literal["mock", "live"]
+    configured_models: dict[str, str]
+    thresholds: dict[str, int]
+    total_requests_served: int
 
 
 class HealthResponse(BaseModel):
-    """Respuesta del endpoint GET /v1/health."""
     status: Literal["healthy", "degraded", "unhealthy"]
     version: str
     environment: str
     uptime_seconds: float
-    checks: dict[str, bool] = Field(
-        description="Estado de cada dependencia verificada"
-    )
+    checks: dict[str, bool]
 ```
 
-#### Verificación
+### Qué puedes ajustar
+Puedes cambiar el límite máximo de caracteres del prompt modificando:
+
+```python
+content: str = Field(min_length=1, max_length=32_000)
+```
+
+### Validación
 
 ```bash
-python -c "
-from models.schemas import ChatCompleteRequest, ChatMessage, ComplexityLevel
-# Test: request válido
-req = ChatCompleteRequest(messages=[ChatMessage(role='user', content='Hola, ¿cómo estás?')])
-print(f'Request válido: {req.messages[0].content}')
-
-# Test: enum de complejidad
-for level in ComplexityLevel:
-    print(f'Nivel: {level.value}')
-"
+python -c "from models.schemas import ChatCompleteRequest, ChatMessage; r=ChatCompleteRequest(messages=[ChatMessage(role='user', content='Hola')]); print(r.messages[0].content)"
 ```
 
-**Salida esperada:**
-```
-Request válido: Hola, ¿cómo estás?
-Nivel: SIMPLE
-Nivel: MEDIUM
-Nivel: COMPLEX
+### Resultado esperado
+
+```text
+Hola
 ```
 
 ---
 
-### Paso 4 — Implementar el clasificador de complejidad (`services/complexity_classifier.py`)
+## Paso 2. Probar validación de error
 
-**Objetivo:** Construir la lógica de clasificación que analiza el prompt entrante y determina su nivel de complejidad. Este componente corresponde al **motor de prompts** de la Lección 2.1 en su rol de análisis previo.
+### Descripción
+Vas a comprobar que Pydantic bloquee un historial mal formado.
 
-#### Instrucciones
+### Contenido
 
-1. Abre `services/complexity_classifier.py` y escribe:
+```bash
+python - << 'PY'
+from models.schemas import ChatCompleteRequest, ChatMessage
+
+try:
+    ChatCompleteRequest(messages=[ChatMessage(role="assistant", content="Hola")])
+except Exception as e:
+    print("Validación funcionando")
+PY
+```
+
+### Validación
+Debe mostrarse el mensaje `Validación funcionando`.
+
+### Resultado esperado
+El contrato impide solicitudes donde el último mensaje no sea del usuario.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 4 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%204%20de%20un%20laboratorio%20FastAPI.%20Defin%C3%AD%20contratos%20con%20Pydantic%20para%20mensajes%2C%20solicitudes%2C%20respuestas%2C%20decisiones%20del%20router%2C%20estado%20del%20servicio%20y%20health%20check.)
+
+---
+
+# Tarea 5. Implementar el clasificador de complejidad
+
+## Objetivo de la tarea
+
+Crear un componente que estime tokens, detecte palabras clave y clasifique el prompt como simple, medio o complejo.
+
+## Paso 1. Crear `services/complexity_classifier.py`
+
+### Descripción
+Vas a implementar la lógica que decide la complejidad inicial de una solicitud.
+
+### Contenido
+Abre `services/complexity_classifier.py` y agrega:
 
 ```python
 # services/complexity_classifier.py
+
 """
-Clasificador de complejidad de prompts.
+Clasificador de complejidad para el Router de Modelos.
 
-Responsabilidad única: recibir el texto del último mensaje del usuario
-y retornar un ClassificationResult con el nivel asignado.
+Este componente analiza el último prompt del usuario y determina si debe
+enrutarse a un modelo simple, medio o complejo.
 
-Implementa heurísticas basadas en:
-  1. Longitud estimada en tokens (aproximación: 1 token ≈ 4 caracteres en inglés,
-     1 token ≈ 3 caracteres en español)
-  2. Presencia de palabras clave asociadas a tareas complejas o simples
-
-RISK: Las heurísticas basadas en longitud y palabras clave son una aproximación.
-Para producción, considerar un clasificador ML ligero (e.g., un modelo de
-embeddings + clasificador logístico) o usar el propio LLM para auto-clasificarse
-en un pre-paso de bajo costo. Ver TODO al final del archivo.
+Criterios usados:
+1. Palabras clave de complejidad.
+2. Palabras clave de complejidad media.
+3. Cantidad estimada de tokens.
+4. Configuración de umbrales desde .env.
 """
 
 import re
-import logging
-from models.schemas import ClassificationResult, ComplexityLevel, ModelProvider
+import unicodedata
+
 from config.settings import get_settings
+from models.schemas import ClassificationResult, ComplexityLevel, ModelProvider
 
-logger = logging.getLogger(__name__)
 
-
-# --- Catálogo de palabras clave por nivel de complejidad ---
-
-COMPLEX_KEYWORDS: list[str] = [
-    # Razonamiento y análisis profundo
-    "analiza", "analyze", "razona", "reason", "deduce",
-    "compara", "compare", "contrasta", "contrast",
-    "argumenta", "argue", "evalúa", "evaluate",
-    # Generación de contenido extenso
-    "escribe un ensayo", "write an essay", "redacta un informe",
-    "genera un plan", "diseña una arquitectura", "create a plan",
-    # Código complejo
-    "implementa", "implement", "refactoriza", "refactor",
-    "optimiza el algoritmo", "optimize the algorithm",
-    # Multi-paso
-    "paso a paso", "step by step", "primero... luego... finalmente",
+COMPLEX_KEYWORDS = [
+    "analiza",
+    "analizar",
+    "compara",
+    "comparar",
+    "contrasta",
+    "evaluar",
+    "evalua",
+    "evalúa",
+    "diseña",
+    "disena",
+    "diseñar",
+    "arquitectura",
+    "microservicios",
+    "monolitica",
+    "monolítica",
+    "estrategia",
+    "optimiza",
+    "optimizar",
+    "razona",
+    "razonamiento",
+    "plan tecnico",
+    "plan técnico",
+    "paso a paso",
 ]
 
-SIMPLE_KEYWORDS: list[str] = [
-    # Preguntas directas de QA
-    "qué es", "what is", "quién es", "who is",
-    "cuándo fue", "when was", "dónde está", "where is",
-    "define", "significa", "means",
-    # Saludos y conversación trivial
-    "hola", "hello", "hi", "gracias", "thanks", "bye", "adiós",
-    # Preguntas de sí/no
-    "es verdad", "is it true", "puedes confirmar", "can you confirm",
+MEDIUM_KEYWORDS = [
+    "resumen detallado",
+    "explica",
+    "explicar",
+    "presentacion tecnica",
+    "presentación técnica",
+    "componentes",
+    "solucion genai",
+    "solución genai",
+    "documenta",
+    "describe",
 ]
 
 
 class ComplexityClassifier:
-    """
-    Clasificador de complejidad de prompts.
+    def __init__(self):
+        self.settings = get_settings()
 
-    Implementa el patrón Strategy de forma implícita: cada nivel de
-    complejidad mapea a una estrategia de modelo diferente.
-    La selección del modelo ocurre en ModelDispatcher, pero la
-    clasificación aquí es la entrada a ese proceso de decisión.
-    """
+    def _normalize_text(self, text: str) -> str:
+        """
+        Normaliza texto para evitar problemas con mayúsculas y acentos.
 
-    def __init__(self) -> None:
-        self._settings = get_settings()
-        logger.info(
-            "ComplexityClassifier inicializado | "
-            f"Umbral SIMPLE: {self._settings.simple_max_tokens} tokens | "
-            f"Umbral MEDIUM: {self._settings.medium_max_tokens} tokens"
-        )
+        Ejemplo:
+        'Analiza una solución técnica'
+        se convierte en:
+        'analiza una solucion tecnica'
+        """
+        text = text.lower().strip()
+        text = unicodedata.normalize("NFD", text)
+        text = "".join(char for char in text if unicodedata.category(char) != "Mn")
+        text = re.sub(r"\s+", " ", text)
+        return text
 
     def estimate_tokens(self, text: str) -> int:
         """
-        Estima el número de tokens en el texto.
-
-        Usa la heurística: 1 token ≈ 4 caracteres (válida para inglés y
-        aproximada para español). Para mayor precisión en producción,
-        usar tiktoken (OpenAI) o el tokenizador nativo del proveedor.
-
-        TODO: Integrar tiktoken para conteo exacto de tokens de OpenAI:
-            import tiktoken
-            enc = tiktoken.encoding_for_model("gpt-4o")
-            return len(enc.encode(text))
+        Estimación aproximada de tokens.
+        Regla simple: 1 token ≈ 4 caracteres.
         """
-        # Limpieza básica: eliminar espacios múltiples
-        cleaned = re.sub(r'\s+', ' ', text.strip())
-        estimated = max(1, len(cleaned) // 4)
-        logger.debug(f"Tokens estimados para texto de {len(cleaned)} chars: {estimated}")
-        return estimated
+        clean_text = text.strip()
 
-    def detect_keywords(self, text: str) -> tuple[list[str], list[str]]:
+        if not clean_text:
+            return 0
+
+        return max(1, round(len(clean_text) / 4))
+
+    def _contains_keyword(self, normalized_text: str, keywords: list[str]) -> list[str]:
         """
-        Detecta palabras clave de complejidad en el texto.
-
-        Returns:
-            Tupla (complex_found, simple_found) con las keywords detectadas.
+        Busca palabras clave normalizadas dentro del texto.
         """
-        text_lower = text.lower()
-        complex_found = [kw for kw in COMPLEX_KEYWORDS if kw in text_lower]
-        simple_found = [kw for kw in SIMPLE_KEYWORDS if kw in text_lower]
-        return complex_found, simple_found
+        found = []
 
-    def classify(self, user_message: str) -> ClassificationResult:
+        for keyword in keywords:
+            normalized_keyword = self._normalize_text(keyword)
+
+            if normalized_keyword in normalized_text:
+                found.append(keyword)
+
+        return found
+
+    def _resolve_provider(self, selected_model: str) -> ModelProvider:
         """
-        Clasifica la complejidad del prompt y retorna el resultado con
-        el modelo recomendado.
+        Define el proveedor asociado al modelo seleccionado.
 
-        Lógica de decisión (en orden de prioridad):
-          1. Si se detectan keywords de COMPLEJIDAD → COMPLEX (override)
-          2. Si se detectan keywords de SIMPLICIDAD y tokens < umbral → SIMPLE
-          3. Si tokens > umbral MEDIUM → COMPLEX
-          4. Si tokens > umbral SIMPLE → MEDIUM
-          5. Default → SIMPLE
-
-        Args:
-            user_message: El texto del último mensaje del usuario.
-
-        Returns:
-            ClassificationResult con el nivel, modelo y razonamiento.
+        En esta práctica se trabaja en modo mock cuando no hay API keys.
+        Si existen API keys, se intenta inferir el proveedor por el nombre
+        del modelo.
         """
-        estimated_tokens = self.estimate_tokens(user_message)
-        complex_keywords, simple_keywords = self.detect_keywords(user_message)
+        if self.settings.is_mock_mode:
+            return ModelProvider.MOCK
 
-        # --- Lógica de clasificación por prioridad ---
-        level: ComplexityLevel
-        reasoning: str
+        model_name = selected_model.lower()
 
-        if complex_keywords:
-            # Las keywords de complejidad tienen máxima prioridad
+        if "openai" in model_name or "gpt" in model_name:
+            return ModelProvider.OPENAI
+
+        if "gemini" in model_name or "google" in model_name:
+            return ModelProvider.GOOGLE
+
+        if "claude" in model_name or "anthropic" in model_name:
+            return ModelProvider.ANTHROPIC
+
+        return ModelProvider.MOCK
+
+    def classify(self, prompt: str) -> ClassificationResult:
+        normalized_prompt = self._normalize_text(prompt)
+        estimated_tokens = self.estimate_tokens(prompt)
+
+        complex_matches = self._contains_keyword(normalized_prompt, COMPLEX_KEYWORDS)
+        medium_matches = self._contains_keyword(normalized_prompt, MEDIUM_KEYWORDS)
+
+        if complex_matches:
             level = ComplexityLevel.COMPLEX
+            selected_model = self.settings.default_complex_model
             reasoning = (
-                f"Se detectaron {len(complex_keywords)} palabra(s) clave de alta complejidad: "
-                f"{', '.join(complex_keywords[:3])}. "
-                "Estas indican tareas de razonamiento, análisis o generación extensa."
+                "El prompt se clasificó como COMPLEX porque contiene señales "
+                f"de análisis avanzado: {', '.join(complex_matches)}."
             )
-        elif simple_keywords and estimated_tokens <= self._settings.simple_max_tokens:
-            # Keywords simples + texto corto → definitivamente SIMPLE
-            level = ComplexityLevel.SIMPLE
-            reasoning = (
-                f"Prompt corto ({estimated_tokens} tokens estimados) con "
-                f"palabras clave de consulta directa: {', '.join(simple_keywords[:3])}. "
-                "Adecuado para un modelo económico."
-            )
-        elif estimated_tokens > self._settings.medium_max_tokens:
-            # Texto muy largo sin keywords simples → COMPLEX por volumen
-            level = ComplexityLevel.COMPLEX
-            reasoning = (
-                f"Prompt extenso ({estimated_tokens} tokens estimados, "
-                f"umbral MEDIUM: {self._settings.medium_max_tokens}). "
-                "La longitud sugiere una tarea compleja o con mucho contexto."
-            )
-        elif estimated_tokens > self._settings.simple_max_tokens:
-            # Rango medio
+
+        elif medium_matches:
             level = ComplexityLevel.MEDIUM
+            selected_model = self.settings.default_medium_model
             reasoning = (
-                f"Prompt de longitud media ({estimated_tokens} tokens estimados, "
-                f"rango: {self._settings.simple_max_tokens}–{self._settings.medium_max_tokens}). "
-                "Asignado a modelo de capacidad intermedia."
+                "El prompt se clasificó como MEDIUM porque contiene señales "
+                f"de explicación o síntesis técnica: {', '.join(medium_matches)}."
             )
-        else:
-            # Default: texto corto sin keywords especiales
+
+        elif estimated_tokens <= self.settings.simple_max_tokens:
             level = ComplexityLevel.SIMPLE
+            selected_model = self.settings.default_simple_model
             reasoning = (
-                f"Prompt corto ({estimated_tokens} tokens estimados, "
-                f"umbral SIMPLE: {self._settings.simple_max_tokens}). "
-                "Asignado al modelo más económico."
+                "El prompt se clasificó como SIMPLE porque es corto y no contiene "
+                "señales de análisis avanzado."
             )
 
-        # Seleccionar modelo y proveedor según el nivel
-        selected_model, provider = self._resolve_model(level)
+        elif estimated_tokens <= self.settings.medium_max_tokens:
+            level = ComplexityLevel.MEDIUM
+            selected_model = self.settings.default_medium_model
+            reasoning = (
+                "El prompt se clasificó como MEDIUM por su longitud estimada."
+            )
 
-        result = ClassificationResult(
+        else:
+            level = ComplexityLevel.COMPLEX
+            selected_model = self.settings.default_complex_model
+            reasoning = (
+                "El prompt se clasificó como COMPLEX por superar el umbral de tokens."
+            )
+
+        provider = self._resolve_provider(selected_model)
+
+        return ClassificationResult(
             level=level,
             estimated_tokens=estimated_tokens,
             reasoning=reasoning,
-            detected_keywords=complex_keywords + simple_keywords,
+            detected_keywords=complex_matches + medium_matches,
             selected_model=selected_model,
-            provider=provider
+            provider=provider,
         )
-
-        logger.info(
-            f"Clasificación completada | Nivel: {level.value} | "
-            f"Tokens: {estimated_tokens} | Modelo: {selected_model} | "
-            f"Keywords detectadas: {len(complex_keywords + simple_keywords)}"
-        )
-
-        return result
-
-    def _resolve_model(self, level: ComplexityLevel) -> tuple[str, ModelProvider]:
-        """
-        Mapea un nivel de complejidad al modelo y proveedor correspondiente.
-
-        RISK: Si el modelo configurado en .env no existe o el proveedor
-        cambia su nomenclatura, este método retornará un nombre inválido
-        que fallará en tiempo de ejecución, no en configuración.
-        TODO: Añadir validación de nombres de modelos contra una lista
-        de modelos soportados por cada proveedor al iniciar el servicio.
-        """
-        settings = self._settings
-
-        if settings.is_mock_mode:
-            # En modo mock, todos los niveles usan el proveedor MOCK
-            model_map = {
-                ComplexityLevel.SIMPLE: (settings.default_simple_model, ModelProvider.MOCK),
-                ComplexityLevel.MEDIUM: (settings.default_medium_model, ModelProvider.MOCK),
-                ComplexityLevel.COMPLEX: (settings.default_complex_model, ModelProvider.MOCK),
-            }
-        else:
-            # En modo live, inferir el proveedor por el nombre del modelo
-            model_map = {
-                ComplexityLevel.SIMPLE: (
-                    settings.default_simple_model,
-                    self._infer_provider(settings.default_simple_model)
-                ),
-                ComplexityLevel.MEDIUM: (
-                    settings.default_medium_model,
-                    self._infer_provider(settings.default_medium_model)
-                ),
-                ComplexityLevel.COMPLEX: (
-                    settings.default_complex_model,
-                    self._infer_provider(settings.default_complex_model)
-                ),
-            }
-
-        return model_map[level]
-
-    @staticmethod
-    def _infer_provider(model_name: str) -> ModelProvider:
-        """Infiere el proveedor a partir del nombre del modelo."""
-        name_lower = model_name.lower()
-        if "gpt" in name_lower or "o1" in name_lower:
-            return ModelProvider.OPENAI
-        elif "claude" in name_lower:
-            return ModelProvider.ANTHROPIC
-        elif "gemini" in name_lower:
-            return ModelProvider.GOOGLE
-        else:
-            logger.warning(f"Proveedor no reconocido para el modelo '{model_name}'. Usando MOCK.")
-            return ModelProvider.MOCK
 ```
 
-#### Verificación
+### Qué puedes ajustar
+Puedes modificar las listas `COMPLEX_KEYWORDS` y `SIMPLE_KEYWORDS`. También puedes cambiar los umbrales desde `.env`.
+
+### Validación
 
 ```bash
-python -c "
+python - << 'PY'
 from services.complexity_classifier import ComplexityClassifier
-from models.schemas import ComplexityLevel
 
-clf = ComplexityClassifier()
+classifier = ComplexityClassifier()
 
-# Test 1: Prompt simple
-r1 = clf.classify('Hola, ¿qué es Python?')
-assert r1.level == ComplexityLevel.SIMPLE, f'Esperado SIMPLE, obtenido {r1.level}'
-print(f'[OK] SIMPLE: {r1.reasoning[:60]}...')
-
-# Test 2: Prompt complejo por keyword
-r2 = clf.classify('Analiza las ventajas y desventajas de los transformers')
-assert r2.level == ComplexityLevel.COMPLEX, f'Esperado COMPLEX, obtenido {r2.level}'
-print(f'[OK] COMPLEX: {r2.reasoning[:60]}...')
-
-# Test 3: Prompt medio por longitud
-medium_text = 'Necesito un resumen de los conceptos básicos de aprendizaje automático incluyendo supervisado no supervisado y por refuerzo para un estudiante universitario'
-r3 = clf.classify(medium_text)
-print(f'[INFO] Prompt medio: nivel={r3.level.value}, tokens={r3.estimated_tokens}')
-"
+for text in [
+    "Hola, ¿qué es Python?",
+    "Necesito un resumen detallado de los componentes de una solución GenAI para una presentación técnica.",
+    "Analiza y compara una arquitectura monolítica contra microservicios para una plataforma de IA generativa."
+]:
+    result = classifier.classify(text)
+    print(text)
+    print(result.level.value, result.estimated_tokens, result.selected_model, result.provider.value)
+    print(result.reasoning)
+    print("---")
+PY
 ```
+
+### Resultado esperado
+Debes observar tres clasificaciones. La tercera debe ser `COMPLEX`.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 5 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%205%20de%20un%20laboratorio%20GenAI.%20Implement%C3%A9%20un%20clasificador%20de%20complejidad%20que%20estima%20tokens%2C%20detecta%20palabras%20clave%20y%20clasifica%20prompts%20como%20SIMPLE%2C%20MEDIUM%20o%20COMPLEX.)
 
 ---
 
-### Paso 5 — Implementar el despachador de modelos (`services/model_dispatcher.py`)
+# Tarea 6. Implementar el despachador de modelos
 
-**Objetivo:** Construir el componente que aplica el **patrón Strategy** para ejecutar la llamada al LLM (o mock) apropiado según el resultado de la clasificación.
+## Objetivo de la tarea
 
-#### Instrucciones
+Crear un componente que reciba la clasificación del prompt y genere una respuesta simulada mediante una estrategia de modelo.
 
-1. Abre `services/model_dispatcher.py` y escribe:
+## Paso 1. Crear `services/model_dispatcher.py`
+
+### Descripción
+Vas a implementar el patrón **Strategy** para separar la lógica de respuesta por proveedor.
+
+### Contenido
+Abre `services/model_dispatcher.py` y agrega:
 
 ```python
-# services/model_dispatcher.py
-"""
-Despachador de modelos — implementa el Patrón Strategy.
-
-Responsabilidad: recibir un ClassificationResult y los mensajes del usuario,
-y retornar la respuesta del modelo (real o mock) junto con metadatos de uso.
-
-Patrón Strategy aplicado:
-  - Interfaz común: ModelStrategy (clase base abstracta)
-  - Estrategias concretas: MockStrategy, OpenAIStrategy, AnthropicStrategy, GoogleStrategy
-  - Contexto: ModelDispatcher selecciona y ejecuta la estrategia correcta
-
-Esto permite añadir nuevos proveedores sin modificar el código del dispatcher:
-solo se agrega una nueva clase Strategy y se registra en el mapa de estrategias.
-
-RISK: Las estrategias reales (OpenAI, Anthropic, Google) requieren que las
-API keys estén configuradas en .env. Si las keys son inválidas, el error
-ocurrirá en tiempo de ejecución. Implementar circuit breaker en producción.
-"""
-
-import time
-import uuid
 import logging
+import time
 from abc import ABC, abstractmethod
-from unittest.mock import MagicMock
 from typing import Any
-
-from models.schemas import (
-    ClassificationResult,
-    ChatMessage,
-    ModelProvider,
-    ComplexityLevel
-)
-from config.settings import get_settings
+from models.schemas import ChatMessage, ClassificationResult, ComplexityLevel, ModelProvider
 
 logger = logging.getLogger(__name__)
 
 
-# ============================================================
-# INTERFAZ BASE (Patrón Strategy)
-# ============================================================
-
 class ModelStrategy(ABC):
-    """
-    Interfaz abstracta que todas las estrategias de modelo deben implementar.
-
-    Cada estrategia encapsula la lógica de llamada a un proveedor específico,
-    incluyendo el formato de mensajes, manejo de errores y extracción de tokens.
-    """
+    """Interfaz común para estrategias de modelos."""
 
     @abstractmethod
     def execute(
@@ -922,614 +965,315 @@ class ModelStrategy(ABC):
         messages: list[ChatMessage],
         model_name: str,
         max_tokens: int,
-        temperature: float
+        temperature: float,
+        complexity_level: ComplexityLevel,
     ) -> dict[str, Any]:
-        """
-        Ejecuta la llamada al modelo y retorna un diccionario estandarizado.
+        pass
 
-        Returns:
-            {
-                "content": str,          # Texto generado
-                "tokens_used": int | None,
-                "latency_ms": float
-            }
-        """
-        ...
-
-
-# ============================================================
-# ESTRATEGIA MOCK (para entornos sin API keys)
-# ============================================================
 
 class MockStrategy(ModelStrategy):
-    """
-    Estrategia mock que simula respuestas de LLM sin consumir APIs de pago.
-
-    Útil para:
-    - Tests unitarios y de integración
-    - Demos y presentaciones offline
-    - Desarrollo cuando no se tienen API keys disponibles
-
-    TODO: Mejorar el mock para retornar respuestas más realistas según
-    el nivel de complejidad, usando plantillas por tipo de tarea.
-    """
-
-    MOCK_RESPONSES: dict[str, str] = {
-        ComplexityLevel.SIMPLE: (
-            "[MOCK - Modelo simple] Esta es una respuesta simulada para un prompt simple. "
-            "En producción, esta respuesta sería generada por {model_name}."
-        ),
-        ComplexityLevel.MEDIUM: (
-            "[MOCK - Modelo medio] Esta es una respuesta simulada para un prompt de "
-            "complejidad media. El modelo {model_name} procesaría este tipo de solicitudes "
-            "con mayor capacidad de razonamiento y síntesis."
-        ),
-        ComplexityLevel.COMPLEX: (
-            "[MOCK - Modelo complejo] Esta es una respuesta simulada para un prompt complejo. "
-            "El modelo {model_name} aplicaría razonamiento profundo, análisis multi-paso "
-            "y generaría una respuesta extensa y estructurada."
-        ),
-    }
-
-    def __init__(self, complexity_level: ComplexityLevel) -> None:
-        self._complexity_level = complexity_level
+    """Estrategia mock para simular respuestas sin consumir APIs reales."""
 
     def execute(
         self,
         messages: list[ChatMessage],
         model_name: str,
         max_tokens: int,
-        temperature: float
+        temperature: float,
+        complexity_level: ComplexityLevel,
     ) -> dict[str, Any]:
-        # Simular latencia realista según complejidad
-        simulated_latency = {
+        latency_by_level = {
             ComplexityLevel.SIMPLE: 120.0,
             ComplexityLevel.MEDIUM: 450.0,
             ComplexityLevel.COMPLEX: 1200.0,
-        }.get(self._complexity_level, 200.0)
+        }
 
-        template = self.MOCK_RESPONSES.get(
-            self._complexity_level,
-            "[MOCK] Respuesta genérica simulada para {model_name}."
-        )
-        content = template.format(model_name=model_name)
+        provider_hint = self._provider_hint(model_name)
+        last_message = messages[-1].content
 
-        logger.info(
-            f"[MOCK] Estrategia ejecutada | Modelo: {model_name} | "
-            f"Latencia simulada: {simulated_latency}ms"
+        content = (
+            f"[MOCK - {provider_hint}] El prompt fue clasificado como {complexity_level.value}. "
+            f"El modelo simulado '{model_name}' respondería considerando un máximo de "
+            f"{max_tokens} tokens y temperatura {temperature}. "
+            "Esta respuesta valida el flujo arquitectónico sin consumir APIs reales. "
+            f"Fragmento recibido: {last_message[:120]}"
         )
 
         return {
             "content": content,
-            "tokens_used": None,  # Mock no consume tokens reales
-            "latency_ms": simulated_latency,
+            "tokens_used": None,
+            "latency_ms": latency_by_level.get(complexity_level, 250.0),
         }
 
+    @staticmethod
+    def _provider_hint(model_name: str) -> str:
+        lower_name = model_name.lower()
+        if "openai" in lower_name:
+            return "OpenAI"
+        if "gemini" in lower_name:
+            return "Gemini"
+        if "claude" in lower_name:
+            return "Claude"
+        return "Generic"
 
-# ============================================================
-# ESTRATEGIA OPENAI (stub para integración futura)
-# ============================================================
 
 class OpenAIStrategy(ModelStrategy):
-    """
-    Estrategia para modelos de OpenAI (GPT-4o, GPT-4o-mini, etc.).
+    """Stub para integración futura con OpenAI."""
 
-    TODO: Implementar la integración real con el SDK de OpenAI:
-        from openai import OpenAI
-        client = OpenAI(api_key=settings.openai_api_key)
-        response = client.chat.completions.create(...)
-
-    RISK: La API de OpenAI puede retornar errores 429 (rate limit) o 503
-    (servicio no disponible). Implementar reintentos con backoff exponencial
-    usando la librería 'tenacity' antes de pasar a producción.
-    """
-
-    def execute(
-        self,
-        messages: list[ChatMessage],
-        model_name: str,
-        max_tokens: int,
-        temperature: float
-    ) -> dict[str, Any]:
-        settings = get_settings()
-        if not settings.openai_api_key:
-            raise ValueError(
-                "OPENAI_API_KEY no configurada. "
-                "Añádela al archivo .env o usa el modo mock."
-            )
-
-        # TODO: Reemplazar este stub con la llamada real al SDK de OpenAI
-        # import openai
-        # client = openai.OpenAI(api_key=settings.openai_api_key)
-        # start = time.time()
-        # response = client.chat.completions.create(
-        #     model=model_name,
-        #     messages=[{"role": m.role, "content": m.content} for m in messages],
-        #     max_tokens=max_tokens,
-        #     temperature=temperature
-        # )
-        # latency_ms = (time.time() - start) * 1000
-        # return {
-        #     "content": response.choices[0].message.content,
-        #     "tokens_used": response.usage.total_tokens,
-        #     "latency_ms": latency_ms,
-        # }
-
-        raise NotImplementedError(
-            f"La estrategia OpenAI para '{model_name}' aún no está implementada. "
-            "Configura OPENAI_API_KEY y descomenta el código del stub."
-        )
+    def execute(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise NotImplementedError("La integración real con OpenAI no forma parte de esta práctica.")
 
 
-# ============================================================
-# ESTRATEGIA ANTHROPIC (stub para integración futura)
-# ============================================================
+class GeminiStrategy(ModelStrategy):
+    """Stub para integración futura con Gemini."""
 
-class AnthropicStrategy(ModelStrategy):
-    """
-    Estrategia para modelos de Anthropic (Claude 3.5 Sonnet, etc.).
-
-    TODO: Implementar con el SDK de Anthropic:
-        from anthropic import Anthropic
-        client = Anthropic(api_key=settings.anthropic_api_key)
-
-    RISK: Claude tiene un formato de mensajes diferente a OpenAI.
-    El mensaje 'system' debe pasarse como parámetro separado, no dentro
-    de la lista de mensajes. Adaptar el formato antes de la llamada.
-    """
-
-    def execute(
-        self,
-        messages: list[ChatMessage],
-        model_name: str,
-        max_tokens: int,
-        temperature: float
-    ) -> dict[str, Any]:
-        settings = get_settings()
-        if not settings.anthropic_api_key:
-            raise ValueError("ANTHROPIC_API_KEY no configurada.")
-
-        # TODO: Implementar llamada real al SDK de Anthropic
-        raise NotImplementedError(
-            f"La estrategia Anthropic para '{model_name}' aún no está implementada."
-        )
+    def execute(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise NotImplementedError("La integración real con Gemini no forma parte de esta práctica.")
 
 
-# ============================================================
-# CONTEXTO DEL PATRÓN STRATEGY: ModelDispatcher
-# ============================================================
+class ClaudeStrategy(ModelStrategy):
+    """Stub para integración futura con Claude."""
+
+    def execute(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise NotImplementedError("La integración real con Claude no forma parte de esta práctica.")
+
 
 class ModelDispatcher:
-    """
-    Contexto del Patrón Strategy que selecciona y ejecuta la estrategia
-    de modelo correcta según el ClassificationResult.
-
-    Flujo:
-      1. Recibe ClassificationResult del ComplexityClassifier
-      2. Selecciona la estrategia (mock, openai, anthropic, google)
-      3. Ejecuta la estrategia con los mensajes del usuario
-      4. Retorna el resultado estandarizado
-
-    Este componente corresponde a la 'Capa de Orquestación' de la Lección 2.1:
-    coordina el flujo y decide qué herramienta invocar.
-    """
+    """Selecciona y ejecuta la estrategia adecuada según la clasificación."""
 
     def __init__(self) -> None:
-        self._settings = get_settings()
-        self._request_count = 0  # Contador para observabilidad
-        logger.info(
-            f"ModelDispatcher inicializado | "
-            f"Modo: {'mock' if self._settings.is_mock_mode else 'live'}"
-        )
+        self._request_count = 0
+        self._strategies = {
+            ModelProvider.MOCK: MockStrategy(),
+            ModelProvider.OPENAI: OpenAIStrategy(),
+            ModelProvider.GEMINI: GeminiStrategy(),
+            ModelProvider.CLAUDE: ClaudeStrategy(),
+        }
 
     def dispatch(
         self,
         classification: ClassificationResult,
         messages: list[ChatMessage],
-        max_tokens: int = 512,
-        temperature: float = 0.7
+        max_tokens: int,
+        temperature: float,
     ) -> dict[str, Any]:
-        """
-        Despacha la solicitud al modelo apropiado y retorna la respuesta.
-
-        Args:
-            classification: Resultado del ComplexityClassifier
-            messages: Historial de mensajes del usuario
-            max_tokens: Límite de tokens para la respuesta
-            temperature: Temperatura de muestreo
-
-        Returns:
-            Diccionario con 'content', 'tokens_used', 'latency_ms' e 'is_mock'
-        """
         self._request_count += 1
-        strategy = self._select_strategy(classification)
-
-        logger.info(
-            f"Despachando solicitud #{self._request_count} | "
-            f"Modelo: {classification.selected_model} | "
-            f"Proveedor: {classification.provider.value} | "
-            f"Nivel: {classification.level.value}"
+        strategy = self._strategies.get(classification.provider, self._strategies[ModelProvider.MOCK])
+        start = time.perf_counter()
+        result = strategy.execute(
+            messages=messages,
+            model_name=classification.selected_model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            complexity_level=classification.level,
         )
-
-        start_time = time.time()
-        try:
-            result = strategy.execute(
-                messages=messages,
-                model_name=classification.selected_model,
-                max_tokens=max_tokens,
-                temperature=temperature
-            )
-            # Si la estrategia no midió la latencia, la medimos aquí
-            if result.get("latency_ms") is None:
-                result["latency_ms"] = (time.time() - start_time) * 1000
-
-            result["is_mock"] = isinstance(strategy, MockStrategy)
-            return result
-
-        except NotImplementedError as e:
-            logger.error(f"Estrategia no implementada: {e}")
-            raise
-        except Exception as e:
-            logger.error(
-                f"Error en dispatch | Modelo: {classification.selected_model} | "
-                f"Error: {type(e).__name__}: {e}"
-            )
-            raise
-
-    def _select_strategy(self, classification: ClassificationResult) -> ModelStrategy:
-        """
-        Selecciona la estrategia concreta basándose en el proveedor
-        y si el servicio está en modo mock.
-
-        RISK: Si se añaden nuevos proveedores sin actualizar este método,
-        el sistema caerá silenciosamente al modo mock en lugar de fallar
-        explícitamente. Considerar usar un registro (registry) de estrategias.
-        """
-        if self._settings.is_mock_mode or classification.provider == ModelProvider.MOCK:
-            return MockStrategy(complexity_level=classification.level)
-
-        strategy_map: dict[ModelProvider, ModelStrategy] = {
-            ModelProvider.OPENAI: OpenAIStrategy(),
-            ModelProvider.ANTHROPIC: AnthropicStrategy(),
-            # TODO: Añadir GoogleStrategy cuando esté implementada
-        }
-
-        strategy = strategy_map.get(classification.provider)
-        if strategy is None:
-            logger.warning(
-                f"Proveedor '{classification.provider.value}' sin estrategia implementada. "
-                "Usando MockStrategy como fallback."
-            )
-            return MockStrategy(complexity_level=classification.level)
-
-        return strategy
+        if result.get("latency_ms") is None:
+            result["latency_ms"] = round((time.perf_counter() - start) * 1000, 2)
+        result["is_mock"] = isinstance(strategy, MockStrategy)
+        return result
 
     @property
     def request_count(self) -> int:
-        """Número total de solicitudes despachadas (para observabilidad)."""
         return self._request_count
 ```
 
+### Qué puedes ajustar
+Puedes modificar el texto del mock en `content` o la latencia simulada en `latency_by_level`.
+
+### Validación
+
+```bash
+python - << 'PY'
+from services.complexity_classifier import ComplexityClassifier
+from services.model_dispatcher import ModelDispatcher
+from models.schemas import ChatMessage
+
+messages = [ChatMessage(role="user", content="Analiza una arquitectura GenAI.")]
+classification = ComplexityClassifier().classify(messages[-1].content)
+result = ModelDispatcher().dispatch(classification, messages, max_tokens=512, temperature=0.2)
+print(result["content"])
+print(result["latency_ms"])
+PY
+```
+
+### Resultado esperado
+La terminal muestra una respuesta simulada y una latencia en milisegundos.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 6 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%206%20de%20un%20laboratorio%20GenAI.%20Implement%C3%A9%20un%20despachador%20de%20modelos%20con%20el%20patr%C3%B3n%20Strategy%2C%20cre%C3%A9%20una%20estrategia%20mock%20y%20dej%C3%A9%20stubs%20para%20OpenAI%2C%20Gemini%20y%20Claude.)
+
 ---
 
-### Paso 6 — Implementar los endpoints del router (`routers/llm_router.py`)
+# Tarea 7. Implementar los endpoints FastAPI
 
-**Objetivo:** Conectar los servicios de clasificación y despacho con los endpoints HTTP de FastAPI.
+## Objetivo de la tarea
 
-#### Instrucciones
+Crear las rutas HTTP que permitirán validar el estado del servicio, consultar la configuración del router y enviar prompts al router.
 
-1. Abre `routers/llm_router.py` y escribe:
+## Paso 1. Crear `routers/llm_router.py`
+
+### Descripción
+Vas a conectar el clasificador y el despachador con endpoints HTTP.
+
+### Contenido
+Abre `routers/llm_router.py` y agrega:
 
 ```python
-# routers/llm_router.py
-"""
-Endpoints del Model Router Service.
-
-Define los tres endpoints públicos del servicio:
-  - POST /v1/chat/complete  → Enruta y procesa la solicitud
-  - GET  /v1/router/status  → Estado actual del router
-  - GET  /v1/health         → Health check para load balancers y orquestadores
-
-La separación entre 'routers/' y 'services/' refleja la arquitectura
-de la Lección 2.1: los routers son la capa de presentación/entrada,
-los services son la capa de orquestación y lógica de negocio.
-"""
-
-import uuid
 import logging
 import time
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, HTTPException, Request, status
-
+import uuid
+from fastapi import APIRouter, HTTPException, status
+from config.settings import get_settings
 from models.schemas import (
     ChatCompleteRequest,
     ChatCompleteResponse,
+    HealthResponse,
     RouterDecision,
     RouterStatusResponse,
-    HealthResponse,
 )
 from services.complexity_classifier import ComplexityClassifier
 from services.model_dispatcher import ModelDispatcher
-from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
-
-# Instancias de los servicios (singleton por módulo)
-# TODO: En producción, usar inyección de dependencias de FastAPI (Depends)
-# para facilitar el testing y el reemplazo de implementaciones.
-_classifier = ComplexityClassifier()
-_dispatcher = ModelDispatcher()
-_settings = get_settings()
-_service_start_time = time.time()
-
 router = APIRouter(prefix="/v1", tags=["Model Router"])
+settings = get_settings()
+classifier = ComplexityClassifier()
+dispatcher = ModelDispatcher()
+service_start_time = time.time()
 
 
-@router.post(
-    "/chat/complete",
-    response_model=ChatCompleteResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Enruta una solicitud de chat al modelo LLM apropiado",
-    description=(
-        "Clasifica la complejidad del último mensaje del usuario y despacha "
-        "la solicitud al modelo más adecuado según la configuración del router. "
-        "Retorna la respuesta del modelo junto con los metadatos de la decisión de routing."
+@router.get("/health", response_model=HealthResponse)
+async def health_check() -> HealthResponse:
+    return HealthResponse(
+        status="degraded" if settings.is_mock_mode else "healthy",
+        version=settings.app_version,
+        environment=settings.environment,
+        uptime_seconds=round(time.time() - service_start_time, 2),
+        checks={
+            "classifier": True,
+            "dispatcher": True,
+            "api_keys_configured": not settings.is_mock_mode,
+        },
     )
-)
+
+
+@router.get("/router/status", response_model=RouterStatusResponse)
+async def router_status() -> RouterStatusResponse:
+    return RouterStatusResponse(
+        service_name=settings.app_name,
+        version=settings.app_version,
+        environment=settings.environment,
+        mode="mock" if settings.is_mock_mode else "live",
+        configured_models={
+            "SIMPLE": settings.default_simple_model,
+            "MEDIUM": settings.default_medium_model,
+            "COMPLEX": settings.default_complex_model,
+        },
+        thresholds={
+            "simple_max_tokens": settings.simple_max_tokens,
+            "medium_max_tokens": settings.medium_max_tokens,
+        },
+        total_requests_served=dispatcher.request_count,
+    )
+
+
+@router.post("/chat/complete", response_model=ChatCompleteResponse)
 async def chat_complete(request_body: ChatCompleteRequest) -> ChatCompleteResponse:
-    """
-    Endpoint principal del router.
-
-    Flujo interno:
-      1. Extraer el último mensaje del usuario para clasificación
-      2. Clasificar la complejidad del prompt
-      3. Despachar al modelo seleccionado
-      4. Construir y retornar la respuesta estandarizada
-
-    RISK: Este endpoint no implementa autenticación en el boilerplate.
-    En producción, añadir middleware de API Key o JWT antes del despliegue.
-    TODO: Añadir rate limiting por IP o por usuario autenticado.
-    """
     request_id = str(uuid.uuid4())
-    logger.info(f"Nueva solicitud recibida | request_id: {request_id}")
-
-    # Extraer el último mensaje del usuario para clasificar
-    user_messages = [m for m in request_body.messages if m.role == "user"]
-    if not user_messages:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="No se encontró ningún mensaje con role='user' en el historial."
-        )
-
-    last_user_message = user_messages[-1].content
-
     try:
-        # Paso 1: Clasificar la complejidad
-        classification = _classifier.classify(last_user_message)
-        logger.info(
-            f"[{request_id}] Clasificación: {classification.level.value} | "
-            f"Modelo seleccionado: {classification.selected_model}"
-        )
-
-        # Paso 2: Despachar al modelo
-        dispatch_result = _dispatcher.dispatch(
+        user_message = request_body.messages[-1].content
+        classification = classifier.classify(user_message)
+        dispatch_result = dispatcher.dispatch(
             classification=classification,
             messages=request_body.messages,
-            max_tokens=request_body.max_tokens or 512,
-            temperature=request_body.temperature or 0.7
+            max_tokens=request_body.max_tokens,
+            temperature=request_body.temperature,
         )
-
-        # Paso 3: Construir la respuesta
-        router_decision = RouterDecision(
+        decision = RouterDecision(
             complexity_level=classification.level,
             model_used=classification.selected_model,
             provider=classification.provider,
             estimated_tokens=classification.estimated_tokens,
-            routing_reasoning=classification.reasoning
+            routing_reasoning=classification.reasoning,
         )
-
-        response = ChatCompleteResponse(
+        return ChatCompleteResponse(
             request_id=request_id,
             content=dispatch_result["content"],
-            router_decision=router_decision,
+            router_decision=decision,
             tokens_used=dispatch_result.get("tokens_used"),
             latency_ms=dispatch_result.get("latency_ms"),
-            is_mock=dispatch_result.get("is_mock", True)
+            is_mock=dispatch_result.get("is_mock", True),
         )
-
-        logger.info(
-            f"[{request_id}] Solicitud completada | "
-            f"Latencia: {response.latency_ms:.1f}ms | "
-            f"Mock: {response.is_mock}"
-        )
-
-        return response
-
-    except Exception as e:
-        logger.error(f"[{request_id}] Error procesando solicitud: {type(e).__name__}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error interno del router: {str(e)}"
-        )
-
-
-@router.get(
-    "/router/status",
-    response_model=RouterStatusResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Estado actual del router y configuración de modelos"
-)
-async def router_status() -> RouterStatusResponse:
-    """
-    Retorna el estado operacional del router incluyendo:
-    - Modelos configurados por nivel de complejidad
-    - Umbrales de clasificación activos
-    - Modo de operación (live vs mock)
-    - Contador de solicitudes procesadas
-    """
-    return RouterStatusResponse(
-        service_name=_settings.app_name,
-        version=_settings.app_version,
-        environment=_settings.environment,
-        mode="mock" if _settings.is_mock_mode else "live",
-        configured_models={
-            "SIMPLE": _settings.default_simple_model,
-            "MEDIUM": _settings.default_medium_model,
-            "COMPLEX": _settings.default_complex_model,
-        },
-        thresholds={
-            "simple_max_tokens": _settings.simple_max_tokens,
-            "medium_max_tokens": _settings.medium_max_tokens,
-        },
-        total_requests_served=_dispatcher.request_count
-    )
-
-
-@router.get(
-    "/health",
-    response_model=HealthResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Health check del servicio"
-)
-async def health_check() -> HealthResponse:
-    """
-    Endpoint de health check para load balancers, orquestadores (Kubernetes)
-    y herramientas de monitoreo.
-
-    Verifica:
-    - Disponibilidad del clasificador
-    - Disponibilidad del dispatcher
-    - Modo de configuración (mock vs live con keys)
-
-    TODO: En producción, añadir verificación de conectividad con las APIs
-    externas (OpenAI, Anthropic) usando llamadas de prueba de bajo costo.
-    """
-    uptime = time.time() - _service_start_time
-
-    checks = {
-        "classifier": True,   # Si llegamos aquí, el clasificador está operativo
-        "dispatcher": True,   # Si llegamos aquí, el dispatcher está operativo
-        "api_keys_configured": not _settings.is_mock_mode,
-    }
-
-    # El servicio está 'degraded' si opera en modo mock (sin API keys reales)
-    overall_status = "healthy" if not _settings.is_mock_mode else "degraded"
-
-    return HealthResponse(
-        status=overall_status,
-        version=_settings.app_version,
-        environment=_settings.environment,
-        uptime_seconds=uptime,
-        checks=checks
-    )
+    except Exception as error:
+        logger.exception("Error procesando solicitud")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
 ```
+
+### Qué puedes ajustar
+Puedes cambiar el prefijo de rutas en `APIRouter(prefix="/v1")`. Si lo cambias, actualiza también los comandos `curl`.
+
+### Validación
+
+```bash
+python -m py_compile routers/llm_router.py
+```
+
+### Resultado esperado
+El archivo compila sin errores.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 7 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%207%20de%20un%20laboratorio%20FastAPI.%20Implement%C3%A9%20endpoints%20para%20health%20check%2C%20estado%20del%20router%20y%20chat%20complete%2C%20conectando%20el%20clasificador%20de%20complejidad%20y%20el%20despachador%20de%20modelos.)
 
 ---
 
-### Paso 7 — Implementar el punto de entrada y el middleware de logging (`main.py`)
+# Tarea 8. Implementar el punto de entrada de la API
 
-**Objetivo:** Ensamblar todos los componentes en la aplicación FastAPI y configurar el middleware de logging que registra las decisiones de routing.
+## Objetivo de la tarea
 
-#### Instrucciones
+Crear `main.py` para inicializar FastAPI, registrar rutas y habilitar logging básico.
 
-1. Abre `main.py` y escribe:
+## Paso 1. Crear `main.py`
+
+### Descripción
+Vas a ensamblar la aplicación principal.
+
+### Contenido
+Abre `main.py` y agrega:
 
 ```python
-# main.py
-"""
-Punto de entrada del Model Router Service.
-
-Responsabilidades de este módulo:
-  1. Crear e instanciar la aplicación FastAPI
-  2. Configurar el middleware de logging estructurado
-  3. Registrar los routers de endpoints
-  4. Exponer el endpoint raíz de información del servicio
-
-Arquitectura reflejada (Lección 2.1):
-  - Este archivo es la 'Capa de Presentación': el punto de entrada al sistema
-  - Los routers/llm_router.py orquestan el flujo
-  - Los services/ implementan la lógica de negocio
-  - Los models/schemas.py definen los contratos de datos
-"""
-
 import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
-
+from collections.abc import AsyncGenerator
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-
 from config.settings import get_settings
 from routers.llm_router import router as llm_router
 
-# ============================================================
-# CONFIGURACIÓN DE LOGGING
-# ============================================================
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 logger = logging.getLogger("model_router")
+settings = get_settings()
 
-
-# ============================================================
-# LIFECYCLE DEL SERVICIO
-# ============================================================
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator:
-    """
-    Gestiona el ciclo de vida de la aplicación.
-    El código antes del 'yield' se ejecuta al iniciar.
-    El código después del 'yield' se ejecuta al apagar.
-    """
-    settings = get_settings()
-    logger.info("=" * 60)
-    logger.info(f"Iniciando {settings.app_name} v{settings.app_version}")
-    logger.info(f"Entorno: {settings.environment}")
-    logger.info(f"Modo: {'MOCK (sin API keys)' if settings.is_mock_mode else 'LIVE'}")
-    logger.info(f"Modelo SIMPLE : {settings.default_simple_model}")
-    logger.info(f"Modelo MEDIUM : {settings.default_medium_model}")
-    logger.info(f"Modelo COMPLEX: {settings.default_complex_model}")
-    logger.info("=" * 60)
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    logger.info("Iniciando %s v%s", settings.app_name, settings.app_version)
+    logger.info("Entorno: %s", settings.environment)
+    logger.info("Modo: %s", "mock" if settings.is_mock_mode else "live")
+    yield
+    logger.info("Apagando %s", settings.app_name)
 
-    yield  # El servidor está activo
-
-    logger.info(f"Apagando {settings.app_name}...")
-
-
-# ============================================================
-# INSTANCIA DE LA APLICACIÓN
-# ============================================================
-
-settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description=(
-        "Router inteligente de modelos LLM que clasifica la complejidad "
-        "del prompt entrante y despacha la solicitud al modelo más adecuado "
-        "según criterios de costo y capacidad. "
-        "Implementa el Patrón Strategy para la selección dinámica de modelos."
-    ),
+    description="Router de Modelos con FastAPI para clasificar prompts y simular enrutamiento a OpenAI, Gemini o Claude.",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
 )
 
-
-# ============================================================
-# MIDDLEWARE
-# ============================================================
-
-# CORS: configuración permisiva para desarrollo
-# TODO: Restringir 'allow_origins' a dominios específicos en producción
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -1541,367 +1285,545 @@ app.add_middleware(
 
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next) -> Response:
-    """
-    Middleware de logging que registra cada solicitud HTTP con:
-    - ID único de solicitud (para trazabilidad)
-    - Método y ruta
-    - Código de estado de la respuesta
-    - Latencia total del endpoint
-
-    Este middleware implementa observabilidad básica, correspondiente
-    a la 'Capa de Almacenamiento y Observabilidad' de la Lección 2.1.
-
-    TODO: En producción, reemplazar por logging estructurado en JSON
-    compatible con sistemas de log aggregation (ELK, Cloud Logging, Datadog).
-    """
-    request_id = str(uuid.uuid4())[:8]  # ID corto para los logs
-    start_time = time.time()
-
-    # Adjuntar el request_id al estado de la request para uso downstream
-    request.state.request_id = request_id
-
-    logger.info(f"[{request_id}] → {request.method} {request.url.path}")
-
+    request_id = str(uuid.uuid4())[:8]
+    start = time.perf_counter()
+    logger.info("[%s] -> %s %s", request_id, request.method, request.url.path)
     response = await call_next(request)
-
-    latency_ms = (time.time() - start_time) * 1000
-    logger.info(
-        f"[{request_id}] ← {response.status_code} | "
-        f"Latencia: {latency_ms:.1f}ms | "
-        f"Ruta: {request.url.path}"
-    )
-
-    # Añadir headers de trazabilidad a la respuesta
+    latency_ms = round((time.perf_counter() - start) * 1000, 2)
+    logger.info("[%s] <- %s | %sms", request_id, response.status_code, latency_ms)
     response.headers["X-Request-ID"] = request_id
-    response.headers["X-Response-Time-Ms"] = f"{latency_ms:.1f}"
-
+    response.headers["X-Response-Time-Ms"] = str(latency_ms)
     return response
 
-
-# ============================================================
-# REGISTRO DE ROUTERS
-# ============================================================
 
 app.include_router(llm_router)
 
 
-# ============================================================
-# ENDPOINT RAÍZ
-# ============================================================
-
 @app.get("/", tags=["Info"])
 async def root() -> dict:
-    """Información básica del servicio. Redirige a /docs para la documentación completa."""
     return {
         "service": settings.app_name,
         "version": settings.app_version,
         "environment": settings.environment,
         "docs": "/docs",
         "health": "/v1/health",
-        "status": "/v1/router/status",
+        "router_status": "/v1/router/status",
     }
-
-
-# ============================================================
-# PUNTO DE ENTRADA PARA EJECUCIÓN DIRECTA
-# ============================================================
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,  # Hot-reload para desarrollo
-        log_level="info"
-    )
 ```
+
+### Qué puedes ajustar
+Puedes restringir CORS cambiando `allow_origins=["*"]` por dominios específicos.
+
+### Validación
+
+```bash
+python -m py_compile main.py
+```
+
+### Resultado esperado
+`main.py` compila sin errores.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 8 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%208%20de%20un%20laboratorio%20FastAPI.%20Cre%C3%A9%20el%20punto%20de%20entrada%20main.py%2C%20configur%C3%A9%20FastAPI%2C%20registr%C3%A9%20el%20router%2C%20agregu%C3%A9%20CORS%20y%20un%20middleware%20de%20logging%20para%20trazabilidad.)
 
 ---
 
-## 7. Validación y Pruebas
+# Tarea 9. Ejecutar el servidor y validar endpoints
 
-### Iniciar el servidor
+## Objetivo de la tarea
+
+Levantar la API localmente y validar su funcionamiento con `curl` desde Git Bash.
+
+## Paso 1. Ejecutar el servidor
+
+### Descripción
+Vas a iniciar FastAPI usando Uvicorn.
+
+### Contenido
 
 ```bash
-# Desde el directorio lab-02-model-router con el venv activo
 uvicorn main:app --reload --port 8000
 ```
 
-**Salida esperada en la consola:**
-```
-2024-01-15T10:30:00 | INFO     | model_router | ============================================================
-2024-01-15T10:30:00 | INFO     | model_router | Iniciando Model Router Service v0.1.0
-2024-01-15T10:30:00 | INFO     | model_router | Entorno: development
-2024-01-15T10:30:00 | INFO     | model_router | Modo: MOCK (sin API keys)
-2024-01-15T10:30:00 | INFO     | model_router | Modelo SIMPLE : gpt-4o-mini
-2024-01-15T10:30:00 | INFO     | model_router | Modelo MEDIUM : gpt-4o
-2024-01-15T10:30:00 | INFO     | model_router | Modelo COMPLEX: claude-3-5-sonnet-20241022
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000
-```
+### Validación
+La terminal debe mostrar que Uvicorn está corriendo en `http://127.0.0.1:8000`.
 
-### Prueba 1: Health check
+### Resultado esperado
+El servidor está activo.
+
+> [!IMPORTANT]
+> Deja esta terminal abierta. Para ejecutar los comandos `curl`, abre una segunda terminal Git Bash en la misma carpeta y activa el entorno virtual.
+
+---
+
+## Paso 2. Validar endpoint raíz
+
+### Descripción
+Vas a comprobar que la aplicación responde.
+
+### Contenido
 
 ```bash
-curl -s http://localhost:8000/v1/health | python3 -m json.tool
+curl -s http://localhost:8000/ | python -m json.tool
 ```
 
-**Salida esperada:**
-```json
+### Validación
+La respuesta debe incluir `service`, `docs` y `health`.
+
+### Resultado esperado
+La API responde correctamente.
+
+---
+
+## Paso 3. Validar health check
+
+### Descripción
+Vas a consultar el estado general del servicio.
+
+### Contenido
+
+```bash
+curl -s http://localhost:8000/v1/health | python -m json.tool
+```
+
+### Validación
+Debes ver un JSON con `status: degraded`, `classifier: true`, `dispatcher: true` y `api_keys_configured: false`.
+
+### Resultado esperado
+El servicio está disponible en modo mock.
+
+---
+
+## Paso 4. Validar estado del router
+
+### Descripción
+Vas a revisar qué modelos simulados y umbrales están configurados.
+
+### Contenido
+
+```bash
+curl -s http://localhost:8000/v1/router/status | python -m json.tool
+```
+
+### Validación
+La respuesta debe incluir `mode: mock` y los modelos configurados para `SIMPLE`, `MEDIUM` y `COMPLEX`.
+
+### Resultado esperado
+El router muestra su configuración activa.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 9 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%209%20de%20un%20laboratorio%20FastAPI.%20Ejecut%C3%A9%20el%20servidor%20con%20Uvicorn%20y%20valid%C3%A9%20los%20endpoints%20ra%C3%ADz%2C%20health%20check%20y%20estado%20del%20router%20usando%20curl%20desde%20Git%20Bash.)
+
+---
+
+# Tarea 10. Probar clasificación y enrutamiento de prompts
+
+## Objetivo de la tarea
+
+Enviar prompts simples, medios y complejos para validar que el router selecciona modelos simulados distintos.
+
+## Paso 1. Probar prompt simple
+
+### Descripción
+Vas a enviar una pregunta corta que debería clasificarse como `SIMPLE`.
+
+### Contenido
+
+```bash
+mkdir -p payloads
+```
+```bash
+cat > payloads/simple.json << 'EOF'
 {
-    "status": "degraded",
-    "version": "0.1.0",
-    "environment": "development",
-    "uptime_seconds": 5.2,
-    "checks": {
-        "classifier": true,
-        "dispatcher": true,
-        "api_keys_configured": false
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hola, ¿qué es Python?"
     }
+  ],
+  "max_tokens": 256,
+  "temperature": 0.2
 }
+EOF
+```
+```bash
+curl -s -X POST "http://localhost:8000/v1/chat/complete" \
+  -H "Content-Type: application/json" \
+  --data-binary @payloads/simple.json | python -m json.tool
 ```
 
-> 💡 `"status": "degraded"` es correcto: indica que el servicio opera en modo mock sin API keys reales. En producción con keys configuradas, retornaría `"healthy"`.
+### Validación
+Verifica:
 
-### Prueba 2: Estado del router
+```text
+router_decision.complexity_level = SIMPLE
+router_decision.model_used = openai-fast-mock
+is_mock = true
+```
+
+### Resultado esperado
+El router envía el prompt al modelo simulado simple.
+
+---
+
+## Paso 2. Probar prompt medio
+
+### Descripción
+Vas a enviar un prompt más largo, sin palabras clave complejas explícitas.
+
+### Contenido
 
 ```bash
-curl -s http://localhost:8000/v1/router/status | python3 -m json.tool
-```
-
-**Salida esperada:**
-```json
+cat > payloads/medium.json << 'EOF'
 {
-    "service_name": "Model Router Service",
-    "version": "0.1.0",
-    "environment": "development",
-    "mode": "mock",
-    "configured_models": {
-        "SIMPLE": "gpt-4o-mini",
-        "MEDIUM": "gpt-4o",
-        "COMPLEX": "claude-3-5-sonnet-20241022"
-    },
-    "thresholds": {
-        "simple_max_tokens": 50,
-        "medium_max_tokens": 200
-    },
-    "total_requests_served": 0
+  "messages": [
+    {
+      "role": "user",
+      "content": "Necesito un resumen detallado de los componentes principales de una solución de inteligencia artificial generativa, incluyendo la capa de aplicación, la capa de orquestación, el modelo de lenguaje y la observabilidad básica."
+    }
+  ],
+  "max_tokens": 512,
+  "temperature": 0.2
 }
+EOF
 ```
-
-### Prueba 3: Prompt SIMPLE
-
 ```bash
-curl -s -X POST http://localhost:8000/v1/chat/complete \
+python -m json.tool payloads/medium.json
+```
+```bash
+curl -s -X POST "http://localhost:8000/v1/chat/complete" \
   -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {"role": "user", "content": "Hola, ¿qué es Python?"}
-    ]
-  }' | python3 -m json.tool
+  --data-binary @payloads/medium.json | python -m json.tool
 ```
 
-**Verificar en la respuesta:**
-- `router_decision.complexity_level` = `"SIMPLE"`
-- `router_decision.model_used` = `"gpt-4o-mini"`
-- `is_mock` = `true`
+### Validación
+Verifica que `complexity_level` sea `MEDIUM` o `COMPLEX`, según los umbrales configurados.
 
-### Prueba 4: Prompt COMPLEX (por keyword)
+### Resultado esperado
+El router selecciona un modelo simulado de mayor capacidad que el modelo simple.
+
+---
+
+## Paso 3. Probar prompt complejo
+
+### Descripción
+Vas a enviar un prompt con palabras clave de análisis y comparación.
+
+### Contenido
 
 ```bash
-curl -s -X POST http://localhost:8000/v1/chat/complete \
+cat > payloads/complex.json << 'EOF'
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Analiza y compara una arquitectura monolítica contra una arquitectura de microservicios para una plataforma de IA generativa empresarial. Incluye riesgos, ventajas, desventajas y una recomendación final."
+    }
+  ],
+  "max_tokens": 700,
+  "temperature": 0.2
+}
+EOF
+```
+```bash
+python -m json.tool payloads/complex.json
+```
+```bash
+curl -s -X POST "http://localhost:8000/v1/chat/complete" \
   -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {"role": "user", "content": "Analiza las ventajas y desventajas de usar microservicios versus arquitectura monolítica para una startup con equipo pequeño."}
-    ],
-    "temperature": 0.5
-  }' | python3 -m json.tool
+  --data-binary @payloads/complex.json | python -m json.tool
 ```
 
-**Verificar en la respuesta:**
-- `router_decision.complexity_level` = `"COMPLEX"`
-- `router_decision.model_used` = `"claude-3-5-sonnet-20241022"`
-- `router_decision.routing_reasoning` contiene mención de la keyword `"analiza"`
+### Validación
+Verifica:
 
-### Prueba 5: Verificar el contador de solicitudes
-
-```bash
-# Después de las pruebas anteriores
-curl -s http://localhost:8000/v1/router/status | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-count = data['total_requests_served']
-print(f'Total solicitudes procesadas: {count}')
-assert count >= 2, f'Esperado >= 2, obtenido {count}'
-print('[OK] Contador de observabilidad funcionando correctamente')
-"
+```text
+router_decision.complexity_level = COMPLEX
+router_decision.model_used = claude-reasoning-mock
+is_mock = true
 ```
 
-### Prueba 6: Validación de error (mensaje inválido)
+### Resultado esperado
+El router selecciona el modelo simulado complejo.
+
+---
+
+## Paso 4. Validar contador de solicitudes
+
+### Descripción
+Vas a confirmar que el router registra cuántas solicitudes ha procesado.
+
+### Contenido
 
 ```bash
-# Intentar enviar un request sin mensajes de usuario
-curl -s -X POST http://localhost:8000/v1/chat/complete \
-  -H "Content-Type: application/json" \
-  -d '{
+curl -s http://localhost:8000/v1/router/status | python -c "import sys,json; data=json.load(sys.stdin); print(data['total_requests_served'])"
+```
+
+### Validación
+El número debe ser mayor o igual a `3` si ejecutaste las pruebas anteriores.
+
+### Resultado esperado
+El servicio muestra observabilidad básica de solicitudes procesadas.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 10 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2010%20de%20un%20laboratorio%20GenAI.%20Prob%C3%A9%20un%20Router%20de%20Modelos%20con%20prompts%20simples%2C%20medios%20y%20complejos%2C%20validando%20que%20la%20API%20clasifica%20el%20prompt%20y%20selecciona%20un%20modelo%20simulado%20diferente%20seg%C3%BAn%20la%20complejidad.)
+
+---
+
+# Tarea 11. Validar errores y documentación automática
+
+## Objetivo de la tarea
+
+Comprobar que la API valida solicitudes incorrectas y expone documentación interactiva.
+
+## Paso 1. Probar error por último mensaje inválido
+
+### Descripción
+Vas a validar que el contrato no acepte una conversación cuyo último mensaje sea del asistente.
+
+### Contenido
+
+```bash
+curl -s -X POST http://localhost:8000/v1/chat/complete   -H "Content-Type: application/json"   -d '{
     "messages": [
       {"role": "assistant", "content": "Hola"}
     ]
-  }' | python3 -m json.tool
+  }' | python -m json.tool
 ```
 
-**Salida esperada:** Error 422 de Pydantic por el validador `validate_last_message_is_user`.
+### Validación
+La respuesta debe ser un error de validación `422`.
 
-### Acceder a la documentación interactiva
-
-Abre en tu navegador: **http://localhost:8000/docs**
-
-Deberías ver la documentación Swagger UI con los tres endpoints documentados automáticamente.
+### Resultado esperado
+La API bloquea solicitudes mal formadas antes de entrar a la lógica de negocio.
 
 ---
 
-## 8. Resolución de Problemas
+## Paso 2. Probar error por temperatura inválida
 
-### Problema 1: `ModuleNotFoundError: No module named 'pydantic_settings'`
+### Descripción
+Vas a comprobar que Pydantic valida rangos numéricos.
 
-**Síntomas:**
-```
-ModuleNotFoundError: No module named 'pydantic_settings'
-```
-El servidor no inicia y el error aparece al importar `config/settings.py`.
+### Contenido
 
-**Causa:**
-En Pydantic v2, `BaseSettings` se movió a un paquete separado llamado `pydantic-settings`. Si solo se instaló `pydantic`, el módulo `pydantic_settings` no existe.
-
-**Solución:**
 ```bash
-# Verificar si pydantic-settings está instalado
-pip show pydantic-settings
-
-# Si no está instalado:
-pip install "pydantic-settings==2.3.4"
-echo "pydantic-settings==2.3.4" >> requirements.txt
-
-# Verificar la instalación
-python -c "from pydantic_settings import BaseSettings; print('OK')"
+curl -s -X POST http://localhost:8000/v1/chat/complete   -H "Content-Type: application/json"   -d '{
+    "messages": [
+      {"role": "user", "content": "Hola"}
+    ],
+    "temperature": 5
+  }' | python -m json.tool
 ```
+
+### Validación
+La respuesta debe indicar error porque `temperature` debe estar entre `0.0` y `2.0`.
+
+### Resultado esperado
+La API protege parámetros inválidos.
 
 ---
 
-### Problema 2: El clasificador siempre retorna `COMPLEX` aunque el prompt sea corto
+## Paso 3. Abrir documentación Swagger
 
-**Síntomas:**
-Prompts cortos como `"¿Qué es Python?"` retornan `complexity_level: "COMPLEX"` en lugar de `"SIMPLE"`. El log muestra keywords detectadas inesperadas.
+### Descripción
+Vas a revisar la documentación automática generada por FastAPI.
 
-**Causa:**
-Las listas `COMPLEX_KEYWORDS` y `SIMPLE_KEYWORDS` en `complexity_classifier.py` usan búsqueda de subcadena (`if kw in text_lower`). Palabras cortas como `"analiza"` pueden coincidir parcialmente con otras palabras del texto (por ejemplo, `"analizar"` contiene `"analiz"` pero no `"analiza"`). Sin embargo, si el texto contiene palabras compuestas que incluyen alguna keyword, se producirá un falso positivo.
+### Contenido
+Abre en el navegador:
 
-**Diagnóstico:**
-```bash
-python -c "
-from services.complexity_classifier import ComplexityClassifier
-clf = ComplexityClassifier()
-text = 'Tu pregunta'  # Reemplaza con el texto problemático
-complex_kw, simple_kw = clf.detect_keywords(text)
-print(f'Keywords complejas detectadas: {complex_kw}')
-print(f'Keywords simples detectadas: {simple_kw}')
-print(f'Tokens estimados: {clf.estimate_tokens(text)}')
-"
+```text
+http://localhost:8000/docs
 ```
 
-**Solución:**
-Usar búsqueda de palabras completas con expresiones regulares en lugar de búsqueda de subcadena:
+### Validación
+Debes ver `GET /v1/health`, `GET /v1/router/status` y `POST /v1/chat/complete`.
 
-```python
-# En services/complexity_classifier.py, modificar detect_keywords:
-import re
+### Resultado esperado
+La API tiene documentación interactiva disponible.
 
-def detect_keywords(self, text: str) -> tuple[list[str], list[str]]:
-    text_lower = text.lower()
-    # Usar \b para coincidir solo con palabras completas
-    complex_found = [
-        kw for kw in COMPLEX_KEYWORDS
-        if re.search(r'\b' + re.escape(kw) + r'\b', text_lower)
-    ]
-    simple_found = [
-        kw for kw in SIMPLE_KEYWORDS
-        if re.search(r'\b' + re.escape(kw) + r'\b', text_lower)
-    ]
-    return complex_found, simple_found
-```
+## Prompt de apoyo
+
+[Explicar la Tarea 11 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2011%20de%20un%20laboratorio%20FastAPI.%20Valid%C3%A9%20errores%20de%20contrato%20con%20Pydantic%2C%20prob%C3%A9%20solicitudes%20inv%C3%A1lidas%20y%20revis%C3%A9%20la%20documentaci%C3%B3n%20autom%C3%A1tica%20Swagger%20generada%20por%20FastAPI.)
 
 ---
 
-## 9. Limpieza del Entorno
+# Tarea 12. Preparar entrega y evidencias
 
-Al finalizar la práctica, ejecuta los siguientes pasos para dejar el entorno limpio:
+## Objetivo de la tarea
+
+Validar que todo el proyecto funcione y preparar los archivos que se deben entregar.
+
+## Paso 1. Compilar archivos Python
+
+### Descripción
+Vas a revisar que no existan errores de sintaxis.
+
+### Contenido
 
 ```bash
-# 1. Detener el servidor uvicorn
-# Presiona Ctrl+C en la terminal donde está corriendo
+python -m py_compile main.py
+python -m py_compile config/settings.py
+python -m py_compile models/schemas.py
+python -m py_compile services/complexity_classifier.py
+python -m py_compile services/model_dispatcher.py
+python -m py_compile routers/llm_router.py
+```
 
-# 2. Desactivar el entorno virtual
+### Validación
+Ningún comando debe mostrar errores.
+
+### Resultado esperado
+Todos los archivos Python tienen sintaxis válida.
+
+---
+
+## Paso 2. Validar estructura final
+
+### Descripción
+Vas a confirmar que el proyecto contiene todos los archivos necesarios.
+
+### Contenido
+
+```bash
+find . -maxdepth 3 -type f -not -path './.venv/*' | sort
+```
+
+### Validación
+Deben aparecer `main.py`, `requirements.txt`, `config/settings.py`, `models/schemas.py`, `routers/llm_router.py`, `services/complexity_classifier.py` y `services/model_dispatcher.py`.
+
+### Resultado esperado
+La estructura del proyecto está completa.
+
+---
+
+## Paso 3. Guardar evidencias de ejecución
+
+### Descripción
+Vas a documentar que la API funcionó correctamente.
+
+### Contenido
+Guarda capturas o copia los resultados de:
+
+1. `GET /v1/health`
+2. `GET /v1/router/status`
+3. `POST /v1/chat/complete` con prompt simple
+4. `POST /v1/chat/complete` con prompt complejo
+5. Vista de `http://localhost:8000/docs`
+
+### Validación
+Cada evidencia debe mostrar respuesta exitosa o validación esperada.
+
+### Resultado esperado
+Tienes evidencia suficiente para entregar la práctica.
+
+---
+
+## Paso 4. Verificar que `.env` no se entregue
+
+### Descripción
+Vas a confirmar que no compartes archivos sensibles.
+
+### Contenido
+
+```bash
+git status --short
+```
+
+### Validación
+El archivo `.env` no debe aparecer como archivo listo para commit.
+
+### Resultado esperado
+La entrega no contiene configuración sensible.
+
+## Prompt de apoyo
+
+[Explicar la Tarea 12 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2012%20de%20un%20laboratorio%20FastAPI.%20Valid%C3%A9%20la%20sintaxis%20de%20los%20archivos%20Python%2C%20revis%C3%A9%20la%20estructura%20final%2C%20guard%C3%A9%20evidencias%20de%20ejecuci%C3%B3n%20y%20confirm%C3%A9%20que%20.env%20no%20se%20entregue.)
+
+---
+
+## 4. Resultado final esperado
+
+Al finalizar la práctica, debes contar con:
+
+- Proyecto FastAPI funcional en Windows.
+- Entorno virtual configurado.
+- Configuración centralizada con `.env` y `pydantic-settings`.
+- Contratos de API definidos con Pydantic.
+- Clasificador de complejidad funcional.
+- Despachador de modelos con patrón Strategy.
+- Mocks para simular OpenAI, Gemini y Claude.
+- Endpoints funcionales para health, status y chat.
+- Pruebas realizadas con `curl`.
+- Documentación Swagger disponible en `/docs`.
+- Evidencias de ejecución.
+
+---
+
+## 5. Criterios de evaluación sugeridos
+
+| Criterio | Ponderación |
+|---|---:|
+| Preparación correcta del ambiente local | 10% |
+| Estructura profesional del proyecto | 10% |
+| Configuración centralizada y segura | 10% |
+| Contratos Pydantic correctos | 15% |
+| Clasificador de complejidad funcional | 15% |
+| Despachador con patrón Strategy | 15% |
+| Endpoints FastAPI funcionales | 15% |
+| Validaciones, evidencias y documentación | 10% |
+| **Total** | **100%** |
+
+---
+
+## 6. Errores comunes que debes evitar
+
+| Error | Cómo evitarlo |
+|---|---|
+| Ejecutar comandos sin activar `.venv` | Verifica que aparezca `(.venv)` en la terminal |
+| Usar `python3` en Windows y que falle | Usa `python` desde Git Bash |
+| Subir `.env` a Git | Confirma que `.env` esté en `.gitignore` |
+| Cambiar nombres de carpetas | Si cambias nombres, actualiza imports |
+| No instalar `pydantic-settings` | Verifica que esté en `requirements.txt` |
+| Usar PowerShell para comandos con `cat << EOF` | Ejecuta los comandos desde Git Bash |
+| Esperar `healthy` en `/v1/health` | En modo mock, el estado correcto es `degraded` |
+| No dejar corriendo Uvicorn | Mantén abierta la terminal del servidor |
+| Copiar JSON con comillas incorrectas | Usa exactamente los comandos `curl` proporcionados |
+| Confundir mock con modelo real | Recuerda que no se consumen APIs reales |
+
+---
+
+## 7. Limpieza del entorno
+
+Cuando termines, detén el servidor con `Ctrl + C` y desactiva el entorno virtual:
+
+```bash
 deactivate
-
-# 3. (Opcional) Eliminar el directorio del proyecto si no continuarás con él
-# ⚠️ Solo ejecutar si ya no necesitas el código
-# cd ..
-# rm -rf lab-02-model-router
-
-# 4. Si vas a continuar en otra sesión, simplemente reactiva el venv:
-# cd lab-02-model-router
-# source .venv/bin/activate  (macOS/Linux)
-# .venv\Scripts\Activate.ps1  (Windows)
 ```
 
-> ✅ **Buena práctica**: Antes de hacer commit a Git, verifica siempre que el archivo `.env` aparezca en `.gitignore` y que no esté en el staging area:
-> ```bash
-> git status  # .env NO debe aparecer como archivo a commitear
-> ```
+Si deseas volver a trabajar después:
+
+```bash
+cd ~/labs-ia-gen/lab-02-model-router
+source .venv/Scripts/activate
+uvicorn main:app --reload --port 8000
+```
 
 ---
 
-## 10. Resumen
+## 8. Fuentes oficiales de referencia
 
-### Lo que construiste
-
-En esta práctica implementaste el **boilerplate completo de un Router de Modelos** con FastAPI, aplicando directamente los conceptos de la Lección 2.1:
-
-| Componente de la Lección 2.1 | Archivo implementado | Responsabilidad |
-|---|---|---|
-| Capa de presentación | `routers/llm_router.py` | Endpoints HTTP, validación de entrada |
-| Capa de orquestación | `services/model_dispatcher.py` | Selección y ejecución de estrategia |
-| Motor de prompts (análisis) | `services/complexity_classifier.py` | Clasificación de complejidad |
-| Modelo de lenguaje | `MockStrategy` + stubs | Generación de respuesta (simulada) |
-| Almacenamiento/Observabilidad | Middleware de logging en `main.py` | Registro de decisiones de routing |
-| Configuración | `config/settings.py` + `.env` | Configuración externalizada y tipada |
-
-### Patrones de diseño aplicados
-
-- **Strategy**: `ModelStrategy` → `MockStrategy`, `OpenAIStrategy`, `AnthropicStrategy` permiten añadir nuevos proveedores sin modificar `ModelDispatcher`.
-- **Singleton con `@lru_cache`**: La configuración se lee una sola vez del archivo `.env`.
-- **Fail-fast validation**: Pydantic v2 valida los contratos de API antes de que la solicitud llegue a la lógica de negocio.
-- **Separación de responsabilidades**: Cada archivo tiene una única razón para cambiar.
-
-### Puntos de extensión documentados (TODOs)
-
-El código incluye **12 comentarios TODO/RISK** que mapean el camino hacia una implementación de producción:
-- Integración real con SDKs de OpenAI, Anthropic y Google
-- Reintentos con backoff exponencial usando `tenacity`
-- Rate limiting por usuario
-- Autenticación con JWT o API Key
-- Clasificador ML en lugar de heurísticas
-- Logging estructurado en JSON
-
-### Recursos adicionales
-
-- [FastAPI — Documentación oficial](https://fastapi.tiangolo.com/)
-- [Pydantic v2 — Guía de migración desde v1](https://docs.pydantic.dev/latest/migration/)
-- [Patrón Strategy — Refactoring Guru](https://refactoring.guru/es/design-patterns/strategy)
-- [pydantic-settings — Gestión de configuración](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)
-- [Lección 2.1 — Componentes de una Solución GenAI](../lessons/02-01-componentes-genai.md)
+- FastAPI — Documentación oficial: https://fastapi.tiangolo.com/
+- FastAPI — Instalación: https://fastapi.tiangolo.com/tutorial/
+- Uvicorn — Documentación oficial: https://www.uvicorn.org/
+- Pydantic — Documentación oficial: https://docs.pydantic.dev/
+- pydantic-settings — Documentación oficial: https://docs.pydantic.dev/latest/concepts/pydantic_settings/
+- Patrón Strategy — Refactoring Guru: https://refactoring.guru/design-patterns/strategy
 
 ---
-*Lab 02-00-01 — Model Router Boilerplate | Módulo 2: Componentes de una Solución GenAI*
+
+## 9. Resumen
+
+En esta práctica construiste una API FastAPI que representa la base arquitectónica de un **Router de Modelos** para soluciones GenAI. Implementaste configuración centralizada, contratos de datos, clasificación de prompts, despacho por estrategia, respuestas simuladas, endpoints de operación y pruebas con `curl`. Aunque no consumiste modelos reales, dejaste preparada una estructura profesional que puede evolucionar hacia integración real con OpenAI, Gemini o Claude en prácticas posteriores.
