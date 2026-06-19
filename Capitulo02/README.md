@@ -101,8 +101,6 @@ Al finalizar esta práctica, tú serás capaz de:
 | Duración estimada | 45 minutos |
 | Complejidad | Intermedia |
 | Nivel de Bloom | Crear, aplicar, analizar y validar |
-| Capítulo | Capítulo 2 |
-| Lección de referencia | 2.1 — Componentes de una solución GenAI |
 | Modalidad | Individual o equipos de 2 personas |
 | Sistema operativo | Windows |
 | Editor | Visual Studio Code |
