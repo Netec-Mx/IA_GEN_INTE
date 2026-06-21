@@ -29,12 +29,6 @@
 
 ## 🧭 Sección 1. Información general de la práctica
 
-### 🏷️ Título de la práctica
-
-**Construir un pipeline de ingesta RAG con Semantic Chunking para un asistente documental**
-
----
-
 ### 📌 Descripción general
 
 En esta práctica vas a construir un pipeline completo de **Retrieval-Augmented Generation (RAG)** para consultar documentos técnicos en PDF. El objetivo no es solo “preguntarle a un PDF”, sino entender cómo se construye una base documental consultable desde cero.
