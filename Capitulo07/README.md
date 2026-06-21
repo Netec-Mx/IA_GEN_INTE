@@ -1,1637 +1,1872 @@
-# Script de preprocesamiento de datos para convertir una base de datos de preguntas y respuestas en un dataset validado para fine-tuning
 
-## 1. Metadatos
+<div align="center">
 
-| Campo            | Detalle                                      |
-|------------------|----------------------------------------------|
-| **Duración**     | 50 minutos                                   |
-| **Complejidad**  | Media                                        |
-| **Nivel Bloom**  | Crear                                        |
-| **Módulo**       | 7 — Fine-Tuning vs. RAG                      |
-| **Costo estimado** | $0 USD (no se ejecuta fine-tuning real)    |
+# 🧪 Laboratorio 7
 
----
+## Preparación profesional de dataset para fine-tuning: limpieza, validación, seguridad y decisión técnica
 
-## 2. Descripción General
+![Nivel](https://img.shields.io/badge/Nivel-Intermedio-2563EB?style=flat-square)
+![Sistema](https://img.shields.io/badge/Sistema-Windows-0F766E?style=flat-square)
+![Editor](https://img.shields.io/badge/Editor-VS%20Code-7C3AED?style=flat-square)
+![Terminal](https://img.shields.io/badge/Terminal-Git%20Bash-475569?style=flat-square)
+![Lenguaje](https://img.shields.io/badge/Lenguaje-Python-CA8A04?style=flat-square)
+![Costo](https://img.shields.io/badge/Costo-0%20USD-16A34A?style=flat-square)
 
-En este laboratorio construirás un pipeline completo de preprocesamiento en Python que transforma un dataset crudo de preguntas y respuestas de soporte técnico (con errores intencionales) en un dataset limpio, validado y listo para ser enviado a la API de fine-tuning de OpenAI. Aplicarás técnicas de limpieza, deduplicación por similitud, conteo de tokens con `tiktoken` y análisis de costo comparativo entre fine-tuning y few-shot prompting. Al finalizar, generarás los archivos `train.jsonl`, `validation.jsonl` y un reporte técnico `preprocessing_report.md`, consolidando así el conocimiento conceptual de la Lección 7.1 en una implementación de nivel producción.
+</div>
 
 ---
 
-## 3. Objetivos de Aprendizaje
+> [!IMPORTANT]
+> En este laboratorio **no ejecutarás un fine-tuning real**. Vas a preparar, limpiar, validar y documentar un dataset de preguntas y respuestas para entender cuándo conviene usar **fine-tuning**, **RAG** o **few-shot prompting**. No uses datos reales de clientes, credenciales, tickets internos ni información sensible.
 
-- [ ] Implementar un pipeline de preprocesamiento que convierta un CSV de preguntas y respuestas al formato JSONL requerido por la API de fine-tuning de OpenAI.
-- [ ] Aplicar técnicas de limpieza, deduplicación por similitud (`difflib`) y balanceo de datos para garantizar la calidad del dataset.
-- [ ] Validar el dataset resultante contra los criterios técnicos de OpenAI (longitud máxima de tokens, formato de mensajes, distribución por categoría) y generar un reporte de calidad.
-- [ ] Calcular y comparar el costo estimado del fine-tuning frente al costo equivalente de usar few-shot prompting con el modelo base para tomar una decisión informada.
-
----
-
-## 4. Prerrequisitos
-
-### Conocimiento previo
-- Haber completado Lab 01-00-01 (análisis de costos con `tiktoken`).
-- Manejo básico de `pandas` para manipulación de DataFrames.
-- Comprensión conceptual de Fine-Tuning vs. RAG (Lección 7.1 de este módulo).
-- Familiaridad con el formato JSON/JSONL.
-
-### Acceso y credenciales
-- **No se requiere API key de OpenAI** para este laboratorio; el fine-tuning real no se ejecuta.
-- Acceso a terminal con Python 3.11 y permisos para instalar paquetes vía `pip`.
-- Conexión a Internet para instalar dependencias desde PyPI.
+<table>
+<tr>
+<td width="25%"><strong>🎯 Enfoque</strong><br>Preparación de datos para fine-tuning</td>
+<td width="25%"><strong>⏱️ Duración</strong><br>50 minutos</td>
+<td width="25%"><strong>🧠 Bloom</strong><br>Aplicar, analizar, evaluar y crear</td>
+<td width="25%"><strong>📦 Entregable</strong><br>JSONL + reportes</td>
+</tr>
+</table>
 
 ---
 
-## 5. Entorno del Laboratorio
+## 🧭 Sección 1. Información general de la práctica
 
-### Hardware mínimo recomendado
+### 📌 Descripción general
 
-| Componente       | Mínimo                          |
-|------------------|---------------------------------|
-| CPU              | 4 núcleos (Intel i5 8va gen / Ryzen 5) |
-| RAM              | 8 GB (16 GB recomendado)        |
-| Almacenamiento   | 500 MB libres en disco SSD      |
-| Red              | Acceso a PyPI (pip install)     |
+En esta práctica vas a construir un pipeline completo de preprocesamiento de datos para fine-tuning. Partirás de un dataset crudo de preguntas y respuestas de soporte técnico con errores intencionales, lo limpiarás, validarás su estructura, detectarás posibles datos sensibles, lo convertirás al formato JSONL compatible con fine-tuning tipo chat y generarás reportes técnicos de calidad.
 
-### Software requerido
+A diferencia de una conversión simple de CSV a JSONL, aquí trabajarás como en un flujo profesional: inspeccionarás calidad, corregirás problemas, validarás tokens y estructura, revisarás seguridad, generarás evidencias y tomarás una decisión informada entre **fine-tuning**, **RAG** y **few-shot prompting**.
 
-| Paquete           | Versión recomendada |
-|-------------------|---------------------|
-| Python            | 3.11.x              |
-| pandas            | 2.2.x               |
-| tiktoken          | 0.7.x               |
-| jsonlines         | 4.0.x               |
-| difflib           | stdlib (incluido)   |
-| python-dotenv     | 1.0.x               |
+La práctica original proponía transformar un dataset crudo de preguntas y respuestas en `train.jsonl`, `validation.jsonl` y `preprocessing_report.md`, aplicando limpieza, deduplicación, conteo de tokens y análisis de costo. Esta versión conserva esa base y agrega validación estricta de orden de roles, detección de datos sensibles, matriz de decisión y revisión manual.
 
-### Configuración inicial del entorno
+---
 
-Ejecuta los siguientes comandos en tu terminal antes de comenzar:
+### 🎯 Objetivos de aprendizaje
+
+Al finalizar esta práctica, tú serás capaz de:
+
+1. Preparar un proyecto Python local en Windows usando VSCode y Git Bash.
+2. Generar un dataset crudo sintético con errores representativos de un caso real.
+3. Inspeccionar nulos, duplicados, respuestas cortas y desbalance de categorías.
+4. Normalizar texto y eliminar caracteres inválidos antes de entrenar un modelo.
+5. Deduplicar preguntas exactas y casi duplicadas con similitud textual.
+6. Detectar posibles datos sensibles antes de exportar ejemplos para entrenamiento.
+7. Convertir preguntas y respuestas al formato JSONL de mensajes tipo chat.
+8. Validar estructura, orden de roles, contenido, tokens y distribución de categorías.
+9. Dividir el dataset en entrenamiento y validación.
+10. Generar reportes profesionales de calidad y decisión técnica.
+11. Elegir entre fine-tuning, RAG y few-shot prompting con criterios técnicos.
+12. Entregar evidencias sin incluir datos sensibles ni archivos innecesarios.
+
+---
+
+### ✅ Prerrequisitos
+
+Antes de iniciar, asegúrate de cumplir con lo siguiente:
+
+1. Tener conocimientos básicos de Python.
+2. Saber ejecutar comandos desde Git Bash.
+3. Conocer el formato JSON y JSONL.
+4. Entender el concepto general de fine-tuning.
+5. Entender la diferencia conceptual entre fine-tuning, RAG y few-shot prompting.
+6. Haber trabajado previamente con archivos CSV.
+7. Tener Visual Studio Code instalado.
+8. Tener Python 3.11 o superior instalado.
+9. Tener acceso a internet para instalar dependencias desde PyPI.
+
+> [!NOTE]
+> No necesitas API key de OpenAI para este laboratorio porque no se ejecutará fine-tuning real ni llamadas a modelos.
+
+---
+
+### 💻 Hardware
+
+| Recurso | Requisito mínimo | Recomendado |
+|---|---:|---:|
+| Equipo | Laptop o PC con Windows | Laptop o PC con Windows 11 |
+| CPU | 2 núcleos | 4 núcleos o más |
+| RAM | 8 GB | 16 GB |
+| Almacenamiento libre | 500 MB | 1 GB |
+| GPU | No requerida | No requerida |
+| Internet | Requerido para instalar paquetes | 10 Mbps o superior |
+
+---
+
+### 🧰 Software
+
+| Software | Uso |
+|---|---|
+| Visual Studio Code | Edición de código |
+| Git Bash | Ejecución de comandos |
+| Python 3.11 o superior | Runtime del laboratorio |
+| pip | Instalación de dependencias |
+| pandas | Manipulación de datos tabulares |
+| tiktoken | Estimación de tokens |
+| jsonlines | Lectura y escritura JSONL |
+| difflib | Deduplicación básica por similitud |
+
+---
+
+### 📋 Datos generales de la práctica
+
+| Elemento | Detalle |
+|---|---|
+| Duración estimada | 50 minutos |
+| Complejidad | Intermedia |
+| Nivel de Bloom | Aplicar, analizar, evaluar y crear |
+| Ubicación recomendada | Después de la lección conceptual de Fine-Tuning vs. RAG |
+| Modalidad | Individual o equipos de 2 personas |
+| Sistema operativo | Windows |
+| Editor | Visual Studio Code |
+| Terminal | Git Bash |
+| Lenguaje | Python |
+| Costo estimado | $0 USD |
+| Dataset | Sintético, generado localmente |
+| Entregable principal | `train.jsonl`, `validation.jsonl`, `preprocessing_report.md` |
+| Entregable secundario | `decision_matrix.md`, `manual_review_checklist.md` |
+| Tipo de práctica | Preparación de datos, validación y análisis técnico |
+
+---
+
+## 🛡️ Consideraciones para estudiantes
+
+<table>
+<tr>
+<td><strong>🔐 Seguridad</strong><br>No uses datos reales ni sensibles.</td>
+<td><strong>🧪 Alcance</strong><br>No se ejecuta fine-tuning real.</td>
+<td><strong>📊 Calidad</strong><br>Un dataset limpio no garantiza un buen modelo.</td>
+</tr>
+</table>
+
+1. No uses tickets reales de soporte.
+2. No incluyas credenciales, tokens, correos reales, teléfonos o datos de clientes.
+3. No subas archivos JSONL con datos sensibles a un repositorio.
+4. El conteo de tokens es una estimación técnica y puede variar por modelo.
+5. Los precios y modelos cambian; los valores usados aquí son de referencia didáctica.
+6. Fine-tuning no reemplaza RAG. Sirve para especializar comportamiento, tono, formato o patrones de respuesta.
+7. La deduplicación con `difflib` es didáctica; para datasets grandes considera embeddings, MinHash o LSH.
+8. La validación automática no reemplaza revisión humana.
+9. No entrenes con respuestas cortas, contradictorias, incompletas o mal etiquetadas.
+10. Documenta cualquier cambio de precios, modelo, split o umbral de similitud.
+11. Si en tu terminal aparecen mensajes como `Failed to send telemetry event ClientStartEvent` o `ClientCreateCollectionEvent`, trátalos como advertencias de telemetría de ChromaDB provenientes de librerías usadas en laboratorios anteriores o en el mismo entorno. En este laboratorio 7 no se usa ChromaDB, por lo que esos mensajes no indican que el pipeline de fine-tuning haya fallado.
+
+---
+
+## 🔗 Fuentes oficiales que debes revisar antes de llevar esto a producción
+
+> [!NOTE]
+> Esta práctica no ejecuta fine-tuning real. Si después decides entrenar un modelo, revisa la documentación vigente del proveedor antes de usar los archivos generados.
+
+| Tema | Qué revisar |
+|---|---|
+| Fine-tuning | Modelos soportados, formato requerido, límites, costos y estado actual del servicio |
+| Formato JSONL | Estructura exacta esperada para ejemplos tipo chat |
+| Tokenización | Modelo de tokenización recomendado para el modelo elegido |
+| Privacidad | Políticas de uso, retención, entrenamiento y manejo de datos |
+| Costos | Precio de entrenamiento, inferencia, validación y almacenamiento |
+
+---
+
+## 🚀 Sección 2. Desarrollo de la práctica
+
+---
+
+# 🧩 Tarea 1. Preparar el proyecto local en Windows
+
+## 🎯 Objetivo de la tarea
+
+Crear la carpeta del laboratorio, abrirla en VSCode, configurar un entorno virtual Python y preparar los archivos base del proyecto.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea la carpeta del laboratorio
+
+**📝 Descripción del paso:**  
+Vas a crear desde Git Bash la carpeta raíz del laboratorio `lab-07-finetuning-dataset`. En esa carpeta guardarás todos los archivos de trabajo de la práctica: scripts Python, dataset CSV, archivos JSONL y reportes Markdown. No debes crear estos archivos en otra ruta para evitar errores de lectura o escritura más adelante.
+
+**⚙️ Contenido del paso:**
 
 ```bash
-# 1. Crear y activar entorno virtual aislado para el Lab 07
-python -m venv venv_lab07
-# En Windows:
-venv_lab07\Scripts\activate
-# En macOS/Linux:
-source venv_lab07/bin/activate
-
-# 2. Instalar dependencias
-pip install pandas==2.2.2 tiktoken==0.7.0 jsonlines==4.0.0 python-dotenv==1.0.1
-
-# 3. Verificar instalaciones
-python -c "import pandas, tiktoken, jsonlines; print('OK')"
+mkdir -p ~/labs-ia-gen/lab-07-finetuning-dataset
+cd ~/labs-ia-gen/lab-07-finetuning-dataset
 ```
 
-### Estructura de archivos del laboratorio
-
-```
-lab07/
-├── raw_qa_dataset.csv          # Dataset crudo (generado en el Paso 1)
-├── dataset_preprocessor.py     # Script principal (construido en los pasos 2-6)
-├── train.jsonl                 # Salida: ejemplos de entrenamiento
-├── validation.jsonl            # Salida: ejemplos de validación
-├── preprocessing_report.md     # Salida: reporte de calidad
-├── requirements.txt
-└── .gitignore
-```
-
-Crea el archivo `.gitignore` y `requirements.txt`:
+**✅ Validación del paso:**
 
 ```bash
-# .gitignore
+pwd
+```
+
+**📌 Resultado esperado:**  
+Debes estar en una ruta similar a:
+
+```text
+/c/Users/TU_USUARIO/labs-ia-gen/lab-07-finetuning-dataset
+```
+
+---
+
+### ✅ Paso 2. Abre la carpeta en Visual Studio Code
+
+**📝 Descripción del paso:**  
+Vas a abrir en Visual Studio Code la carpeta `lab-07-finetuning-dataset` que acabas de crear. A partir de este punto, todos los archivos nuevos se deben crear dentro de esa carpeta y no en el escritorio, descargas u otra ubicación.
+
+**⚙️ Contenido del paso:**
+
+```bash
+code .
+```
+
+Si el comando no funciona, abre VSCode manualmente y selecciona:
+
+```text
+File > Open Folder > labs-ia-gen > lab-07-finetuning-dataset
+```
+
+**✅ Validación del paso:**  
+Confirma que VSCode muestra la carpeta `lab-07-finetuning-dataset`.
+
+**📌 Resultado esperado:**  
+El proyecto está abierto en VSCode.
+
+---
+
+### ✅ Paso 3. Crea y activa el entorno virtual
+
+**📝 Descripción del paso:**  
+Vas a crear dentro del proyecto un entorno virtual llamado `.venv` y después lo vas a activar desde Git Bash. Esto hace que las librerías instaladas en la práctica queden aisladas de otros proyectos de Python.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python -m venv .venv
+source .venv/Scripts/activate
+```
+
+**✅ Validación del paso:**
+
+```bash
+python --version
+which python
+```
+
+**📌 Resultado esperado:**  
+La ruta de Python debe apuntar a `.venv`.
+
+---
+
+### ✅ Paso 4. Crea `requirements.txt`
+
+**📝 Descripción del paso:**  
+Vas a crear en la raíz del proyecto el archivo `requirements.txt`. Este archivo debe contener la lista de librerías que instalarás para manipular datos, contar tokens y escribir archivos JSONL.
+
+**⚙️ Contenido del paso:**
+
+```bash
+cat > requirements.txt << 'EOF'
+pandas>=2.2,<3
+tiktoken>=0.7,<1
+jsonlines>=4.0,<5
+python-dotenv>=1.0,<2
+EOF
+```
+
+**✅ Validación del paso:**
+
+```bash
+cat requirements.txt
+```
+
+**📌 Resultado esperado:**  
+El archivo contiene las dependencias necesarias.
+
+---
+
+### ✅ Paso 5. Instala dependencias
+
+**📝 Descripción del paso:**  
+Vas a ejecutar la instalación desde Git Bash con el entorno virtual activo. El comando leerá `requirements.txt` e instalará las librerías necesarias para manipular el CSV, generar JSONL y estimar tokens.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -c "import pandas, tiktoken, jsonlines; print('Dependencias instaladas correctamente')"
+```
+
+**📌 Resultado esperado:**
+
+```text
+Dependencias instaladas correctamente
+```
+
+---
+
+### ✅ Paso 6. Crea `.gitignore`
+
+**📝 Descripción del paso:**  
+Vas a crear en la raíz del proyecto el archivo `.gitignore`. Este archivo indica qué elementos no deben subirse a un repositorio, como el entorno virtual, archivos temporales o posibles archivos sensibles.
+
+**⚙️ Contenido del paso:**
+
+```bash
 cat > .gitignore << 'EOF'
 .env
-*.pyc
+.venv/
 __pycache__/
-venv_lab07/
+*.pyc
+*.pyo
 *.key
-EOF
-
-# requirements.txt
-cat > requirements.txt << 'EOF'
-pandas==2.2.2
-tiktoken==0.7.0
-jsonlines==4.0.0
-python-dotenv==1.0.1
+*.log
+*.tmp
+# Si usas datos reales, considera excluir también:
+# *.jsonl
+# raw_qa_dataset.csv
 EOF
 ```
 
+**✅ Validación del paso:**
+
+```bash
+cat .gitignore
+```
+
+**📌 Resultado esperado:**  
+`.venv/` y archivos temporales están excluidos.
+
 ---
 
-## 6. Pasos del Laboratorio
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 1 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%201%20de%20un%20laboratorio%20de%20IA%20generativa.%20Prepar%C3%A9%20un%20proyecto%20local%20en%20Windows%20con%20VSCode%2C%20Git%20Bash%2C%20un%20entorno%20virtual%20Python%2C%20requirements.txt%20y%20.gitignore%20para%20trabajar%20un%20dataset%20de%20fine-tuning.)
 
 ---
 
-### Paso 1: Generar el Dataset Crudo de Prueba
+# 🧩 Tarea 2. Generar un dataset crudo con errores intencionales
 
-**Objetivo:** Crear el archivo `raw_qa_dataset.csv` con 500 pares de preguntas y respuestas de soporte técnico, incluyendo errores intencionales (duplicados, respuestas vacías, respuestas cortas, caracteres especiales y desbalance de categorías).
+## 🎯 Objetivo de la tarea
 
-#### Instrucciones
+Crear un archivo CSV sintético de preguntas y respuestas de soporte técnico con problemas realistas: duplicados, nulos, respuestas cortas, caracteres inválidos, posibles datos sensibles y categorías desbalanceadas.
 
-1. Crea el archivo `generate_raw_dataset.py` con el siguiente contenido:
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `generate_raw_dataset.py`
+
+**📝 Descripción del paso:**  
+Vas a crear en Visual Studio Code el archivo `generate_raw_dataset.py` dentro de la carpeta del laboratorio. Este script generará localmente un dataset sintético y controlado, por lo que no necesitas descargar datos externos ni usar información real.
+
+**⚙️ Contenido del paso:**
+
+Crea el archivo:
+
+```text
+generate_raw_dataset.py
+```
+
+Agrega el siguiente código:
 
 ```python
-# generate_raw_dataset.py
 """
-Genera un dataset crudo de soporte técnico con errores intencionales
-para usar como entrada del pipeline de preprocesamiento.
+Genera un dataset crudo sintético de soporte técnico con errores intencionales.
 """
-import pandas as pd
-import random
+
 import csv
+import random
+import pandas as pd
 
 random.seed(42)
 
-# ------------------------------------------------------------------
-# Datos base por categoría (distribución DESBALANCEADA intencional)
-# ------------------------------------------------------------------
 CATEGORIES = {
     "instalacion": {
-        "count": 200,  # Categoría sobrerepresentada
+        "count": 120,
         "qa_pairs": [
-            ("¿Cómo instalo el software en Windows 11?",
-             "Para instalar el software en Windows 11, descarga el instalador desde nuestra página oficial, "
-             "haz doble clic en el archivo .exe y sigue el asistente de instalación. Asegúrate de tener "
-             "permisos de administrador. El proceso tarda aproximadamente 5 minutos."),
-            ("¿Puedo instalar en Mac con chip M1?",
-             "Sí, el software es compatible con Mac M1 y M2. Descarga la versión ARM64 desde la sección "
-             "de descargas. Si tienes problemas, verifica que tu macOS sea Monterey 12 o superior."),
-            ("El instalador dice que falta .NET Framework, ¿qué hago?",
-             "Debes instalar .NET Framework 4.8 o superior. Ve a la página oficial de Microsoft, descarga "
-             "el instalador de .NET y ejecútalo antes de volver a intentar la instalación de nuestro software."),
-            ("¿Cuánto espacio en disco necesito?",
-             "La instalación completa requiere un mínimo de 2 GB de espacio libre en disco. Recomendamos "
-             "tener al menos 5 GB disponibles para archivos temporales y actualizaciones futuras."),
-            ("¿Puedo instalar en múltiples computadoras con una sola licencia?",
-             "Una licencia estándar permite la instalación en hasta 2 dispositivos simultáneamente. "
-             "Si necesitas más instalaciones, considera nuestro plan empresarial que permite instalaciones ilimitadas."),
-        ]
+            (
+                "¿Cómo instalo el software en Windows 11?",
+                "Para instalar el software en Windows 11, descarga el instalador desde la página oficial, ejecuta el archivo .exe como administrador y sigue el asistente de instalación. Antes de iniciar, verifica que tengas permisos suficientes y espacio disponible en disco. Si el instalador falla, reinicia el equipo y vuelve a ejecutar el proceso."
+            ),
+            (
+                "El instalador indica que falta .NET Framework, ¿qué hago?",
+                "Debes instalar .NET Framework 4.8 o superior desde el sitio oficial de Microsoft. Después de instalarlo, reinicia Windows y ejecuta nuevamente el instalador del software. Si el error persiste, revisa que Windows Update esté habilitado y que tu usuario tenga permisos de administrador."
+            ),
+            (
+                "¿Puedo instalar el software en varias computadoras?",
+                "Depende del tipo de licencia. Una licencia estándar permite la instalación en un número limitado de dispositivos. Para ambientes empresariales, se recomienda revisar el contrato de licenciamiento o contactar al área comercial para confirmar el número de activaciones permitidas."
+            ),
+        ],
     },
     "configuracion": {
-        "count": 150,
+        "count": 90,
         "qa_pairs": [
-            ("¿Cómo cambio el idioma de la interfaz?",
-             "Ve a Configuración > General > Idioma y selecciona tu idioma preferido del menú desplegable. "
-             "Los cambios se aplican inmediatamente sin necesidad de reiniciar la aplicación."),
-            ("¿Cómo configuro las notificaciones por correo?",
-             "En Configuración > Notificaciones > Correo Electrónico, ingresa tu dirección de email y "
-             "selecciona los eventos para los que deseas recibir alertas. Haz clic en 'Guardar' para confirmar."),
-            ("¿Puedo personalizar los atajos de teclado?",
-             "Sí, en Configuración > Accesibilidad > Atajos de Teclado encontrarás un editor visual donde "
-             "puedes asignar combinaciones personalizadas a cualquier acción del software."),
-            ("¿Cómo configuro el proxy de red?",
-             "Ve a Configuración > Red > Proxy. Puedes elegir entre detección automática, sin proxy, o "
-             "configuración manual donde ingresas host, puerto, usuario y contraseña de tu proxy corporativo."),
-        ]
+            (
+                "¿Cómo cambio el idioma de la interfaz?",
+                "Abre el menú Configuración, entra a la sección General y selecciona el idioma deseado. Guarda los cambios y reinicia la aplicación si el sistema lo solicita. Si el idioma no aparece en la lista, verifica que tu versión tenga instalado el paquete regional correspondiente."
+            ),
+            (
+                "¿Cómo configuro el proxy corporativo?",
+                "Ve a Configuración > Red > Proxy y selecciona configuración manual. Ingresa host, puerto y credenciales si tu organización las requiere. Después guarda los cambios y prueba la conexión. Si la autenticación falla, solicita al equipo de redes los datos correctos del proxy."
+            ),
+            (
+                "¿Puedo personalizar los atajos de teclado?",
+                "Sí. En Configuración > Accesibilidad > Atajos de teclado puedes modificar combinaciones de teclas para acciones frecuentes. Evita usar combinaciones reservadas por el sistema operativo y guarda una copia de tu configuración antes de hacer cambios masivos."
+            ),
+        ],
     },
     "errores": {
-        "count": 80,
+        "count": 70,
         "qa_pairs": [
-            ("El programa se cierra inesperadamente al abrir un archivo grande",
-             "Este error suele deberse a memoria insuficiente. Cierra otras aplicaciones, aumenta la memoria "
-             "virtual en las opciones de rendimiento del sistema, o considera actualizar a la versión Pro que "
-             "optimiza el manejo de archivos grandes mediante procesamiento por bloques."),
-            ("Aparece el error 'Access Denied' al guardar",
-             "El error 'Access Denied' indica que no tienes permisos de escritura en la carpeta de destino. "
-             "Haz clic derecho en la carpeta, ve a Propiedades > Seguridad y agrega permisos de escritura "
-             "para tu usuario, o guarda en una carpeta donde tengas acceso completo."),
-            ("La aplicación no responde después de una actualización",
-             "Intenta limpiar la caché de la aplicación: ve a %AppData% en Windows o ~/Library/Caches en Mac, "
-             "encuentra la carpeta de la aplicación y elimínala. Luego reinicia el software. Si el problema "
-             "persiste, usa la opción de reparación en el panel de control."),
-        ]
+            (
+                "La aplicación muestra Access Denied al guardar archivos",
+                "El error Access Denied suele indicar falta de permisos de escritura en la carpeta destino. Guarda el archivo en una ubicación donde tengas permisos, ejecuta la aplicación como administrador o solicita al equipo de TI que ajuste los permisos del directorio compartido."
+            ),
+            (
+                "El programa se cierra al abrir archivos grandes",
+                "Este comportamiento puede deberse a memoria insuficiente o archivos dañados. Cierra otras aplicaciones, verifica que el archivo no esté corrupto y aumenta la memoria disponible. Si trabajas con archivos grandes frecuentemente, usa la opción de procesamiento por lotes o la versión optimizada para alto volumen."
+            ),
+        ],
     },
     "licencias": {
-        "count": 40,  # Categoría subrepresentada
+        "count": 35,
         "qa_pairs": [
-            ("¿Cómo activo mi licencia después de comprar?",
-             "Recibirás un correo con tu clave de activación. Abre el software, ve a Ayuda > Activar Licencia "
-             "e ingresa la clave. Necesitas conexión a internet para la activación en línea. Si no tienes "
-             "internet, usa la activación manual siguiendo las instrucciones del correo."),
-            ("Mi licencia expiró, ¿puedo seguir usando el software?",
-             "Con la licencia expirada puedes usar el software en modo de solo lectura. Para restaurar la "
-             "funcionalidad completa, renueva tu suscripción en nuestra tienda en línea. Los datos y "
-             "configuraciones se conservan durante el período de gracia de 30 días."),
-        ]
+            (
+                "¿Cómo activo mi licencia después de comprar?",
+                "Después de la compra recibirás un correo con la clave de activación. Abre el software, entra a Ayuda > Activar licencia e ingresa la clave. Necesitas conexión a internet para validar la licencia. Si no tienes conexión, usa el flujo de activación manual."
+            ),
+            (
+                "Mi licencia expiró, ¿puedo seguir usando el software?",
+                "Cuando la licencia expira, el software puede quedar en modo limitado o de solo lectura. Para recuperar todas las funciones, renueva la suscripción desde el portal de clientes. Los datos existentes normalmente se conservan, pero algunas funciones avanzadas pueden quedar bloqueadas."
+            ),
+        ],
     },
     "rendimiento": {
-        "count": 30,  # Categoría muy subrepresentada
+        "count": 25,
         "qa_pairs": [
-            ("El software va muy lento en mi computadora",
-             "Para mejorar el rendimiento: cierra las pestañas y proyectos que no estés usando, desactiva "
-             "las animaciones en Configuración > Rendimiento, y verifica que tu computadora cumpla los "
-             "requisitos mínimos. En Windows, asegúrate de que el software use la GPU dedicada en el "
-             "panel de control de gráficos."),
-            ("¿Cómo puedo reducir el uso de memoria RAM?",
-             "En Configuración > Rendimiento > Memoria, reduce el tamaño del caché de trabajo. También "
-             "puedes activar el modo de bajo consumo que limita los procesos en segundo plano. Para "
-             "proyectos grandes, considera aumentar la RAM de tu sistema a 16 GB o más."),
-        ]
-    }
+            (
+                "El software va muy lento, ¿cómo puedo mejorar el rendimiento?",
+                "Cierra proyectos que no estés usando, reduce el tamaño de caché, desactiva animaciones y verifica que tu equipo cumpla los requisitos mínimos. Si trabajas con archivos grandes, considera aumentar memoria RAM, usar disco SSD y dividir tareas pesadas en procesos más pequeños."
+            ),
+            (
+                "¿Cómo reduzco el uso de memoria RAM?",
+                "Puedes reducir el uso de memoria ajustando el tamaño de caché, cerrando módulos no utilizados y activando el modo de bajo consumo. También conviene revisar extensiones instaladas, procesos en segundo plano y configuraciones que carguen datos innecesarios al iniciar."
+            ),
+        ],
+    },
 }
 
-# ------------------------------------------------------------------
-# Errores intencionales a inyectar
-# ------------------------------------------------------------------
-EMPTY_RESPONSES = [
-    ("¿Cómo desinstalo el software completamente?", ""),
-    ("¿Hay versión para Linux?", ""),
-    ("¿Cómo exporto mis datos?", None),
+EMPTY_OR_NULL = [
+    ("¿Cómo desinstalo completamente el software?", "", "instalacion"),
+    ("¿Existe versión para Linux?", None, "instalacion"),
+    ("¿Cómo exporto mis datos?", "   ", "configuracion"),
 ]
 
-SHORT_RESPONSES = [
-    ("¿Qué navegador recomiendas?", "Chrome.", "configuracion"),
-    ("¿Puedo usar sin internet?", "Sí.", "configuracion"),
+SHORT_ANSWERS = [
+    ("¿Qué navegador recomiendan?", "Chrome.", "configuracion"),
     ("¿Tienen soporte 24/7?", "No.", "licencias"),
+    ("¿Funciona sin internet?", "Sí.", "instalacion"),
 ]
 
 SPECIAL_CHARS = [
-    ("¿Cómo uso la función de búsqueda avanzada\x00?",
-     "La búsqueda avanzada permite filtrar por fecha\x00, tipo y etiquetas usando operadores booleanos.",
-     "configuracion"),
-    ("Error código 0x80070005\r\n¿cómo lo soluciono?",
-     "Este código indica permisos insuficientes\r\n. Ejecuta como administrador.",
-     "errores"),
+    (
+        "¿Cómo uso la búsqueda avanzada\\x00?",
+        "La búsqueda avanzada permite filtrar por fecha, tipo y etiqueta. También puedes combinar filtros usando operadores booleanos y guardar búsquedas frecuentes para reutilizarlas después.",
+        "configuracion",
+    ),
+    (
+        "Error código 0x80070005\\r\\n¿cómo lo soluciono?",
+        "El código 0x80070005 normalmente indica permisos insuficientes. Ejecuta la aplicación como administrador, revisa los permisos de la carpeta y confirma que tu antivirus no esté bloqueando el proceso.",
+        "errores",
+    ),
+]
+
+SENSITIVE_EXAMPLES = [
+    (
+        "No puedo iniciar sesión con mi correo usuario.demo@example.com",
+        "No compartas contraseñas ni tokens por correo. Para recuperar el acceso, usa el portal de autoservicio, valida tu correo corporativo y contacta soporte si el segundo factor no funciona.",
+        "errores",
+    ),
+    (
+        "Mi token sk-proj-EXAMPLE123 dejó de funcionar",
+        "Por seguridad, nunca compartas tokens de API en tickets. Revoca el token expuesto, genera uno nuevo desde la consola del proveedor y actualiza la aplicación usando variables de entorno o un gestor de secretos.",
+        "configuracion",
+    ),
 ]
 
 rows = []
-
-# Generar pares válidos con distribución desbalanceada
 for category, data in CATEGORIES.items():
     qa_pool = data["qa_pairs"]
     for i in range(data["count"]):
-        qa = qa_pool[i % len(qa_pool)]
-        # Agregar variación mínima para simular datos reales
-        suffix = f" (caso #{i+1})" if i >= len(qa_pool) else ""
+        question, answer = qa_pool[i % len(qa_pool)]
+        variation = "" if i < len(qa_pool) else f" Caso {i + 1}."
         rows.append({
             "id": len(rows) + 1,
             "category": category,
-            "question": qa[0] + suffix,
-            "answer": qa[1]
+            "question": question + variation,
+            "answer": answer,
         })
 
-# Inyectar duplicados exactos (10% del total)
-duplicates = random.sample(rows[:100], 30)
-for d in duplicates:
+for row in random.sample(rows[:80], 20):
     rows.append({
         "id": len(rows) + 1,
-        "category": d["category"],
-        "question": d["question"],
-        "answer": d["answer"]
+        "category": row["category"],
+        "question": row["question"],
+        "answer": row["answer"],
     })
 
-# Inyectar respuestas vacías
-for q, a in EMPTY_RESPONSES:
-    rows.append({"id": len(rows)+1, "category": "instalacion", "question": q, "answer": a})
+near_duplicates = [
+    (
+        "¿Cómo puedo instalar el software en Windows 11?",
+        "Para instalar el software en Windows 11, descarga el instalador desde la página oficial, ejecuta el archivo .exe como administrador y sigue el asistente de instalación. Antes de iniciar, verifica permisos y espacio en disco.",
+        "instalacion",
+    ),
+    (
+        "La aplicación marca Access Denied cuando intento guardar",
+        "El error Access Denied suele indicar falta de permisos de escritura. Guarda en una ubicación permitida, ejecuta la aplicación como administrador o solicita al equipo de TI ajustar permisos.",
+        "errores",
+    ),
+]
 
-# Inyectar respuestas cortas
-for q, a, cat in SHORT_RESPONSES:
-    rows.append({"id": len(rows)+1, "category": cat, "question": q, "answer": a})
+for question, answer, category in EMPTY_OR_NULL + SHORT_ANSWERS + SPECIAL_CHARS + SENSITIVE_EXAMPLES + near_duplicates:
+    rows.append({
+        "id": len(rows) + 1,
+        "category": category,
+        "question": question,
+        "answer": answer,
+    })
 
-# Inyectar caracteres especiales
-for q, a, cat in SPECIAL_CHARS:
-    rows.append({"id": len(rows)+1, "category": cat, "question": q, "answer": a})
-
-# Mezclar filas
 random.shuffle(rows)
-for i, row in enumerate(rows):
-    row["id"] = i + 1
+for index, row in enumerate(rows, start=1):
+    row["id"] = index
 
 df = pd.DataFrame(rows)
 df.to_csv("raw_qa_dataset.csv", index=False, encoding="utf-8", quoting=csv.QUOTE_ALL)
-print(f"Dataset generado: {len(df)} filas → raw_qa_dataset.csv")
+
+print(f"Dataset generado: {len(df)} filas -> raw_qa_dataset.csv")
 print(df["category"].value_counts())
 ```
 
-2. Ejecuta el generador:
+**✅ Validación del paso:**
+
+```bash
+python -m py_compile generate_raw_dataset.py
+```
+
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
+
+---
+
+### ✅ Paso 2. Ejecuta el generador del dataset
+
+**📝 Descripción del paso:**  
+Vas a ejecutar desde Git Bash el script `generate_raw_dataset.py`. Al ejecutarlo, se creará en la misma carpeta del proyecto el archivo `raw_qa_dataset.csv`, que será la entrada principal del pipeline de preprocesamiento.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 python generate_raw_dataset.py
 ```
 
-#### Salida esperada
-
-```
-Dataset generado: 535 filas → raw_qa_dataset.csv
-category
-instalacion      233
-configuracion    157
-errores           83
-licencias         43
-rendimiento       32
-dtype: int64
-```
-
-#### Verificación
+**✅ Validación del paso:**
 
 ```bash
-# Verificar que el archivo fue creado y tiene el número correcto de filas
-python -c "import pandas as pd; df = pd.read_csv('raw_qa_dataset.csv'); print(f'Filas: {len(df)}, Columnas: {list(df.columns)}')"
+python -c "import pandas as pd; df = pd.read_csv('raw_qa_dataset.csv'); print(df.shape); print(df.columns.tolist())"
+```
+
+**📌 Resultado esperado:**  
+Debes ver más de 340 filas y columnas:
+
+```text
+['id', 'category', 'question', 'answer']
 ```
 
 ---
 
-### Paso 2: Implementar `load_and_inspect()`
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Objetivo:** Crear el script principal `dataset_preprocessor.py` con la función de carga e inspección estadística del dataset crudo.
+[Explicar la Tarea 2 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%202%20de%20un%20laboratorio%20de%20fine-tuning.%20Gener%C3%A9%20un%20dataset%20crudo%20sint%C3%A9tico%20de%20preguntas%20y%20respuestas%20con%20duplicados%2C%20nulos%2C%20respuestas%20cortas%2C%20caracteres%20inv%C3%A1lidos%2C%20datos%20sensibles%20simulados%20y%20categor%C3%ADas%20desbalanceadas.)
 
-#### Instrucciones
+---
 
-1. Crea el archivo `dataset_preprocessor.py` con el siguiente contenido inicial (se irá completando en los pasos siguientes):
+# 🧩 Tarea 3. Crear el pipeline base e inspeccionar el dataset
+
+## 🎯 Objetivo de la tarea
+
+Crear el script principal `dataset_preprocessor.py` e implementar una función de inspección inicial para entender la calidad del dataset antes de limpiarlo.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo `dataset_preprocessor.py`
+
+**📝 Descripción del paso:**  
+Vas a crear en Visual Studio Code el archivo principal `dataset_preprocessor.py`. En este archivo agregarás el código del pipeline por partes durante las siguientes tareas, por lo que debes mantenerlo abierto para editarlo paso a paso.
+
+**⚙️ Contenido del paso:**
+
+Crea el archivo:
+
+```text
+dataset_preprocessor.py
+```
+
+Agrega este contenido inicial:
 
 ```python
-# dataset_preprocessor.py
 """
-Pipeline de preprocesamiento de datos para fine-tuning de OpenAI.
-Transforma raw_qa_dataset.csv en train.jsonl y validation.jsonl validados.
-
-Lección 7.1: Fine-Tuning vs. RAG
+Pipeline profesional de preprocesamiento de datos para fine-tuning.
 """
 
-import csv
+from __future__ import annotations
+
 import difflib
-import json
-import os
 import re
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional, Tuple
+from pathlib import Path
+from typing import Any
 
 import jsonlines
 import pandas as pd
 import tiktoken
 
-# ──────────────────────────────────────────────────────────────────
-# CONSTANTES DE CONFIGURACIÓN
-# ──────────────────────────────────────────────────────────────────
+INPUT_FILE = "raw_qa_dataset.csv"
+TRAIN_FILE = "train.jsonl"
+VALIDATION_FILE = "validation.jsonl"
+REPORT_FILE = "preprocessing_report.md"
+DECISION_MATRIX_FILE = "decision_matrix.md"
+MANUAL_REVIEW_FILE = "manual_review_checklist.md"
+
 MAX_TOKENS_PER_EXAMPLE = 4096
 MIN_WORDS_IN_ANSWER = 20
-DEDUP_SIMILARITY_THRESHOLD = 0.85
+DEDUP_SIMILARITY_THRESHOLD = 0.99
 MIN_EXAMPLES_PER_CATEGORY = 10
 TRAIN_SPLIT_RATIO = 0.90
-FINE_TUNING_MODEL = "gpt-4o-mini-2024-07-18"
-BASE_MODEL_FOR_FEWSHOT = "gpt-4o"
 
-# Precios por token (USD) — Actualiza según la página de OpenAI
-# https://openai.com/pricing
-PRICE_FINETUNING_INPUT_PER_1K = 0.003   # $0.003 / 1K tokens de entrenamiento
-PRICE_GPT4O_INPUT_PER_1K = 0.005        # $0.005 / 1K tokens de entrada
-PRICE_GPT4O_OUTPUT_PER_1K = 0.015       # $0.015 / 1K tokens de salida
+FINE_TUNING_MODEL = "modelo-fine-tuning-a-validar"
+BASE_MODEL_FOR_FEWSHOT = "modelo-base-a-validar"
+PRICE_FINETUNING_INPUT_PER_1K = 0.003
+PRICE_FEWSHOT_INPUT_PER_1K = 0.005
+PRICE_FEWSHOT_OUTPUT_PER_1K = 0.015
+EXPECTED_QUERIES_PER_MONTH = 1000
+EPOCHS = 3
 
 SYSTEM_PROMPT = (
     "Eres un agente de soporte técnico especializado en software empresarial. "
-    "Responde de manera clara, concisa y profesional. "
-    "Si no tienes información suficiente para responder, indícalo explícitamente "
-    "y sugiere contactar al equipo de soporte avanzado."
+    "Responde de manera clara, concisa, profesional y orientada a la solución. "
+    "Si no tienes información suficiente, indícalo y sugiere contactar al equipo de soporte avanzado."
 )
 
+SENSITIVE_PATTERNS = {
+    "email": re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"),
+    "openai_like_key": re.compile(r"sk-[a-zA-Z0-9_-]{8,}"),
+    "aws_access_key": re.compile(r"AKIA[0-9A-Z]{12,}"),
+    "password_word": re.compile(r"(?i)(password|contraseña|passwd|secret|token|api[_-]?key)"),
+    "phone_like": re.compile(r"\+?\d[\d\s().-]{8,}\d"),
+}
 
-# ──────────────────────────────────────────────────────────────────
-# DATACLASSES DE RESULTADOS
-# ──────────────────────────────────────────────────────────────────
+@dataclass
+class CleaningStats:
+    raw_count: int = 0
+    removed_empty: int = 0
+    removed_short: int = 0
+    removed_duplicates: int = 0
+    final_count: int = 0
+
+@dataclass
+class SensitiveFinding:
+    row_index: int
+    category: str
+    field: str
+    pattern_name: str
+    preview: str
+
 @dataclass
 class ValidationReport:
     total_examples: int = 0
     valid_examples: int = 0
     invalid_examples: int = 0
-    token_violations: List[dict] = field(default_factory=list)
-    format_violations: List[dict] = field(default_factory=list)
-    category_distribution: dict = field(default_factory=dict)
-    category_violations: List[str] = field(default_factory=list)
+    token_violations: list[dict[str, Any]] = field(default_factory=list)
+    format_violations: list[dict[str, Any]] = field(default_factory=list)
+    category_distribution: dict[str, int] = field(default_factory=dict)
+    category_violations: list[str] = field(default_factory=list)
     avg_tokens_per_example: float = 0.0
     max_tokens_found: int = 0
     train_count: int = 0
     validation_count: int = 0
     passed: bool = False
 
-
 @dataclass
 class CostAnalysis:
     total_training_tokens: int = 0
-    epochs: int = 3
+    epochs: int = EPOCHS
     finetuning_cost_usd: float = 0.0
-    fewshot_cost_usd: float = 0.0
-    expected_queries_per_month: int = 1000
+    fewshot_monthly_cost_usd: float = 0.0
+    expected_queries_per_month: int = EXPECTED_QUERIES_PER_MONTH
     break_even_queries: int = 0
     recommendation: str = ""
-
-
-# ──────────────────────────────────────────────────────────────────
-# PASO 2: CARGA E INSPECCIÓN
-# ──────────────────────────────────────────────────────────────────
-def load_and_inspect(filepath: str) -> pd.DataFrame:
-    """
-    Carga el CSV y genera estadísticas descriptivas del dataset crudo.
-
-    Args:
-        filepath: Ruta al archivo CSV de entrada.
-
-    Returns:
-        DataFrame con los datos cargados.
-    """
-    print("\n" + "="*60)
-    print("PASO 1: CARGA E INSPECCIÓN DEL DATASET")
-    print("="*60)
-
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"No se encontró el archivo: {filepath}")
-
-    df = pd.read_csv(filepath, encoding="utf-8", keep_default_na=True)
-
-    print(f"\n📂 Archivo cargado: {filepath}")
-    print(f"   Filas totales:    {len(df)}")
-    print(f"   Columnas:         {list(df.columns)}")
-
-    # Estadísticas de valores nulos
-    null_counts = df.isnull().sum()
-    print(f"\n🔍 Valores nulos por columna:")
-    for col, count in null_counts.items():
-        status = "⚠️ " if count > 0 else "✅"
-        print(f"   {status} {col}: {count}")
-
-    # Distribución de categorías
-    print(f"\n📊 Distribución por categoría:")
-    cat_dist = df["category"].value_counts()
-    for cat, count in cat_dist.items():
-        bar = "█" * (count // 10)
-        print(f"   {cat:<15} {count:>4}  {bar}")
-
-    # Estadísticas de longitud
-    df["question_len"] = df["question"].fillna("").apply(lambda x: len(str(x).split()))
-    df["answer_len"] = df["answer"].fillna("").apply(lambda x: len(str(x).split()))
-
-    print(f"\n📏 Estadísticas de longitud (palabras):")
-    print(f"   Preguntas — min: {df['question_len'].min()}, "
-          f"media: {df['question_len'].mean():.1f}, "
-          f"max: {df['question_len'].max()}")
-    print(f"   Respuestas — min: {df['answer_len'].min()}, "
-          f"media: {df['answer_len'].mean():.1f}, "
-          f"max: {df['answer_len'].max()}")
-
-    # Detectar respuestas vacías o muy cortas
-    empty_answers = df[df["answer"].isnull() | (df["answer"].fillna("").str.strip() == "")]
-    short_answers = df[df["answer_len"] < MIN_WORDS_IN_ANSWER]
-    print(f"\n⚠️  Problemas detectados (antes de limpiar):")
-    print(f"   Respuestas vacías/nulas:     {len(empty_answers)}")
-    print(f"   Respuestas < {MIN_WORDS_IN_ANSWER} palabras:      {len(short_answers)}")
-
-    # Limpiar columnas auxiliares antes de retornar
-    df.drop(columns=["question_len", "answer_len"], inplace=True)
-
-    return df
 ```
 
-2. Prueba la función de forma aislada:
+**✅ Validación del paso:**
 
 ```bash
-python -c "
-from dataset_preprocessor import load_and_inspect
-df = load_and_inspect('raw_qa_dataset.csv')
-print(f'\nDataFrame shape: {df.shape}')
-"
+python -m py_compile dataset_preprocessor.py
 ```
 
-#### Salida esperada
-
-```
-============================================================
-PASO 1: CARGA E INSPECCIÓN DEL DATASET
-============================================================
-
-📂 Archivo cargado: raw_qa_dataset.csv
-   Filas totales:    535
-   Columnas:         ['id', 'category', 'question', 'answer']
-
-🔍 Valores nulos por columna:
-   ✅ id: 0
-   ✅ category: 0
-   ✅ question: 0
-   ⚠️  answer: 1
-
-📊 Distribución por categoría:
-   instalacion       233  ███████████████████████
-   configuracion     157  ███████████████
-   errores            83  ████████
-   licencias          43  ████
-   rendimiento        32  ███
-
-📏 Estadísticas de longitud (palabras):
-   Preguntas — min: 3, media: 9.2, max: 18
-   Respuestas — min: 0, media: 48.3, max: 89
-
-⚠️  Problemas detectados (antes de limpiar):
-   Respuestas vacías/nulas:     4
-   Respuestas < 20 palabras:    9
-```
-
-#### Verificación
-
-```bash
-python -c "
-from dataset_preprocessor import load_and_inspect
-df = load_and_inspect('raw_qa_dataset.csv')
-assert len(df) > 500, 'El dataset debe tener más de 500 filas'
-assert 'category' in df.columns, 'Debe existir columna category'
-print('✅ load_and_inspect: OK')
-"
-```
+**📌 Resultado esperado:**  
+El archivo compila sin errores.
 
 ---
 
-### Paso 3: Implementar `clean_dataset()`
+### ✅ Paso 2. Implementa `load_and_inspect()`
 
-**Objetivo:** Agregar al script la función de limpieza que elimina filas problemáticas, deduplica por similitud y normaliza el encoding.
+**📝 Descripción del paso:**  
+Vas a editar el archivo `dataset_preprocessor.py` y agregar la función `load_and_inspect()` al final del archivo. Esta función leerá `raw_qa_dataset.csv` y mostrará estadísticas iniciales para identificar nulos, categorías, longitudes y problemas del dataset crudo.
 
-#### Instrucciones
+**⚙️ Contenido del paso:**
 
-1. Agrega la siguiente función al final de `dataset_preprocessor.py`:
+Agrega este bloque al final de `dataset_preprocessor.py`:
 
 ```python
-# ──────────────────────────────────────────────────────────────────
-# PASO 3: LIMPIEZA DEL DATASET
-# ──────────────────────────────────────────────────────────────────
-def _normalize_text(text: str) -> str:
-    """Normaliza encoding UTF-8 y elimina caracteres de control."""
-    # Normalizar a NFC (forma canónica compuesta)
-    text = unicodedata.normalize("NFC", text)
-    # Eliminar caracteres de control (excepto newline y tab)
-    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
-    # Normalizar saltos de línea
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    # Eliminar espacios múltiples
-    text = re.sub(r" {2,}", " ", text)
-    return text.strip()
+def load_and_inspect(filepath: str) -> pd.DataFrame:
+    print("\n" + "=" * 70)
+    print("PASO 1: CARGA E INSPECCIÓN DEL DATASET")
+    print("=" * 70)
 
+    if not Path(filepath).exists():
+        raise FileNotFoundError(f"No se encontró el archivo: {filepath}")
 
-def _is_near_duplicate(text_a: str, text_b: str, threshold: float) -> bool:
-    """Retorna True si la similitud entre dos textos supera el umbral."""
+    df = pd.read_csv(filepath, encoding="utf-8", keep_default_na=True)
+    required_columns = {"id", "category", "question", "answer"}
+    missing = required_columns - set(df.columns)
+    if missing:
+        raise ValueError(f"Faltan columnas requeridas: {missing}")
+
+    print(f"\n📂 Archivo cargado: {filepath}")
+    print(f"   Filas totales : {len(df)}")
+    print(f"   Columnas      : {list(df.columns)}")
+
+    print("\n🔍 Valores nulos por columna:")
+    for column, count in df.isnull().sum().items():
+        icon = "⚠️" if count else "✅"
+        print(f"   {icon} {column}: {count}")
+
+    print("\n📊 Distribución por categoría:")
+    for category, count in df["category"].value_counts().items():
+        bar = "█" * max(1, count // 10)
+        print(f"   {category:<15} {count:>4}  {bar}")
+
+    question_words = df["question"].fillna("").astype(str).apply(lambda text: len(text.split()))
+    answer_words = df["answer"].fillna("").astype(str).apply(lambda text: len(text.split()))
+
+    print("\n📏 Longitud en palabras:")
+    print(f"   Preguntas  min={question_words.min()} media={question_words.mean():.1f} max={question_words.max()}")
+    print(f"   Respuestas min={answer_words.min()} media={answer_words.mean():.1f} max={answer_words.max()}")
+
+    empty_answers = df[df["answer"].isnull() | (df["answer"].fillna("").astype(str).str.strip() == "")]
+    short_answers = df[answer_words < MIN_WORDS_IN_ANSWER]
+
+    print("\n⚠️ Problemas iniciales detectados:")
+    print(f"   Respuestas vacías o nulas  : {len(empty_answers)}")
+    print(f"   Respuestas cortas          : {len(short_answers)}")
+    print(f"   Categorías únicas          : {df['category'].nunique()}")
+    return df
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -c "from dataset_preprocessor import load_and_inspect; df = load_and_inspect('raw_qa_dataset.csv'); print('Shape:', df.shape)"
+```
+
+**📌 Resultado esperado:**  
+Debes ver estadísticas iniciales del dataset y el número de filas cargadas.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 3 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%203%20de%20un%20laboratorio%20de%20fine-tuning.%20Cre%C3%A9%20dataset_preprocessor.py%2C%20defin%C3%AD%20constantes%2C%20dataclasses%20de%20reporte%20y%20una%20funci%C3%B3n%20load_and_inspect%20para%20inspeccionar%20nulos%2C%20categor%C3%ADas%2C%20longitudes%20y%20problemas%20iniciales%20del%20dataset.)
+
+---
+
+# 🧩 Tarea 4. Limpiar, normalizar y deduplicar el dataset
+
+## 🎯 Objetivo de la tarea
+
+Eliminar registros problemáticos, normalizar texto y remover duplicados exactos o muy similares para mejorar la calidad del dataset antes de convertirlo a JSONL.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Implementa funciones auxiliares de limpieza
+
+**📝 Descripción del paso:**  
+Vas a volver a abrir o mantener abierto `dataset_preprocessor.py` y agregar al final del archivo las funciones auxiliares `normalize_text()` e `is_near_duplicate()`. Estas funciones serán usadas después por la limpieza principal del dataset.
+
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
+
+```python
+def normalize_text(text: Any) -> str:
+    if pd.isna(text):
+        return ""
+    normalized = unicodedata.normalize("NFC", str(text))
+    normalized = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", normalized)
+    normalized = normalized.replace("\r\n", "\n").replace("\r", "\n")
+    normalized = re.sub(r"[ \t]{2,}", " ", normalized)
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized)
+    return normalized.strip()
+
+def is_near_duplicate(text_a: str, text_b: str, threshold: float = DEDUP_SIMILARITY_THRESHOLD) -> bool:
     ratio = difflib.SequenceMatcher(None, text_a.lower(), text_b.lower()).ratio()
     return ratio >= threshold
+```
 
+**✅ Validación del paso:**
 
-def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Limpia el dataset aplicando:
-    1. Eliminación de filas con campos vacíos o nulos.
-    2. Normalización de encoding UTF-8.
-    3. Filtrado de respuestas con menos de MIN_WORDS_IN_ANSWER palabras.
-    4. Deduplicación por similitud (difflib, umbral DEDUP_SIMILARITY_THRESHOLD).
+```bash
+python -c "from dataset_preprocessor import normalize_text, is_near_duplicate; print(normalize_text('Hola\\x00 mundo')); print(is_near_duplicate('instalar software', 'instalar el software'))"
+```
 
-    Args:
-        df: DataFrame crudo cargado con load_and_inspect().
+**📌 Resultado esperado:**  
+Se imprime texto limpio y una comparación booleana.
 
-    Returns:
-        DataFrame limpio y deduplicado.
-    """
-    print("\n" + "="*60)
-    print("PASO 2: LIMPIEZA DEL DATASET")
-    print("="*60)
+---
 
-    initial_count = len(df)
-    df = df.copy()
+### ✅ Paso 2. Implementa `clean_dataset()`
 
-    # ── 1. Eliminar filas con campos vacíos o nulos ──────────────
-    df["question"] = df["question"].fillna("")
-    df["answer"] = df["answer"].fillna("")
-    before = len(df)
-    df = df[
-        (df["question"].str.strip() != "") &
-        (df["answer"].str.strip() != "")
-    ]
-    removed_empty = before - len(df)
-    print(f"\n🗑️  Filas con campos vacíos eliminadas:  {removed_empty}")
+**📝 Descripción del paso:**  
+Vas a editar nuevamente `dataset_preprocessor.py` y agregar al final la función `clean_dataset()`. Esta función usará las funciones auxiliares anteriores para limpiar preguntas, respuestas, categorías y eliminar registros problemáticos.
 
-    # ── 2. Normalizar encoding UTF-8 ────────────────────────────
-    df["question"] = df["question"].apply(_normalize_text)
-    df["answer"] = df["answer"].apply(_normalize_text)
-    print(f"✅ Normalización UTF-8 aplicada a {len(df)} filas")
+**⚙️ Contenido del paso:**
 
-    # ── 3. Filtrar respuestas muy cortas ────────────────────────
-    before = len(df)
-    df["answer_word_count"] = df["answer"].apply(lambda x: len(x.split()))
-    df = df[df["answer_word_count"] >= MIN_WORDS_IN_ANSWER]
-    removed_short = before - len(df)
-    df.drop(columns=["answer_word_count"], inplace=True)
-    print(f"🗑️  Respuestas < {MIN_WORDS_IN_ANSWER} palabras eliminadas: {removed_short}")
+Agrega este bloque al final de `dataset_preprocessor.py`:
 
-    # ── 4. Deduplicación por similitud ──────────────────────────
-    print(f"\n🔄 Deduplicando con umbral de similitud {DEDUP_SIMILARITY_THRESHOLD}...")
-    df = df.reset_index(drop=True)
-    questions = df["question"].tolist()
-    to_remove = set()
+```python
+def clean_dataset(df: pd.DataFrame) -> tuple[pd.DataFrame, CleaningStats]:
+    print("\n" + "=" * 70)
+    print("PASO 2: LIMPIEZA, NORMALIZACIÓN Y DEDUPLICACIÓN")
+    print("=" * 70)
 
+    stats = CleaningStats(raw_count=len(df))
+    clean_df = df.copy()
+    clean_df["question"] = clean_df["question"].apply(normalize_text)
+    clean_df["answer"] = clean_df["answer"].apply(normalize_text)
+    clean_df["category"] = clean_df["category"].apply(normalize_text).str.lower()
+
+    before = len(clean_df)
+    clean_df = clean_df[(clean_df["question"] != "") & (clean_df["answer"] != "")]
+    stats.removed_empty = before - len(clean_df)
+    print(f"\n🗑️ Filas con pregunta/respuesta vacía eliminadas: {stats.removed_empty}")
+
+    before = len(clean_df)
+    answer_word_count = clean_df["answer"].apply(lambda text: len(text.split()))
+    clean_df = clean_df[answer_word_count >= MIN_WORDS_IN_ANSWER]
+    stats.removed_short = before - len(clean_df)
+    print(f"🗑️ Respuestas < {MIN_WORDS_IN_ANSWER} palabras eliminadas: {stats.removed_short}")
+
+    print(f"\n🔄 Deduplicando preguntas con umbral {DEDUP_SIMILARITY_THRESHOLD}...")
+    clean_df = clean_df.reset_index(drop=True)
+    questions = clean_df["question"].tolist()
+    to_remove: set[int] = set()
     for i in range(len(questions)):
         if i in to_remove:
             continue
         for j in range(i + 1, len(questions)):
             if j in to_remove:
                 continue
-            if _is_near_duplicate(questions[i], questions[j], DEDUP_SIMILARITY_THRESHOLD):
-                to_remove.add(j)  # Conservar el primero (índice i)
+            if is_near_duplicate(questions[i], questions[j]):
+                to_remove.add(j)
 
-    before_dedup = len(df)
-    df = df.drop(index=list(to_remove)).reset_index(drop=True)
-    removed_dupes = before_dedup - len(df)
-    print(f"🗑️  Duplicados/casi-duplicados eliminados: {removed_dupes}")
+    before = len(clean_df)
+    clean_df = clean_df.drop(index=list(to_remove)).reset_index(drop=True)
+    stats.removed_duplicates = before - len(clean_df)
+    stats.final_count = len(clean_df)
 
-    # ── Resumen ──────────────────────────────────────────────────
-    final_count = len(df)
-    print(f"\n📊 Resumen de limpieza:")
-    print(f"   Filas iniciales:  {initial_count}")
-    print(f"   Filas finales:    {final_count}")
-    print(f"   Total eliminadas: {initial_count - final_count} "
-          f"({(initial_count - final_count)/initial_count*100:.1f}%)")
-    print(f"\n📊 Distribución post-limpieza por categoría:")
-    for cat, count in df["category"].value_counts().items():
-        print(f"   {cat:<15} {count:>4}")
-
-    return df
+    print(f"🗑️ Duplicados o casi duplicados eliminados: {stats.removed_duplicates}")
+    print("\n📊 Resumen de limpieza:")
+    print(f"   Filas iniciales : {stats.raw_count}")
+    print(f"   Filas finales   : {stats.final_count}")
+    print(f"   Eliminadas      : {stats.raw_count - stats.final_count}")
+    return clean_df, stats
 ```
 
-2. Prueba la función:
+**✅ Validación del paso:**
+
+```bash
+python -c "from dataset_preprocessor import load_and_inspect, clean_dataset; df = load_and_inspect('raw_qa_dataset.csv'); clean, stats = clean_dataset(df); print(clean.shape); print(stats)"
+```
+
+**📌 Resultado esperado:**  
+El número de filas debe reducirse y no deben quedar respuestas vacías o demasiado cortas.
+
+---
+
+### ✅ Paso 3. Valida la limpieza
+
+**📝 Descripción del paso:**  
+Vas a ejecutar desde Git Bash una validación directa sobre el código que ya agregaste en `dataset_preprocessor.py`. Esta prueba carga el CSV, ejecuta la limpieza y confirma que no queden preguntas vacías, respuestas vacías ni respuestas demasiado cortas.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 python -c "
-from dataset_preprocessor import load_and_inspect, clean_dataset
+from dataset_preprocessor import load_and_inspect, clean_dataset, MIN_WORDS_IN_ANSWER
+
 df = load_and_inspect('raw_qa_dataset.csv')
-df_clean = clean_dataset(df)
-print(f'\nShape limpio: {df_clean.shape}')
-assert len(df_clean) < 535, 'Debe haber eliminado filas'
-print('✅ clean_dataset: OK')
+clean, stats = clean_dataset(df)
+assert clean['question'].str.strip().eq('').sum() == 0
+assert clean['answer'].str.strip().eq('').sum() == 0
+assert clean['answer'].apply(lambda x: len(x.split())).min() >= MIN_WORDS_IN_ANSWER
+assert len(clean) < len(df)
+print('✅ Limpieza validada correctamente')
 "
 ```
 
-#### Salida esperada
+**📌 Resultado esperado:**
 
-```
-============================================================
-PASO 2: LIMPIEZA DEL DATASET
-============================================================
-
-🗑️  Filas con campos vacíos eliminadas:  4
-✅ Normalización UTF-8 aplicada a 531 filas
-🗑️  Respuestas < 20 palabras eliminadas: 5
-
-🔄 Deduplicando con umbral de similitud 0.85...
-🗑️  Duplicados/casi-duplicados eliminados: 47
-
-📊 Resumen de limpieza:
-   Filas iniciales:  535
-   Filas finales:    479
-   Total eliminadas: 56 (10.5%)
-```
-
-#### Verificación
-
-```bash
-python -c "
-from dataset_preprocessor import load_and_inspect, clean_dataset
-df = load_and_inspect('raw_qa_dataset.csv')
-df_clean = clean_dataset(df)
-# No debe haber respuestas vacías
-assert df_clean['answer'].str.strip().eq('').sum() == 0, 'No deben quedar respuestas vacías'
-# No debe haber respuestas muy cortas
-word_counts = df_clean['answer'].apply(lambda x: len(x.split()))
-assert word_counts.min() >= 20, 'Todas las respuestas deben tener >= 20 palabras'
-print('✅ Verificación de clean_dataset: PASÓ')
-"
+```text
+✅ Limpieza validada correctamente
 ```
 
 ---
 
-### Paso 4: Implementar `convert_to_jsonl()` y `validate_dataset()`
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Objetivo:** Convertir el DataFrame limpio al formato de mensajes de OpenAI y validar cada ejemplo contra los criterios técnicos requeridos.
+[Explicar la Tarea 4 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%204%20de%20un%20laboratorio%20de%20fine-tuning.%20Limpi%C3%A9%20un%20dataset%20eliminando%20nulos%2C%20respuestas%20cortas%2C%20caracteres%20de%20control%20y%20preguntas%20duplicadas%20o%20casi%20duplicadas%20usando%20difflib.SequenceMatcher.)
 
-#### Instrucciones
+---
 
-1. Agrega las siguientes funciones al final de `dataset_preprocessor.py`:
+# 🧩 Tarea 5. Detectar posibles datos sensibles
+
+## 🎯 Objetivo de la tarea
+
+Identificar posibles datos sensibles o secretos dentro del dataset antes de exportar archivos para fine-tuning.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Implementa `detect_sensitive_data()`
+
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final las funciones `mask_preview()` y `detect_sensitive_data()`. Estas funciones revisarán el dataset limpio para localizar posibles correos, tokens, contraseñas, claves o teléfonos antes de exportar datos.
+
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
 
 ```python
-# ──────────────────────────────────────────────────────────────────
-# PASO 4A: CONVERSIÓN A FORMATO JSONL
-# ──────────────────────────────────────────────────────────────────
-def convert_to_jsonl(df: pd.DataFrame, system_prompt: str) -> List[dict]:
-    """
-    Convierte cada fila del DataFrame al formato de mensajes de OpenAI:
-    {"messages": [
-        {"role": "system",    "content": "..."},
-        {"role": "user",      "content": "..."},
-        {"role": "assistant", "content": "..."}
-    ]}
+def mask_preview(text: str, max_len: int = 90) -> str:
+    preview = text.replace("\n", " ")[:max_len]
+    return preview + ("..." if len(text) > max_len else "")
 
-    Args:
-        df:            DataFrame limpio con columnas question y answer.
-        system_prompt: Instrucción de sistema para todos los ejemplos.
+def detect_sensitive_data(df: pd.DataFrame) -> list[SensitiveFinding]:
+    print("\n" + "=" * 70)
+    print("PASO 3: DETECCIÓN DE POSIBLES DATOS SENSIBLES")
+    print("=" * 70)
+    findings: list[SensitiveFinding] = []
+    for row_index, row in df.iterrows():
+        for field_name in ["question", "answer"]:
+            text = str(row.get(field_name, ""))
+            for pattern_name, pattern in SENSITIVE_PATTERNS.items():
+                if pattern.search(text):
+                    findings.append(SensitiveFinding(
+                        row_index=int(row_index),
+                        category=str(row.get("category", "unknown")),
+                        field=field_name,
+                        pattern_name=pattern_name,
+                        preview=mask_preview(text),
+                    ))
+    if findings:
+        print(f"\n⚠️ Posibles datos sensibles detectados: {len(findings)}")
+        for finding in findings[:10]:
+            print(f"   fila={finding.row_index} campo={finding.field} tipo={finding.pattern_name} preview={finding.preview}")
+    else:
+        print("\n✅ No se detectaron patrones sensibles conocidos")
+    return findings
+```
 
-    Returns:
-        Lista de diccionarios en formato de fine-tuning de OpenAI.
-    """
-    print("\n" + "="*60)
-    print("PASO 3: CONVERSIÓN A FORMATO JSONL")
-    print("="*60)
+**✅ Validación del paso:**
 
-    examples = []
+```bash
+python -c "from dataset_preprocessor import load_and_inspect, clean_dataset, detect_sensitive_data; df = load_and_inspect('raw_qa_dataset.csv'); clean, _ = clean_dataset(df); findings = detect_sensitive_data(clean); print('Hallazgos:', len(findings))"
+```
+
+**📌 Resultado esperado:**  
+Debes ver algunos hallazgos simulados, como correos, tokens o palabras relacionadas con contraseña.
+
+---
+
+### ✅ Paso 2. Interpreta el resultado
+
+**📝 Descripción del paso:**  
+Vas a revisar en la terminal los hallazgos que devuelve `detect_sensitive_data()`. En este paso no editas código; interpretas el resultado y confirmas que cualquier patrón detectado debe revisarse manualmente antes de usar un dataset en entrenamiento real.
+
+**⚙️ Contenido del paso:**
+
+| Resultado | Interpretación |
+|---|---|
+| 0 hallazgos | No se encontraron patrones conocidos, pero aún se requiere revisión manual |
+| 1 a 10 hallazgos | Revisa manualmente cada caso |
+| Más de 10 hallazgos | Detén el proceso y revisa la fuente de datos |
+
+**✅ Validación del paso:**  
+Confirma que los hallazgos aparecen en el reporte final.
+
+**📌 Resultado esperado:**  
+Comprendes que el dataset no debe exportarse a entrenamiento real sin revisión humana.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 5 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%205%20de%20un%20laboratorio%20de%20fine-tuning.%20Agregu%C3%A9%20detecci%C3%B3n%20de%20datos%20sensibles%20con%20regex%20para%20identificar%20emails%2C%20tokens%2C%20contrase%C3%B1as%2C%20claves%20y%20tel%C3%A9fonos%20antes%20de%20exportar%20un%20dataset%20a%20JSONL.)
+
+---
+
+# 🧩 Tarea 6. Convertir el dataset al formato JSONL de mensajes
+
+## 🎯 Objetivo de la tarea
+
+Transformar cada fila limpia del dataset en un ejemplo tipo chat con roles `system`, `user` y `assistant`.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Implementa `convert_to_jsonl_examples()`
+
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final la función `convert_to_jsonl_examples()`. Esta función convertirá cada fila limpia en una estructura de mensajes con roles `system`, `user` y `assistant`.
+
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
+
+```python
+def convert_to_jsonl_examples(df: pd.DataFrame, system_prompt: str = SYSTEM_PROMPT) -> list[dict[str, Any]]:
+    print("\n" + "=" * 70)
+    print("PASO 4: CONVERSIÓN A FORMATO JSONL")
+    print("=" * 70)
+    examples: list[dict[str, Any]] = []
     for _, row in df.iterrows():
-        example = {
+        examples.append({
             "messages": [
-                {"role": "system",    "content": system_prompt},
-                {"role": "user",      "content": str(row["question"])},
-                {"role": "assistant", "content": str(row["answer"])}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": str(row["question"])},
+                {"role": "assistant", "content": str(row["answer"])},
             ],
-            # Metadato auxiliar (se elimina antes de exportar)
-            "_category": str(row.get("category", "unknown"))
-        }
-        examples.append(example)
-
-    print(f"✅ {len(examples)} ejemplos convertidos al formato de mensajes OpenAI")
-    print(f"   Estructura de un ejemplo:")
-    sample = examples[0]
-    for msg in sample["messages"]:
-        preview = msg["content"][:60].replace("\n", " ")
-        print(f"   [{msg['role']:>10}] {preview}...")
-
+            "_category": str(row.get("category", "unknown")),
+        })
+    print(f"\n✅ Ejemplos convertidos: {len(examples)}")
+    for message in examples[0]["messages"]:
+        print(f"   {message['role']:<9}: {message['content'][:80]}...")
     return examples
+```
 
+**✅ Validación del paso:**
 
-# ──────────────────────────────────────────────────────────────────
-# PASO 4B: VALIDACIÓN DEL DATASET
-# ──────────────────────────────────────────────────────────────────
-def _count_tokens(messages: List[dict], model: str = FINE_TUNING_MODEL) -> int:
-    """Cuenta tokens en una lista de mensajes usando tiktoken."""
+```bash
+python -c "from dataset_preprocessor import *; df = load_and_inspect('raw_qa_dataset.csv'); clean, _ = clean_dataset(df); examples = convert_to_jsonl_examples(clean); print(examples[0].keys())"
+```
+
+**📌 Resultado esperado:**  
+Cada ejemplo tiene `messages` y `_category` como metadato auxiliar interno.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 6 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%206%20de%20un%20laboratorio%20de%20fine-tuning.%20Convert%C3%AD%20un%20dataset%20limpio%20de%20preguntas%20y%20respuestas%20al%20formato%20JSONL%20de%20mensajes%20con%20roles%20system%2C%20user%20y%20assistant.)
+
+---
+
+# 🧩 Tarea 7. Validar estructura, tokens y distribución
+
+## 🎯 Objetivo de la tarea
+
+Validar que los ejemplos tengan formato correcto, orden exacto de roles, contenido no vacío, límite de tokens aceptable y una distribución mínima por categoría.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Implementa el contador de tokens
+
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final la función `count_tokens_for_messages()`. Esta función usará `tiktoken` para estimar cuántos tokens contiene cada ejemplo antes de exportarlo.
+
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
+
+```python
+def count_tokens_for_messages(messages: list[dict[str, str]], model: str = "gpt-4o-mini") -> int:
     try:
-        enc = tiktoken.encoding_for_model(model)
+        encoding = tiktoken.encoding_for_model(model)
     except KeyError:
-        enc = tiktoken.get_encoding("cl100k_base")
-
-    # Fórmula de OpenAI para contar tokens en mensajes de chat
-    num_tokens = 3  # Overhead por conversación
+        encoding = tiktoken.get_encoding("cl100k_base")
+    tokens = 3
     for message in messages:
-        num_tokens += 4  # Overhead por mensaje
-        for key, value in message.items():
-            num_tokens += len(enc.encode(str(value)))
-    num_tokens += 3  # Overhead de respuesta del asistente
-    return num_tokens
+        tokens += 4
+        tokens += len(encoding.encode(message.get("role", "")))
+        tokens += len(encoding.encode(message.get("content", "")))
+    tokens += 3
+    return tokens
+```
 
+**✅ Validación del paso:**
 
-def validate_dataset(examples: List[dict]) -> ValidationReport:
-    """
-    Valida cada ejemplo contra los criterios técnicos de OpenAI:
-    - Formato correcto de mensajes (system + user + assistant)
-    - Máximo MAX_TOKENS_PER_EXAMPLE tokens por ejemplo
-    - Mínimo MIN_EXAMPLES_PER_CATEGORY por categoría
-    - Split train/validation 90/10
+```bash
+python -c "from dataset_preprocessor import count_tokens_for_messages; print(count_tokens_for_messages([{'role':'user','content':'Hola'}]))"
+```
 
-    Args:
-        examples: Lista de ejemplos en formato de mensajes OpenAI.
+**📌 Resultado esperado:**  
+Debes ver un número entero de tokens.
 
-    Returns:
-        ValidationReport con estadísticas detalladas.
-    """
-    print("\n" + "="*60)
-    print("PASO 4: VALIDACIÓN DEL DATASET")
-    print("="*60)
+---
 
-    report = ValidationReport()
-    report.total_examples = len(examples)
-    token_counts = []
-    category_counts = {}
+### ✅ Paso 2. Implementa `validate_dataset()`
 
-    required_roles = {"system", "user", "assistant"}
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final la función `validate_dataset()`. Esta función revisará que cada ejemplo tenga los roles en el orden correcto, contenido no vacío, tokens dentro del límite y categorías con suficientes ejemplos.
 
-    for idx, example in enumerate(examples):
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
+
+```python
+def validate_dataset(examples: list[dict[str, Any]]) -> ValidationReport:
+    print("\n" + "=" * 70)
+    print("PASO 5: VALIDACIÓN DEL DATASET")
+    print("=" * 70)
+    report = ValidationReport(total_examples=len(examples))
+    token_counts: list[int] = []
+    expected_roles = ["system", "user", "assistant"]
+
+    for index, example in enumerate(examples):
         is_valid = True
         messages = example.get("messages", [])
-        category = example.get("_category", "unknown")
-
-        # ── Validar formato de mensajes ──────────────────────────
-        actual_roles = {m.get("role") for m in messages}
-        if not required_roles.issubset(actual_roles):
-            report.format_violations.append({
-                "index": idx,
-                "issue": f"Roles faltantes: {required_roles - actual_roles}"
-            })
+        category = str(example.get("_category", "unknown"))
+        roles = [message.get("role") for message in messages]
+        if roles != expected_roles:
+            report.format_violations.append({"index": index, "issue": f"Orden de roles inválido: {roles}"})
             is_valid = False
-
-        for msg in messages:
-            if not msg.get("content", "").strip():
-                report.format_violations.append({
-                    "index": idx,
-                    "issue": f"Contenido vacío en rol '{msg.get('role')}'"
-                })
+        for message in messages:
+            role = message.get("role")
+            content = str(message.get("content", "")).strip()
+            if role not in expected_roles:
+                report.format_violations.append({"index": index, "issue": f"Rol no permitido: {role}"})
                 is_valid = False
-
-        # ── Validar conteo de tokens ─────────────────────────────
-        token_count = _count_tokens(messages)
+            if not content:
+                report.format_violations.append({"index": index, "issue": f"Contenido vacío en rol: {role}"})
+                is_valid = False
+        token_count = count_tokens_for_messages(messages)
         token_counts.append(token_count)
-
         if token_count > MAX_TOKENS_PER_EXAMPLE:
-            report.token_violations.append({
-                "index": idx,
-                "tokens": token_count,
-                "limit": MAX_TOKENS_PER_EXAMPLE
-            })
+            report.token_violations.append({"index": index, "tokens": token_count, "limit": MAX_TOKENS_PER_EXAMPLE})
             is_valid = False
-
-        # ── Conteo por categoría ─────────────────────────────────
-        category_counts[category] = category_counts.get(category, 0) + 1
-
+        report.category_distribution[category] = report.category_distribution.get(category, 0) + 1
         if is_valid:
             report.valid_examples += 1
         else:
             report.invalid_examples += 1
 
-    # ── Verificar mínimo por categoría ──────────────────────────
-    report.category_distribution = category_counts
-    for cat, count in category_counts.items():
+    for category, count in report.category_distribution.items():
         if count < MIN_EXAMPLES_PER_CATEGORY:
             report.category_violations.append(
-                f"Categoría '{cat}': {count} ejemplos (mínimo: {MIN_EXAMPLES_PER_CATEGORY})"
+                f"Categoría '{category}' tiene {count} ejemplos; mínimo recomendado: {MIN_EXAMPLES_PER_CATEGORY}"
             )
 
-    # ── Estadísticas de tokens ───────────────────────────────────
     if token_counts:
         report.avg_tokens_per_example = sum(token_counts) / len(token_counts)
         report.max_tokens_found = max(token_counts)
 
-    # ── Split train/validation ───────────────────────────────────
     report.train_count = int(report.valid_examples * TRAIN_SPLIT_RATIO)
     report.validation_count = report.valid_examples - report.train_count
-
-    # ── Determinar si el dataset pasó la validación ──────────────
     report.passed = (
-        report.invalid_examples == 0 and
-        len(report.category_violations) == 0 and
-        report.valid_examples >= 50
+        report.invalid_examples == 0
+        and len(report.token_violations) == 0
+        and len(report.format_violations) == 0
+        and len(report.category_violations) == 0
+        and report.valid_examples >= 50
     )
 
-    # ── Imprimir resumen ─────────────────────────────────────────
-    status = "✅ PASÓ" if report.passed else "⚠️  REQUIERE ATENCIÓN"
-    print(f"\n{status} — Validación del dataset")
-    print(f"   Total ejemplos:    {report.total_examples}")
-    print(f"   Válidos:           {report.valid_examples}")
-    print(f"   Inválidos:         {report.invalid_examples}")
-    print(f"   Tokens promedio:   {report.avg_tokens_per_example:.0f}")
-    print(f"   Tokens máximo:     {report.max_tokens_found}")
-    print(f"   Violaciones token: {len(report.token_violations)}")
-    print(f"   Violaciones fmt:   {len(report.format_violations)}")
-    print(f"\n   Split entrenamiento: {report.train_count} ejemplos")
-    print(f"   Split validación:    {report.validation_count} ejemplos")
-
-    if report.category_violations:
-        print(f"\n⚠️  Categorías con pocos ejemplos:")
-        for v in report.category_violations:
-            print(f"   • {v}")
-    else:
-        print(f"\n✅ Todas las categorías tienen ≥ {MIN_EXAMPLES_PER_CATEGORY} ejemplos")
-
+    status = "✅ PASÓ" if report.passed else "⚠️ REQUIERE REVISIÓN"
+    print(f"\n{status}")
+    print(f"   Ejemplos totales     : {report.total_examples}")
+    print(f"   Ejemplos válidos     : {report.valid_examples}")
+    print(f"   Ejemplos inválidos   : {report.invalid_examples}")
+    print(f"   Tokens promedio      : {report.avg_tokens_per_example:.1f}")
+    print(f"   Tokens máximo        : {report.max_tokens_found}")
+    print(f"   Train                : {report.train_count}")
+    print(f"   Validation           : {report.validation_count}")
     return report
 ```
 
-2. Prueba las funciones:
+**✅ Validación del paso:**
 
 ```bash
-python -c "
-from dataset_preprocessor import load_and_inspect, clean_dataset, convert_to_jsonl, validate_dataset, SYSTEM_PROMPT
-df = load_and_inspect('raw_qa_dataset.csv')
-df_clean = clean_dataset(df)
-examples = convert_to_jsonl(df_clean, SYSTEM_PROMPT)
-report = validate_dataset(examples)
-print(f'\nPasó validación: {report.passed}')
-"
+python -c "from dataset_preprocessor import *; df = load_and_inspect('raw_qa_dataset.csv'); clean, _ = clean_dataset(df); examples = convert_to_jsonl_examples(clean); report = validate_dataset(examples); print(report.passed)"
 ```
 
-#### Salida esperada (fragmento)
-
-```
-============================================================
-PASO 4: VALIDACIÓN DEL DATASET
-============================================================
-
-✅ PASÓ — Validación del dataset
-   Total ejemplos:    479
-   Válidos:           479
-   Inválidos:         0
-   Tokens promedio:   198
-   Tokens máximo:     312
-   Violaciones token: 0
-   Violaciones fmt:   0
-
-   Split entrenamiento: 431 ejemplos
-   Split validación:    48 ejemplos
-
-✅ Todas las categorías tienen ≥ 10 ejemplos
-```
-
-#### Verificación
-
-```bash
-python -c "
-from dataset_preprocessor import *
-df = load_and_inspect('raw_qa_dataset.csv')
-df_clean = clean_dataset(df)
-examples = convert_to_jsonl(df_clean, SYSTEM_PROMPT)
-report = validate_dataset(examples)
-assert report.total_examples > 0
-assert report.train_count > report.validation_count
-assert report.train_count + report.validation_count == report.valid_examples
-print('✅ Validación de validate_dataset: OK')
-"
-```
+**📌 Resultado esperado:**  
+La validación debe pasar si el dataset quedó limpio y con categorías suficientes.
 
 ---
 
-### Paso 5: Implementar `calculate_finetuning_cost()` y la exportación
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Objetivo:** Calcular el análisis de costo comparativo entre fine-tuning y few-shot prompting, y exportar los archivos JSONL finales.
+[Explicar la Tarea 7 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%207%20de%20un%20laboratorio%20de%20fine-tuning.%20Valid%C3%A9%20un%20dataset%20JSONL%20revisando%20orden%20exacto%20de%20roles%2C%20contenido%20no%20vac%C3%ADo%2C%20conteo%20de%20tokens%2C%20distribuci%C3%B3n%20por%20categor%C3%ADa%20y%20split%20train-validation.)
 
-#### Instrucciones
+---
 
-1. Agrega las siguientes funciones al final de `dataset_preprocessor.py`:
+# 🧩 Tarea 8. Calcular costos y construir matriz de decisión
+
+## 🎯 Objetivo de la tarea
+
+Comparar fine-tuning, RAG y few-shot prompting usando criterios técnicos, no solo costo.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Implementa `calculate_cost_analysis()`
+
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final la función `calculate_cost_analysis()`. Esta función usará los ejemplos ya convertidos para estimar costos didácticos de fine-tuning y compararlos con un escenario de few-shot prompting.
+
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
 
 ```python
-# ──────────────────────────────────────────────────────────────────
-# PASO 5: ANÁLISIS DE COSTO
-# ──────────────────────────────────────────────────────────────────
-def calculate_finetuning_cost(
-    examples: List[dict],
-    epochs: int = 3,
-    expected_queries_per_month: int = 1000
-) -> CostAnalysis:
-    """
-    Calcula el costo estimado de fine-tuning y lo compara con
-    el costo equivalente de few-shot prompting con el modelo base.
-
-    Fórmula fine-tuning:
-        costo = total_tokens_entrenamiento * epochs * precio_por_1k_tokens / 1000
-
-    Fórmula few-shot (5 ejemplos en el prompt):
-        tokens_por_consulta ≈ tokens_sistema + 5*tokens_ejemplo + tokens_pregunta + tokens_respuesta
-        costo_mensual = consultas * tokens_entrada * precio_input + consultas * tokens_salida * precio_output
-
-    Args:
-        examples:                   Lista de ejemplos en formato de mensajes.
-        epochs:                     Número de épocas de entrenamiento (default: 3).
-        expected_queries_per_month: Consultas esperadas al mes para comparación.
-
-    Returns:
-        CostAnalysis con todos los campos calculados.
-    """
-    print("\n" + "="*60)
-    print("PASO 5: ANÁLISIS DE COSTO")
-    print("="*60)
-
-    analysis = CostAnalysis(epochs=epochs, expected_queries_per_month=expected_queries_per_month)
-
-    # ── Tokens totales de entrenamiento ─────────────────────────
-    total_tokens = sum(
-        _count_tokens(ex["messages"]) for ex in examples
+def calculate_cost_analysis(examples: list[dict[str, Any]]) -> CostAnalysis:
+    print("\n" + "=" * 70)
+    print("PASO 6: ANÁLISIS DE COSTO")
+    print("=" * 70)
+    analysis = CostAnalysis()
+    total_training_tokens = sum(count_tokens_for_messages(example["messages"]) for example in examples)
+    analysis.total_training_tokens = total_training_tokens
+    analysis.finetuning_cost_usd = total_training_tokens * analysis.epochs * PRICE_FINETUNING_INPUT_PER_1K / 1000
+    avg_tokens = total_training_tokens / len(examples) if examples else 0
+    fewshot_input_tokens = 5 * avg_tokens + 200
+    fewshot_output_tokens = avg_tokens * 0.6
+    monthly_input_cost = analysis.expected_queries_per_month * fewshot_input_tokens * PRICE_FEWSHOT_INPUT_PER_1K / 1000
+    monthly_output_cost = analysis.expected_queries_per_month * fewshot_output_tokens * PRICE_FEWSHOT_OUTPUT_PER_1K / 1000
+    analysis.fewshot_monthly_cost_usd = monthly_input_cost + monthly_output_cost
+    cost_per_query = analysis.fewshot_monthly_cost_usd / analysis.expected_queries_per_month
+    analysis.break_even_queries = int(analysis.finetuning_cost_usd / cost_per_query) if cost_per_query else 0
+    analysis.recommendation = (
+        "Fine-tuning puede ser conveniente si necesitas respuestas con formato, tono o comportamiento consistente "
+        "y tienes suficientes ejemplos de alta calidad. Si el conocimiento cambia con frecuencia o necesitas citar fuentes, "
+        "RAG suele ser mejor opción. Si el volumen es bajo, few-shot puede ser suficiente."
     )
-    analysis.total_training_tokens = total_tokens
-
-    # ── Costo de fine-tuning ─────────────────────────────────────
-    # Precio: $0.003 por 1K tokens de entrenamiento (gpt-4o-mini)
-    analysis.finetuning_cost_usd = (
-        total_tokens * epochs * PRICE_FINETUNING_INPUT_PER_1K / 1000
-    )
-
-    # ── Costo de few-shot prompting ──────────────────────────────
-    # Estimación: 5 ejemplos en el prompt ≈ 5 * avg_tokens_por_ejemplo
-    avg_tokens = total_tokens / len(examples) if examples else 0
-    fewshot_context_tokens = 5 * avg_tokens + 150  # 150 tokens para system + pregunta
-    avg_response_tokens = avg_tokens * 0.6          # Respuesta ≈ 60% del ejemplo
-
-    monthly_input_cost = (
-        expected_queries_per_month * fewshot_context_tokens *
-        PRICE_GPT4O_INPUT_PER_1K / 1000
-    )
-    monthly_output_cost = (
-        expected_queries_per_month * avg_response_tokens *
-        PRICE_GPT4O_OUTPUT_PER_1K / 1000
-    )
-    analysis.fewshot_cost_usd = monthly_input_cost + monthly_output_cost
-
-    # ── Punto de equilibrio (break-even) ────────────────────────
-    # ¿Cuántas consultas mensuales hacen que fine-tuning sea más barato?
-    cost_per_query_fewshot = analysis.fewshot_cost_usd / expected_queries_per_month
-    if cost_per_query_fewshot > 0:
-        analysis.break_even_queries = int(
-            analysis.finetuning_cost_usd / cost_per_query_fewshot
-        )
-
-    # ── Recomendación ────────────────────────────────────────────
-    if analysis.finetuning_cost_usd < analysis.fewshot_cost_usd * 3:
-        analysis.recommendation = (
-            "✅ FINE-TUNING RECOMENDADO: El costo de entrenamiento se amortiza "
-            f"en aproximadamente {analysis.break_even_queries:,} consultas mensuales. "
-            "Adicionalmente, el modelo fine-tuned tendrá menor latencia al no requerir "
-            "el contexto de 5 ejemplos en cada llamada."
-        )
-    else:
-        analysis.recommendation = (
-            "⚠️  EVALÚA RAG O FEW-SHOT: El costo de fine-tuning es significativamente "
-            "mayor que el few-shot prompting para el volumen de consultas esperado. "
-            "Considera RAG si el conocimiento cambia frecuentemente, o few-shot "
-            "si el volumen mensual es bajo."
-        )
-
-    # ── Imprimir análisis ────────────────────────────────────────
-    print(f"\n💰 Análisis de Costo (modelo: {FINE_TUNING_MODEL})")
-    print(f"\n   FINE-TUNING:")
-    print(f"   • Tokens totales de entrenamiento: {total_tokens:,}")
-    print(f"   • Épocas:                          {epochs}")
-    print(f"   • Costo de entrenamiento:          ${analysis.finetuning_cost_usd:.4f} USD")
-    print(f"\n   FEW-SHOT PROMPTING (base: {BASE_MODEL_FOR_FEWSHOT}):")
-    print(f"   • Tokens de entrada por consulta:  {fewshot_context_tokens:.0f}")
-    print(f"   • Tokens de salida por consulta:   {avg_response_tokens:.0f}")
-    print(f"   • Costo mensual ({expected_queries_per_month:,} consultas): "
-          f"${analysis.fewshot_cost_usd:.4f} USD")
-    print(f"\n   PUNTO DE EQUILIBRIO:")
-    print(f"   • Fine-tuning se amortiza en:      {analysis.break_even_queries:,} consultas")
-    print(f"\n   RECOMENDACIÓN:")
-    print(f"   {analysis.recommendation}")
-
+    print(f"\n💰 Costo estimado de fine-tuning: ${analysis.finetuning_cost_usd:.4f} USD")
+    print(f"💬 Costo mensual few-shot estimado: ${analysis.fewshot_monthly_cost_usd:.4f} USD")
+    print(f"⚖️ Punto de equilibrio aproximado: {analysis.break_even_queries:,} consultas")
+    print("\n⚠️ Estos precios son valores de referencia. Actualízalos antes de una decisión real.")
     return analysis
-
-
-# ──────────────────────────────────────────────────────────────────
-# PASO 6: EXPORTACIÓN DE ARCHIVOS
-# ──────────────────────────────────────────────────────────────────
-def export_datasets(
-    examples: List[dict],
-    report: ValidationReport,
-    train_path: str = "train.jsonl",
-    validation_path: str = "validation.jsonl"
-) -> Tuple[int, int]:
-    """
-    Exporta los ejemplos válidos en archivos JSONL para fine-tuning.
-    Elimina el campo auxiliar '_category' antes de exportar.
-
-    Args:
-        examples:        Lista completa de ejemplos.
-        report:          ValidationReport con conteos de split.
-        train_path:      Ruta de salida para entrenamiento.
-        validation_path: Ruta de salida para validación.
-
-    Returns:
-        Tupla (train_count, validation_count).
-    """
-    print("\n" + "="*60)
-    print("PASO 6: EXPORTACIÓN DE ARCHIVOS JSONL")
-    print("="*60)
-
-    # Solo exportar ejemplos válidos y limpiar metadatos auxiliares
-    valid_examples = []
-    for ex in examples:
-        clean_ex = {"messages": ex["messages"]}
-        valid_examples.append(clean_ex)
-
-    # Dividir en train y validation
-    train_examples = valid_examples[:report.train_count]
-    val_examples = valid_examples[report.train_count:]
-
-    # Exportar train.jsonl
-    with jsonlines.open(train_path, mode="w") as writer:
-        writer.write_all(train_examples)
-
-    # Exportar validation.jsonl
-    with jsonlines.open(validation_path, mode="w") as writer:
-        writer.write_all(val_examples)
-
-    print(f"\n✅ Archivos exportados:")
-    print(f"   📄 {train_path}:      {len(train_examples)} ejemplos")
-    print(f"   📄 {validation_path}: {len(val_examples)} ejemplos")
-
-    # Verificar que los archivos son JSONL válidos
-    for path in [train_path, validation_path]:
-        with jsonlines.open(path) as reader:
-            count = sum(1 for _ in reader)
-        print(f"   ✅ {path} verificado: {count} líneas JSONL válidas")
-
-    return len(train_examples), len(val_examples)
 ```
 
-2. Prueba el análisis de costo y la exportación:
+**✅ Validación del paso:**
 
 ```bash
-python -c "
-from dataset_preprocessor import *
-df = load_and_inspect('raw_qa_dataset.csv')
-df_clean = clean_dataset(df)
-examples = convert_to_jsonl(df_clean, SYSTEM_PROMPT)
-report = validate_dataset(examples)
-cost = calculate_finetuning_cost(examples, epochs=3, expected_queries_per_month=1000)
-train_n, val_n = export_datasets(examples, report)
-print(f'Exportados: {train_n} train, {val_n} validation')
-"
+python -c "from dataset_preprocessor import *; df = load_and_inspect('raw_qa_dataset.csv'); clean, _ = clean_dataset(df); examples = convert_to_jsonl_examples(clean); cost = calculate_cost_analysis(examples); print(cost)"
 ```
 
-#### Verificación
-
-```bash
-# Verificar que los archivos JSONL son válidos
-python -c "
-import jsonlines
-for path in ['train.jsonl', 'validation.jsonl']:
-    with jsonlines.open(path) as reader:
-        items = list(reader)
-    # Verificar estructura de cada ejemplo
-    for item in items:
-        assert 'messages' in item, f'Falta campo messages en {path}'
-        roles = [m['role'] for m in item['messages']]
-        assert 'system' in roles and 'user' in roles and 'assistant' in roles
-    print(f'✅ {path}: {len(items)} ejemplos válidos')
-"
-```
+**📌 Resultado esperado:**  
+Debes ver costos estimados y una recomendación conceptual.
 
 ---
 
-### Paso 6: Generar el Reporte de Calidad y el Script Principal
+### ✅ Paso 2. Implementa la matriz de decisión
 
-**Objetivo:** Crear la función de generación del reporte Markdown y el punto de entrada `main()` que orquesta todo el pipeline.
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final la función `generate_decision_matrix()`. Esta función generará el archivo `decision_matrix.md` en la raíz del proyecto para comparar Fine-Tuning, RAG y Few-shot Prompting.
 
-#### Instrucciones
+**⚙️ Contenido del paso:**
 
-1. Agrega la función de reporte y el `main()` al final de `dataset_preprocessor.py`:
+Agrega este bloque al final de `dataset_preprocessor.py`:
 
 ```python
-# ──────────────────────────────────────────────────────────────────
-# PASO 7: GENERACIÓN DEL REPORTE MARKDOWN
-# ──────────────────────────────────────────────────────────────────
-def generate_report(
-    raw_count: int,
-    clean_count: int,
-    report: ValidationReport,
-    cost: CostAnalysis,
-    output_path: str = "preprocessing_report.md"
+def generate_decision_matrix(output_path: str = DECISION_MATRIX_FILE) -> None:
+    content = """# Matriz de decisión: Fine-Tuning vs. RAG vs. Few-shot
+
+| Criterio | Fine-Tuning | RAG | Few-shot Prompting |
+|---|---|---|---|
+| Necesitas formato o tono consistente | ✅ Muy fuerte | ⚠️ Depende del prompt | ✅ Bueno |
+| El conocimiento cambia frecuentemente | ❌ Débil | ✅ Muy fuerte | ⚠️ Manual |
+| Necesitas citar fuentes | ❌ Débil | ✅ Muy fuerte | ❌ Débil |
+| Tienes muchos ejemplos de alta calidad | ✅ Requerido | ⚠️ No obligatorio | ✅ Útil |
+| Quieres reducir prompts largos | ✅ Bueno | ⚠️ Depende del contexto | ❌ Débil |
+| Volumen mensual bajo | ⚠️ Puede no convenir | ✅ Puede convenir | ✅ Muy conveniente |
+| Necesitas trazabilidad documental | ❌ No ideal | ✅ Ideal | ❌ No ideal |
+| Cambia el estilo, no el conocimiento | ✅ Ideal | ⚠️ No es el foco | ✅ Bueno |
+
+## Recomendación práctica
+
+- Usa **Fine-Tuning** cuando quieres especializar comportamiento, tono, formato, clasificación o patrones de respuesta y tienes ejemplos de alta calidad.
+- Usa **RAG** cuando necesitas responder con conocimiento actualizado, documentos internos, trazabilidad o citas.
+- Usa **Few-shot prompting** cuando el volumen es bajo, estás prototipando o necesitas flexibilidad sin entrenar un modelo.
+"""
+    Path(output_path).write_text(content, encoding="utf-8")
+    print(f"✅ Matriz de decisión generada: {output_path}")
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -c "from dataset_preprocessor import generate_decision_matrix; generate_decision_matrix()"
+ls -la decision_matrix.md
+```
+
+**📌 Resultado esperado:**  
+Se genera `decision_matrix.md`.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 8 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%208%20de%20un%20laboratorio%20de%20fine-tuning.%20Calcul%C3%A9%20costos%20estimados%20y%20constru%C3%AD%20una%20matriz%20de%20decisi%C3%B3n%20para%20comparar%20Fine-Tuning%2C%20RAG%20y%20Few-shot%20Prompting%20usando%20criterios%20t%C3%A9cnicos.)
+
+---
+
+# 🧩 Tarea 9. Exportar archivos JSONL y generar reportes
+
+## 🎯 Objetivo de la tarea
+
+Exportar `train.jsonl`, `validation.jsonl`, `preprocessing_report.md` y `manual_review_checklist.md` como evidencias finales del pipeline.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Implementa `export_datasets()`
+
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final la función `export_datasets()`. Esta función dividirá los ejemplos en `train.jsonl` y `validation.jsonl`, y eliminará el metadato auxiliar `_category` antes de guardar los archivos finales.
+
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
+
+```python
+def export_datasets(examples: list[dict[str, Any]], report: ValidationReport) -> tuple[int, int]:
+    print("\n" + "=" * 70)
+    print("PASO 7: EXPORTACIÓN DE JSONL")
+    print("=" * 70)
+    valid_examples = [{"messages": example["messages"]} for example in examples]
+    train_examples = valid_examples[:report.train_count]
+    validation_examples = valid_examples[report.train_count:report.train_count + report.validation_count]
+    with jsonlines.open(TRAIN_FILE, mode="w") as writer:
+        writer.write_all(train_examples)
+    with jsonlines.open(VALIDATION_FILE, mode="w") as writer:
+        writer.write_all(validation_examples)
+    print(f"\n✅ {TRAIN_FILE}: {len(train_examples)} ejemplos")
+    print(f"✅ {VALIDATION_FILE}: {len(validation_examples)} ejemplos")
+    return len(train_examples), len(validation_examples)
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -c "from dataset_preprocessor import *; df = load_and_inspect('raw_qa_dataset.csv'); clean, _ = clean_dataset(df); examples = convert_to_jsonl_examples(clean); report = validate_dataset(examples); export_datasets(examples, report)"
+```
+
+**📌 Resultado esperado:**  
+Se generan `train.jsonl` y `validation.jsonl`.
+
+---
+
+### ✅ Paso 2. Implementa el reporte técnico
+
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final la función `generate_preprocessing_report()`. Esta función generará el archivo `preprocessing_report.md` con métricas de limpieza, validación, posibles datos sensibles y análisis de costo.
+
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
+
+```python
+def generate_preprocessing_report(
+    cleaning_stats: CleaningStats,
+    sensitive_findings: list[SensitiveFinding],
+    validation_report: ValidationReport,
+    cost_analysis: CostAnalysis,
+    output_path: str = REPORT_FILE,
 ) -> None:
-    """
-    Genera un reporte técnico en formato Markdown con todas las
-    métricas del pipeline de preprocesamiento.
-    """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    status_emoji = "✅" if report.passed else "⚠️"
-
-    md = f"""# Reporte de Preprocesamiento de Dataset para Fine-Tuning
-
-**Generado:** {timestamp}
-**Estado:** {status_emoji} {"DATASET LISTO PARA FINE-TUNING" if report.passed else "REQUIERE REVISIÓN"}
-
----
-
-## 1. Resumen Ejecutivo
-
-| Métrica                        | Valor                        |
-|-------------------------------|------------------------------|
-| Filas en dataset crudo         | {raw_count}                  |
-| Filas después de limpieza      | {clean_count}                |
-| Reducción por limpieza         | {(raw_count - clean_count) / raw_count * 100:.1f}%  |
-| Ejemplos válidos para training | {report.valid_examples}      |
-| Split entrenamiento            | {report.train_count} ({TRAIN_SPLIT_RATIO*100:.0f}%) |
-| Split validación               | {report.validation_count} ({(1-TRAIN_SPLIT_RATIO)*100:.0f}%) |
-
----
-
-## 2. Estadísticas de Tokens
-
-| Métrica                        | Valor                        |
-|-------------------------------|------------------------------|
-| Tokens promedio por ejemplo    | {report.avg_tokens_per_example:.0f}  |
-| Tokens máximo encontrado       | {report.max_tokens_found}    |
-| Límite máximo (OpenAI)         | {MAX_TOKENS_PER_EXAMPLE}     |
-| Violaciones de token           | {len(report.token_violations)} |
-| Violaciones de formato         | {len(report.format_violations)} |
-
----
-
-## 3. Distribución por Categoría
-
-| Categoría       | Ejemplos | Estado                          |
-|----------------|----------|---------------------------------|
-"""
-    for cat, count in sorted(report.category_distribution.items()):
-        status = "✅" if count >= MIN_EXAMPLES_PER_CATEGORY else "⚠️ Insuficiente"
-        md += f"| {cat:<15} | {count:>8} | {status:<31} |\n"
-
-    md += f"""
----
-
-## 4. Análisis de Costo: Fine-Tuning vs. Few-Shot Prompting
-
-### Fine-Tuning ({FINE_TUNING_MODEL})
-
-| Parámetro                          | Valor                               |
-|-----------------------------------|-------------------------------------|
-| Tokens totales de entrenamiento    | {cost.total_training_tokens:,}      |
-| Épocas                             | {cost.epochs}                       |
-| Precio por 1K tokens               | ${PRICE_FINETUNING_INPUT_PER_1K:.4f} USD |
-| **Costo total de entrenamiento**   | **${cost.finetuning_cost_usd:.4f} USD** |
-
-### Few-Shot Prompting ({BASE_MODEL_FOR_FEWSHOT})
-
-| Parámetro                          | Valor                               |
-|-----------------------------------|-------------------------------------|
-| Consultas esperadas/mes            | {cost.expected_queries_per_month:,} |
-| Precio input por 1K tokens         | ${PRICE_GPT4O_INPUT_PER_1K:.4f} USD |
-| Precio output por 1K tokens        | ${PRICE_GPT4O_OUTPUT_PER_1K:.4f} USD |
-| **Costo mensual estimado**         | **${cost.fewshot_cost_usd:.4f} USD** |
-
-### Punto de Equilibrio
-
-El costo del fine-tuning se amortiza en aproximadamente **{cost.break_even_queries:,} consultas**.
-
-### Recomendación
-
-{cost.recommendation}
-
----
-
-## 5. Archivos Generados
-
-| Archivo                  | Descripción                                |
-|-------------------------|--------------------------------------------|
-| `train.jsonl`           | {report.train_count} ejemplos de entrenamiento (JSONL) |
-| `validation.jsonl`      | {report.validation_count} ejemplos de validación (JSONL) |
-| `preprocessing_report.md` | Este reporte                             |
-
----
-
-## 6. Próximos Pasos
-
-1. **Revisar `validation.jsonl`** manualmente para confirmar calidad de las respuestas.
-2. **Subir el dataset** a la API de OpenAI usando `openai files create`.
-3. **Iniciar el fine-tuning** con `openai fine_tuning.jobs.create`.
-4. **Monitorear métricas** de training loss y validation loss durante el entrenamiento.
-5. **Evaluar el modelo fine-tuned** con un conjunto de prueba independiente.
-
----
-
-*Reporte generado por `dataset_preprocessor.py` — Lab 07-00-01*
-"""
-
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(md)
-
-    print(f"\n✅ Reporte generado: {output_path}")
-
-
-# ──────────────────────────────────────────────────────────────────
-# PUNTO DE ENTRADA PRINCIPAL
-# ──────────────────────────────────────────────────────────────────
-def main():
-    """Orquesta el pipeline completo de preprocesamiento."""
-    print("\n" + "🚀 " + "="*56)
-    print("   PIPELINE DE PREPROCESAMIENTO PARA FINE-TUNING")
-    print("   Lección 7.1: Fine-Tuning vs. RAG")
-    print("🚀 " + "="*56)
-
-    INPUT_FILE = "raw_qa_dataset.csv"
-
-    # 1. Cargar e inspeccionar
-    df_raw = load_and_inspect(INPUT_FILE)
-    raw_count = len(df_raw)
-
-    # 2. Limpiar
-    df_clean = clean_dataset(df_raw)
-    clean_count = len(df_clean)
-
-    # 3. Convertir a formato JSONL
-    examples = convert_to_jsonl(df_clean, SYSTEM_PROMPT)
-
-    # 4. Validar
-    report = validate_dataset(examples)
-
-    # 5. Análisis de costo
-    cost = calculate_finetuning_cost(
-        examples,
-        epochs=3,
-        expected_queries_per_month=1000
+    status = "✅ DATASET LISTO PARA REVISIÓN FINAL" if validation_report.passed else "⚠️ DATASET REQUIERE REVISIÓN"
+    category_rows = "\n".join(
+        f"| {category} | {count} | {'✅ OK' if count >= MIN_EXAMPLES_PER_CATEGORY else '⚠️ Bajo'} |"
+        for category, count in sorted(validation_report.category_distribution.items())
     )
+    sensitive_rows = "\n".join(
+        f"| {f.row_index} | {f.category} | {f.field} | {f.pattern_name} | {f.preview} |"
+        for f in sensitive_findings[:25]
+    ) or "| N/A | N/A | N/A | N/A | No se detectaron hallazgos |"
 
-    # 6. Exportar archivos JSONL
-    export_datasets(examples, report)
+    markdown = f"""# Reporte de Preprocesamiento para Fine-Tuning
 
-    # 7. Generar reporte
-    generate_report(raw_count, clean_count, report, cost)
+**Generado:** {timestamp}  
+**Estado:** {status}
 
-    print("\n" + "="*60)
-    print("✅ PIPELINE COMPLETADO EXITOSAMENTE")
-    print("="*60)
-    print(f"\nArchivos generados:")
-    print(f"  📄 train.jsonl")
-    print(f"  📄 validation.jsonl")
-    print(f"  📄 preprocessing_report.md")
+---
 
+## 1. Resumen ejecutivo
+
+| Métrica | Valor |
+|---|---:|
+| Filas crudas | {cleaning_stats.raw_count} |
+| Filas finales | {cleaning_stats.final_count} |
+| Filas vacías eliminadas | {cleaning_stats.removed_empty} |
+| Respuestas cortas eliminadas | {cleaning_stats.removed_short} |
+| Duplicados eliminados | {cleaning_stats.removed_duplicates} |
+| Ejemplos válidos | {validation_report.valid_examples} |
+| Ejemplos inválidos | {validation_report.invalid_examples} |
+
+---
+
+## 2. Validación de estructura y tokens
+
+| Métrica | Valor |
+|---|---:|
+| Tokens promedio por ejemplo | {validation_report.avg_tokens_per_example:.1f} |
+| Tokens máximos encontrados | {validation_report.max_tokens_found} |
+| Límite configurado | {MAX_TOKENS_PER_EXAMPLE} |
+| Violaciones de formato | {len(validation_report.format_violations)} |
+| Violaciones de tokens | {len(validation_report.token_violations)} |
+| Ejemplos de entrenamiento | {validation_report.train_count} |
+| Ejemplos de validación | {validation_report.validation_count} |
+
+---
+
+## 3. Distribución por categoría
+
+| Categoría | Ejemplos | Estado |
+|---|---:|---|
+{category_rows}
+
+---
+
+## 4. Posibles datos sensibles detectados
+
+| Fila | Categoría | Campo | Patrón | Vista previa |
+|---:|---|---|---|---|
+{sensitive_rows}
+
+> Revisa manualmente estos hallazgos antes de usar un dataset real para entrenamiento.
+
+---
+
+## 5. Análisis de costo didáctico
+
+| Concepto | Valor |
+|---|---:|
+| Tokens de entrenamiento | {cost_analysis.total_training_tokens:,} |
+| Épocas | {cost_analysis.epochs} |
+| Costo estimado fine-tuning | ${cost_analysis.finetuning_cost_usd:.4f} USD |
+| Costo mensual few-shot estimado | ${cost_analysis.fewshot_monthly_cost_usd:.4f} USD |
+| Punto de equilibrio aproximado | {cost_analysis.break_even_queries:,} consultas |
+
+**Recomendación:**  
+{cost_analysis.recommendation}
+"""
+    Path(output_path).write_text(markdown, encoding="utf-8")
+    print(f"✅ Reporte generado: {output_path}")
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -m py_compile dataset_preprocessor.py
+```
+
+**📌 Resultado esperado:**  
+El script compila sin errores.
+
+---
+
+### ✅ Paso 3. Genera checklist de revisión manual
+
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final la función `generate_manual_review_checklist()`. Esta función creará el archivo `manual_review_checklist.md`, que servirá como evidencia de revisión humana del dataset.
+
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
+
+```python
+def generate_manual_review_checklist(output_path: str = MANUAL_REVIEW_FILE) -> None:
+    content = """# Checklist de revisión manual del dataset
+
+Revisa al menos 10 ejemplos de `train.jsonl` y 5 ejemplos de `validation.jsonl` antes de usar el dataset para entrenamiento real.
+
+| Ejemplo | Pregunta clara | Respuesta útil | Categoría correcta | Sin datos sensibles | Formato correcto | Aprobado |
+|---:|---|---|---|---|---|---|
+| 1 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 2 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 3 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 4 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 5 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 6 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 7 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 8 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 9 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| 10 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+
+## Criterios de revisión
+
+- La pregunta debe ser comprensible sin contexto externo.
+- La respuesta debe resolver la pregunta de forma completa y segura.
+- La respuesta no debe inventar información.
+- No debe haber credenciales, tokens, correos reales, teléfonos ni datos personales.
+- El ejemplo debe tener exactamente los roles `system`, `user` y `assistant` en ese orden.
+- Si el conocimiento cambia con frecuencia, considera RAG en lugar de fine-tuning.
+"""
+    Path(output_path).write_text(content, encoding="utf-8")
+    print(f"✅ Checklist manual generado: {output_path}")
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -c "from dataset_preprocessor import generate_manual_review_checklist; generate_manual_review_checklist()"
+```
+
+**📌 Resultado esperado:**  
+Se genera `manual_review_checklist.md`.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 9 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%209%20de%20un%20laboratorio%20de%20fine-tuning.%20Export%C3%A9%20train.jsonl%2C%20validation.jsonl%2C%20gener%C3%A9%20un%20reporte%20Markdown%20de%20calidad%20y%20un%20checklist%20de%20revisi%C3%B3n%20manual%20para%20validar%20el%20dataset.)
+
+---
+
+# 🧩 Tarea 10. Orquestar el pipeline completo y validar evidencias
+
+## 🎯 Objetivo de la tarea
+
+Crear la función `main()` para ejecutar todo el pipeline de inicio a fin y validar los archivos generados.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Implementa `main()`
+
+**📝 Descripción del paso:**  
+Vas a editar `dataset_preprocessor.py` y agregar al final la función `main()` junto con el bloque `if __name__ == "__main__":`. Este bloque permitirá ejecutar todo el pipeline completo con un solo comando.
+
+**⚙️ Contenido del paso:**
+
+Agrega este bloque al final de `dataset_preprocessor.py`:
+
+```python
+def main() -> None:
+    print("\n" + "🚀" + "=" * 69)
+    print(" PIPELINE DE PREPROCESAMIENTO DE DATASET PARA FINE-TUNING")
+    print("🚀" + "=" * 69)
+    df_raw = load_and_inspect(INPUT_FILE)
+    df_clean, cleaning_stats = clean_dataset(df_raw)
+    sensitive_findings = detect_sensitive_data(df_clean)
+    examples = convert_to_jsonl_examples(df_clean)
+    validation_report = validate_dataset(examples)
+    cost_analysis = calculate_cost_analysis(examples)
+    export_datasets(examples, validation_report)
+    generate_decision_matrix()
+    generate_manual_review_checklist()
+    generate_preprocessing_report(
+        cleaning_stats=cleaning_stats,
+        sensitive_findings=sensitive_findings,
+        validation_report=validation_report,
+        cost_analysis=cost_analysis,
+    )
+    print("\n" + "=" * 70)
+    print("✅ PIPELINE COMPLETADO")
+    print("=" * 70)
+    print("\nArchivos generados:")
+    for filename in [TRAIN_FILE, VALIDATION_FILE, REPORT_FILE, DECISION_MATRIX_FILE, MANUAL_REVIEW_FILE]:
+        print(f"   📄 {filename}")
+    if sensitive_findings:
+        print("\n⚠️ Revisa los posibles datos sensibles antes de usar el dataset en un entrenamiento real.")
 
 if __name__ == "__main__":
     main()
 ```
 
-2. Ejecuta el pipeline completo:
+**✅ Validación del paso:**
+
+```bash
+python -m py_compile dataset_preprocessor.py
+```
+
+**📌 Resultado esperado:**  
+El script principal compila sin errores.
+
+---
+
+### ✅ Paso 2. Ejecuta el pipeline completo
+
+**📝 Descripción del paso:**  
+Vas a ejecutar desde Git Bash el archivo `dataset_preprocessor.py`. Este comando tomará `raw_qa_dataset.csv` como entrada y generará los archivos finales del laboratorio en la misma carpeta del proyecto.
+
+**⚙️ Contenido del paso:**
 
 ```bash
 python dataset_preprocessor.py
 ```
 
-#### Salida esperada (resumen final)
-
-```
-🚀 ========================================================
-   PIPELINE DE PREPROCESAMIENTO PARA FINE-TUNING
-   Lección 7.1: Fine-Tuning vs. RAG
-🚀 ========================================================
-
-[... salidas de pasos anteriores ...]
-
-============================================================
-PASO 5: ANÁLISIS DE COSTO
-============================================================
-
-💰 Análisis de Costo (modelo: gpt-4o-mini-2024-07-18)
-
-   FINE-TUNING:
-   • Tokens totales de entrenamiento: 94,762
-   • Épocas:                          3
-   • Costo de entrenamiento:          $0.8529 USD
-
-   FEW-SHOT PROMPTING (base: gpt-4o):
-   • Tokens de entrada por consulta:  1,140
-   • Tokens de salida por consulta:   118
-   • Costo mensual (1,000 consultas): $7.4700 USD
-
-   PUNTO DE EQUILIBRIO:
-   • Fine-tuning se amortiza en:      114 consultas
-
-   RECOMENDACIÓN:
-   ✅ FINE-TUNING RECOMENDADO: El costo de entrenamiento se amortiza
-   en aproximadamente 114 consultas mensuales.
-
-============================================================
-✅ PIPELINE COMPLETADO EXITOSAMENTE
-============================================================
-
-Archivos generados:
-  📄 train.jsonl
-  📄 validation.jsonl
-  📄 preprocessing_report.md
-```
-
-#### Verificación
+**✅ Validación del paso:**
 
 ```bash
-# Verificar que los 3 archivos de salida existen y tienen contenido
-python -c "
-import os, jsonlines
-for f in ['train.jsonl', 'validation.jsonl', 'preprocessing_report.md']:
-    assert os.path.exists(f), f'Falta: {f}'
-    size = os.path.getsize(f)
-    print(f'✅ {f}: {size:,} bytes')
+ls -la
+```
 
-# Verificar estructura del primer ejemplo de train.jsonl
-with jsonlines.open('train.jsonl') as r:
-    first = next(iter(r))
-    roles = [m['role'] for m in first['messages']]
-    assert roles == ['system', 'user', 'assistant'], f'Roles incorrectos: {roles}'
-print('✅ Estructura JSONL: correcta')
+Debes encontrar:
+
+```text
+train.jsonl
+validation.jsonl
+preprocessing_report.md
+decision_matrix.md
+manual_review_checklist.md
+```
+
+**📌 Resultado esperado:**  
+El pipeline se ejecuta completo y genera las evidencias.
+
+---
+
+### ✅ Paso 3. Valida la estructura de los JSONL
+
+**📝 Descripción del paso:**  
+Vas a ejecutar desde Git Bash una validación sobre `train.jsonl` y `validation.jsonl`. Esta prueba confirma que los archivos existen, no están vacíos, tienen la clave `messages`, conservan el orden de roles y no incluyen el metadato auxiliar `_category`.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python -c "
+import jsonlines
+for path in ['train.jsonl', 'validation.jsonl']:
+    with jsonlines.open(path) as reader:
+        items = list(reader)
+    assert len(items) > 0, f'{path} está vacío'
+    for item in items[:10]:
+        assert 'messages' in item
+        roles = [m['role'] for m in item['messages']]
+        assert roles == ['system', 'user', 'assistant'], roles
+        assert '_category' not in item
+    print(f'✅ {path}: {len(items)} ejemplos válidos')
 "
+```
+
+**📌 Resultado esperado:**
+
+```text
+✅ train.jsonl: ... ejemplos válidos
+✅ validation.jsonl: ... ejemplos válidos
 ```
 
 ---
 
-## 7. Validación y Pruebas
+### ✅ Paso 4. Crea una suite de validación final
 
-Ejecuta el siguiente script de validación integral para confirmar que todos los componentes del pipeline funcionan correctamente:
+**📝 Descripción del paso:**  
+Vas a crear en la raíz del proyecto el archivo `validation_test.py`. Este script realizará una validación final de evidencias: existencia de archivos, contenido no vacío, roles correctos en JSONL y secciones esperadas del reporte Markdown.
+
+**⚙️ Contenido del paso:**
+
+Crea `validation_test.py`:
 
 ```bash
-# validation_test.py
-cat > validation_test.py << 'TESTEOF'
-"""
-Suite de validación integral para el Lab 07-00-01.
-Ejecutar después de completar todos los pasos.
-"""
-import os
-import json
+cat > validation_test.py << 'EOF'
+"""Suite de validación final del Laboratorio 7."""
+from pathlib import Path
 import jsonlines
-import pandas as pd
 
-print("=" * 60)
-print("SUITE DE VALIDACIÓN — Lab 07-00-01")
-print("=" * 60)
+REQUIRED_FILES = [
+    "train.jsonl",
+    "validation.jsonl",
+    "preprocessing_report.md",
+    "decision_matrix.md",
+    "manual_review_checklist.md",
+]
 
-tests_passed = 0
-tests_failed = 0
+passed = 0
+failed = 0
 
-def check(condition, name, detail=""):
-    global tests_passed, tests_failed
+def check(condition: bool, name: str) -> None:
+    global passed, failed
     if condition:
-        print(f"  ✅ PASS: {name}")
-        tests_passed += 1
+        print(f"✅ PASS: {name}")
+        passed += 1
     else:
-        print(f"  ❌ FAIL: {name} — {detail}")
-        tests_failed += 1
+        print(f"❌ FAIL: {name}")
+        failed += 1
 
-# ── Test 1: Archivos de salida existen ──────────────────────────
-print("\n[1] Archivos de salida")
-for f in ["train.jsonl", "validation.jsonl", "preprocessing_report.md"]:
-    check(os.path.exists(f), f"Existe {f}")
+print("=" * 70)
+print("VALIDACIÓN FINAL — LABORATORIO 7")
+print("=" * 70)
 
-# ── Test 2: Estructura JSONL correcta ───────────────────────────
-print("\n[2] Estructura JSONL")
+for file in REQUIRED_FILES:
+    check(Path(file).exists(), f"Existe {file}")
+    check(Path(file).stat().st_size > 0, f"{file} no está vacío")
+
 for path in ["train.jsonl", "validation.jsonl"]:
     with jsonlines.open(path) as reader:
         items = list(reader)
-    check(len(items) > 0, f"{path} no está vacío", f"items={len(items)}")
-    for i, item in enumerate(items[:5]):  # Verificar primeros 5
-        msgs = item.get("messages", [])
-        roles = [m.get("role") for m in msgs]
-        check(
-            set(roles) == {"system", "user", "assistant"},
-            f"{path}[{i}] tiene roles correctos",
-            f"roles={roles}"
-        )
-        check(
-            "_category" not in item,
-            f"{path}[{i}] no tiene metadatos auxiliares"
-        )
+    check(len(items) > 0, f"{path} tiene ejemplos")
+    for index, item in enumerate(items[:5]):
+        roles = [message.get("role") for message in item.get("messages", [])]
+        check(roles == ["system", "user", "assistant"], f"{path}[{index}] roles correctos")
+        check("_category" not in item, f"{path}[{index}] no contiene metadatos auxiliares")
 
-# ── Test 3: Ratio train/validation ──────────────────────────────
-print("\n[3] Split train/validation")
-with jsonlines.open("train.jsonl") as r: train_n = sum(1 for _ in r)
-with jsonlines.open("validation.jsonl") as r: val_n = sum(1 for _ in r)
-total = train_n + val_n
-ratio = train_n / total if total > 0 else 0
-check(0.88 <= ratio <= 0.92, f"Ratio train ~90%", f"ratio={ratio:.2f}")
-check(val_n >= 10, "Validación tiene al menos 10 ejemplos", f"val_n={val_n}")
+report = Path("preprocessing_report.md").read_text(encoding="utf-8")
+for section in ["Resumen ejecutivo", "Validación de estructura", "Posibles datos sensibles", "Análisis de costo"]:
+    check(section in report, f"Reporte contiene sección: {section}")
 
-# ── Test 4: Contenido del reporte ───────────────────────────────
-print("\n[4] Reporte Markdown")
-with open("preprocessing_report.md", encoding="utf-8") as f:
-    content = f.read()
-for section in ["Resumen Ejecutivo", "Análisis de Costo", "Distribución por Categoría"]:
-    check(section in content, f"Reporte contiene sección '{section}'")
+print("=" * 70)
+print(f"Resultado: {passed} PASS / {failed} FAIL")
+print("=" * 70)
+if failed:
+    raise SystemExit(1)
+EOF
+```
 
-# ── Test 5: Tokens dentro del límite ────────────────────────────
-print("\n[5] Límite de tokens")
-import tiktoken
-enc = tiktoken.get_encoding("cl100k_base")
-with jsonlines.open("train.jsonl") as reader:
-    for i, item in enumerate(reader):
-        total_tokens = sum(len(enc.encode(m["content"])) for m in item["messages"])
-        check(
-            total_tokens <= 4096,
-            f"train[{i}] dentro del límite de tokens",
-            f"tokens={total_tokens}"
-        ) if i < 3 else None  # Verificar primeros 3
+Ejecuta:
 
-# ── Resumen ──────────────────────────────────────────────────────
-print(f"\n{'='*60}")
-print(f"RESULTADO: {tests_passed} PASS / {tests_failed} FAIL")
-if tests_failed == 0:
-    print("🎉 Todos los tests pasaron — Lab completado exitosamente")
-else:
-    print("⚠️  Revisa los tests fallidos antes de continuar")
-print("=" * 60)
-TESTEOF
-
+```bash
 python validation_test.py
 ```
 
-**Resultado esperado:** todos los tests en estado `PASS`.
+**📌 Resultado esperado:**  
+Todos los checks deben aparecer como `PASS`.
 
 ---
 
-## 8. Resolución de Problemas
+## 💬 Prompt de apoyo para explicar lo realizado
 
-### Problema 1: `tiktoken` no puede encontrar el encoding para el modelo
-
-**Síntomas:**
-```
-KeyError: 'gpt-4o-mini-2024-07-18'
-```
-El script falla al intentar contar tokens porque la versión instalada de `tiktoken` no reconoce el modelo especificado en `FINE_TUNING_MODEL`.
-
-**Causa:**
-La constante `FINE_TUNING_MODEL = "gpt-4o-mini-2024-07-18"` usa un nombre de modelo que versiones antiguas de `tiktoken` (< 0.6.0) no tienen en su registro interno.
-
-**Solución:**
-```bash
-# 1. Actualizar tiktoken a la versión más reciente compatible
-pip install tiktoken --upgrade
-
-# 2. Si el problema persiste, la función _count_tokens() ya tiene
-#    un fallback a cl100k_base. Verificar que el bloque try/except
-#    esté presente en el código:
-python -c "
-import tiktoken
-# Probar fallback manual
-try:
-    enc = tiktoken.encoding_for_model('gpt-4o-mini-2024-07-18')
-except KeyError:
-    enc = tiktoken.get_encoding('cl100k_base')
-    print('Usando cl100k_base como fallback')
-print(f'Encoding: {enc.name}')
-"
-```
+[Explicar la Tarea 10 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2010%20de%20un%20laboratorio%20de%20fine-tuning.%20Orquest%C3%A9%20un%20pipeline%20completo%20que%20carga%2C%20limpia%2C%20detecta%20datos%20sensibles%2C%20convierte%2C%20valida%2C%20calcula%20costos%2C%20exporta%20JSONL%20y%20genera%20reportes%20profesionales.)
 
 ---
 
-### Problema 2: La deduplicación tarda demasiado tiempo con datasets grandes
+# 🏁 Resultado final esperado del laboratorio
 
-**Síntomas:**
-El script se queda "colgado" en el paso de deduplicación durante varios minutos cuando el dataset tiene más de 1,000 filas. La deduplicación O(n²) con `difflib.SequenceMatcher` se vuelve muy lenta.
+Al finalizar la práctica, debes contar con:
 
-**Causa:**
-El algoritmo de deduplicación actual compara cada par de preguntas (complejidad O(n²)). Para 500 filas hay ~125,000 comparaciones; para 2,000 filas serían ~2,000,000 comparaciones, lo que puede tardar varios minutos.
-
-**Solución:**
-```python
-# Reemplaza el bloque de deduplicación en clean_dataset() con esta
-# versión optimizada que usa hashing para pre-filtrar candidatos:
-
-from collections import defaultdict
-
-def _get_shingles(text: str, k: int = 3) -> set:
-    """Genera k-shingles de palabras para pre-filtrado rápido."""
-    words = text.lower().split()
-    return set(tuple(words[i:i+k]) for i in range(len(words)-k+1))
-
-# Dentro de clean_dataset(), reemplaza el bucle de deduplicación:
-print(f"\n🔄 Deduplicando (versión optimizada) con umbral {DEDUP_SIMILARITY_THRESHOLD}...")
-df = df.reset_index(drop=True)
-questions = df["question"].tolist()
-to_remove = set()
-
-# Pre-agrupar por shingles similares para reducir comparaciones
-shingle_index = defaultdict(list)
-for i, q in enumerate(questions):
-    for shingle in _get_shingles(q):
-        shingle_index[shingle].append(i)
-
-# Solo comparar pares con al menos 1 shingle en común
-candidate_pairs = set()
-for indices in shingle_index.values():
-    for a in range(len(indices)):
-        for b in range(a+1, len(indices)):
-            if indices[a] not in to_remove and indices[b] not in to_remove:
-                candidate_pairs.add((min(indices[a], indices[b]),
-                                     max(indices[a], indices[b])))
-
-for i, j in candidate_pairs:
-    if i not in to_remove and j not in to_remove:
-        if _is_near_duplicate(questions[i], questions[j], DEDUP_SIMILARITY_THRESHOLD):
-            to_remove.add(j)
-```
+1. Proyecto local creado en Windows.
+2. Entorno virtual Python funcional.
+3. Dataset crudo `raw_qa_dataset.csv`.
+4. Script generador `generate_raw_dataset.py`.
+5. Pipeline principal `dataset_preprocessor.py`.
+6. Dataset limpio convertido a formato JSONL.
+7. Archivo `train.jsonl`.
+8. Archivo `validation.jsonl`.
+9. Reporte `preprocessing_report.md`.
+10. Matriz `decision_matrix.md`.
+11. Checklist `manual_review_checklist.md`.
+12. Suite de validación `validation_test.py`.
+13. Evidencia de limpieza, deduplicación y validación.
+14. Detección de posibles datos sensibles.
+15. Decisión técnica entre Fine-Tuning, RAG y Few-shot.
 
 ---
 
-## 9. Limpieza
+# 📊 Criterios de evaluación sugeridos
 
-Ejecuta los siguientes comandos para limpiar los archivos temporales generados durante el laboratorio:
+| Criterio | Ponderación |
+|---|---:|
+| Preparación correcta del entorno local | 10% |
+| Generación del dataset crudo | 10% |
+| Inspección y limpieza del dataset | 15% |
+| Deduplicación y normalización | 10% |
+| Detección de datos sensibles | 10% |
+| Conversión correcta a JSONL | 15% |
+| Validación de roles, tokens y categorías | 15% |
+| Reporte técnico y matriz de decisión | 10% |
+| Entrega segura de evidencias | 5% |
+| Total | 100% |
+
+---
+
+# ⚠️ Errores comunes que debes evitar
+
+1. Usar datos reales de clientes en el dataset.
+2. Subir archivos JSONL con información sensible.
+3. Validar solo que existan roles, pero no su orden.
+4. No revisar manualmente muestras del dataset.
+5. Confundir fine-tuning con actualización de conocimiento documental.
+6. Tomar decisiones solo por costo y no por caso de uso.
+7. Entrenar con respuestas cortas, incompletas o contradictorias.
+8. Ignorar categorías con pocos ejemplos.
+9. Usar precios desactualizados para justificar una decisión real.
+10. Considerar la deduplicación con `difflib` como suficiente para datasets grandes.
+
+---
+
+
+# 🧯 Nota sobre mensajes de telemetría de ChromaDB
+
+Aunque este laboratorio no usa ChromaDB, es posible que algunos estudiantes vean mensajes heredados de otro laboratorio o del mismo entorno Python, por ejemplo:
+
+```text
+Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+```
+
+Estos mensajes corresponden a eventos de telemetría de ChromaDB y no significan, por sí solos, que el código del laboratorio 7 esté mal. Si el script genera `train.jsonl`, `validation.jsonl`, `preprocessing_report.md`, `decision_matrix.md` y `manual_review_checklist.md`, el pipeline funcionó.
+
+Si quieres evitar confusión en el aula, puedes indicar al participante que valide primero si el laboratorio actual realmente usa ChromaDB. En esta práctica, las dependencias declaradas son `pandas`, `tiktoken`, `jsonlines` y `python-dotenv`, por lo que cualquier mensaje de ChromaDB normalmente viene de otro entorno, notebook, terminal previa o práctica anterior.
+
+Si el mensaje aparece en una práctica que sí usa ChromaDB, se puede documentar como advertencia no crítica o desactivar telemetría en el código de ChromaDB usando configuración explícita, por ejemplo con `anonymized_telemetry=False` en los settings del cliente cuando aplique.
+
+
+# 🧹 Limpieza del entorno
+
+Ejecuta estos comandos solo si quieres limpiar archivos temporales:
 
 ```bash
-# Opción 1: Limpiar solo archivos generados (conservar el script)
-rm -f raw_qa_dataset.csv generate_raw_dataset.py validation_test.py
-echo "✅ Archivos temporales eliminados"
+rm -f validation_test.py
+```
 
-# Opción 2: Conservar los archivos de salida para revisión
-# (train.jsonl, validation.jsonl, preprocessing_report.md se conservan)
-ls -lh *.jsonl *.md 2>/dev/null
+Para limpiar por completo el entorno virtual:
 
-# Opción 3: Limpieza completa del entorno virtual
+```bash
 deactivate
-rm -rf venv_lab07/
-echo "✅ Entorno virtual eliminado"
-
-# Verificar que no hay API keys en el código antes de hacer commit
-grep -r "sk-" . --include="*.py" && echo "⚠️ ALERTA: Posible API key encontrada" || echo "✅ Sin API keys en el código"
+rm -rf .venv/
 ```
 
-> **Nota de seguridad:** Verifica que el archivo `.gitignore` incluya `*.jsonl` si los datasets contienen información sensible de tu organización antes de hacer commit al repositorio.
+Si decides subir el laboratorio a un repositorio, revisa antes:
+
+```bash
+grep -r "sk-" . --include="*.py" --include="*.txt" --include="*.jsonl" 2>/dev/null \
+  && echo "⚠️ Posibles secretos encontrados" \
+  || echo "✅ No se encontraron claves con patrón sk-"
+```
 
 ---
 
-## 10. Resumen
+# Cierre de la práctica
 
-En este laboratorio construiste un pipeline completo de preprocesamiento de datos para fine-tuning que abarcó:
+En este laboratorio construiste un pipeline profesional para preparar datos antes de un posible fine-tuning. Generaste un dataset sintético con errores, inspeccionaste su calidad, limpiaste registros problemáticos, deduplicaste preguntas similares, detectaste posibles datos sensibles, convertiste ejemplos al formato JSONL, validaste estructura y tokens, generaste reportes y construiste una matriz de decisión entre Fine-Tuning, RAG y Few-shot Prompting.
 
-1. **Carga e inspección** (`load_and_inspect`): análisis estadístico del dataset crudo con detección automática de problemas.
-2. **Limpieza** (`clean_dataset`): eliminación de nulos, normalización UTF-8, filtrado por longitud mínima y deduplicación por similitud con `difflib.SequenceMatcher` (umbral 0.85).
-3. **Conversión** (`convert_to_jsonl`): transformación al formato de mensajes `[system, user, assistant]` requerido por la API de fine-tuning de OpenAI.
-4. **Validación** (`validate_dataset`): verificación de límites de tokens con `tiktoken`, formato de mensajes, distribución mínima por categoría y split 90/10.
-5. **Análisis de costo** (`calculate_finetuning_cost`): comparación cuantitativa entre fine-tuning y few-shot prompting, con cálculo del punto de equilibrio.
-6. **Exportación**: archivos `train.jsonl` y `validation.jsonl` listos para subir a OpenAI, más un reporte técnico `preprocessing_report.md`.
-
-Este pipeline conecta directamente con el marco conceptual de la **Lección 7.1**: el análisis de costo que implementaste en el Paso 5 es exactamente el tipo de decisión informada que distingue entre elegir Fine-Tuning, RAG o few-shot prompting. El dataset que generaste hoy es el insumo directo para el proceso de fine-tuning que se abordará en las próximas lecciones.
-
-### Recursos Adicionales
-
-- [Guía oficial de Fine-Tuning de OpenAI](https://platform.openai.com/docs/guides/fine-tuning)
-- [Documentación de tiktoken](https://github.com/openai/tiktoken)
-- [Formato de datos para fine-tuning — OpenAI Cookbook](https://cookbook.openai.com/examples/chat_finetuning_data_prep)
-- [difflib — Documentación oficial de Python](https://docs.python.org/3/library/difflib.html)
-- [Pandas 2.2 — Guía de usuario](https://pandas.pydata.org/docs/user_guide/index.html)
-
----
-*Lab 07-00-01 — Módulo 7: Fine-Tuning vs. RAG — Nivel: Crear (Bloom)*
+El aprendizaje más importante es que fine-tuning no inicia entrenando un modelo. Inicia con datos confiables, seguros, representativos y bien validados. Si el dataset no tiene calidad, el modelo tampoco la tendrá.
