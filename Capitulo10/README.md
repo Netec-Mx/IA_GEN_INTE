@@ -1,1441 +1,1762 @@
-# Crear un script que evalúe la fidelidad de las respuestas de un chatbot comparándolas contra un "Golden Dataset"
+<div align="center">
 
-## Metadatos
+# 🧪 Laboratorio 10
 
-| Campo            | Valor                                                                 |
-|------------------|-----------------------------------------------------------------------|
-| **Duración**     | 40 minutos                                                            |
-| **Complejidad**  | Media                                                                 |
-| **Nivel Bloom**  | Crear                                                                 |
-| **Modalidad**    | Individual / Guiada                                                   |
-| **Costo estimado** | ~$0.20–$0.50 USD (llamadas a GPT-4o para G-Eval sobre 20 ejemplos) |
+## Evaluación de fidelidad de un chatbot con Golden Dataset, ROUGE, BLEU y G-Eval
 
----
+![Nivel](https://img.shields.io/badge/Nivel-Intermedio%20Avanzado-2563EB?style=flat-square)
+![Sistema](https://img.shields.io/badge/Sistema-Windows-0F766E?style=flat-square)
+![Editor](https://img.shields.io/badge/Editor-VS%20Code-7C3AED?style=flat-square)
+![Terminal](https://img.shields.io/badge/Terminal-Git%20Bash-475569?style=flat-square)
+![Lenguaje](https://img.shields.io/badge/Lenguaje-Python-CA8A04?style=flat-square)
+![Evaluación](https://img.shields.io/badge/Evaluaci%C3%B3n-ROUGE%20%7C%20BLEU%20%7C%20G--Eval-DB2777?style=flat-square)
 
-## Descripción General
-
-En este laboratorio construirás un framework completo de evaluación automatizada para chatbots llamado `chatbot_evaluator.py`. Partirás de un **Golden Dataset** de 20 pares pregunta-respuesta sobre historia de la computación, generarás respuestas con un modelo GPT, y las evaluarás usando tres familias de métricas: las clásicas de superposición de n-gramas (**ROUGE-1, ROUGE-2, ROUGE-L, BLEU**) y la moderna métrica basada en LLM-as-a-Judge (**G-Eval**). Al finalizar, producirás un reporte en Markdown y HTML que compara todas las métricas, identifica los mejores y peores casos, y analiza la correlación entre los enfoques léxico y semántico.
+</div>
 
 ---
 
-## Objetivos de Aprendizaje
+> [!IMPORTANT]
+> En este laboratorio vas a construir un framework para evaluar la fidelidad de respuestas de un chatbot contra un **Golden Dataset**. Primero ejecutarás una ruta sin costo usando **fixtures locales** y métricas léxicas. Después, de forma opcional, podrás activar generación con API y evaluación tipo **G-Eval** con un modelo juez. No uses datos reales de clientes, credenciales, tickets internos ni información sensible.
 
-Al completar este laboratorio serás capaz de:
-
-- [ ] Implementar un pipeline de evaluación que aplique ROUGE y BLEU usando `rouge-score` y `nltk` sobre un dataset estructurado en JSON.
-- [ ] Diseñar y ejecutar evaluaciones G-Eval con GPT-4o como juez, interpretando tanto las puntuaciones numéricas como las justificaciones textuales.
-- [ ] Analizar las diferencias entre métricas léxicas y semánticas a partir de casos concretos donde divergen.
-- [ ] Generar un reporte de evaluación profesional en Markdown/HTML con tablas comparativas, promedios por categoría y análisis de casos extremos.
-
----
-
-## Prerrequisitos
-
-### Conocimiento previo
-- Comprensión de métricas ROUGE, BLEU y G-Eval (cubierto en la lección 10.1).
-- Familiaridad con `pandas` para análisis tabular.
-- Experiencia con el SDK de OpenAI y gestión de `.env` (labs anteriores del curso).
-
-### Acceso y credenciales
-- `OPENAI_API_KEY` activa con acceso a `gpt-4o` (para G-Eval y generación de respuestas).
-- Conexión a internet estable.
-- Límite de gasto mensual configurado en la consola de OpenAI (recomendado: $5 USD máximo para todo el curso).
+<table>
+<tr>
+<td width="25%"><strong>🎯 Enfoque</strong><br>Evaluación de fidelidad de respuestas</td>
+<td width="25%"><strong>⏱️ Duración</strong><br>40 minutos</td>
+<td width="25%"><strong>🧠 Bloom</strong><br>Aplicar, analizar, evaluar y crear</td>
+<td width="25%"><strong>📦 Entregable</strong><br>Golden Dataset + reportes Markdown/HTML/JSON</td>
+</tr>
+</table>
 
 ---
 
-## Entorno del Laboratorio
+## 🧭 Sección 1. Información general de la práctica
 
-### Hardware requerido
+### 📌 Descripción general
 
-| Componente   | Mínimo                              |
-|--------------|-------------------------------------|
-| RAM          | 8 GB (16 GB recomendado)            |
-| Disco        | 500 MB libres                       |
-| CPU          | 4 núcleos                           |
-| Red          | 10 Mbps estable                     |
+En esta práctica vas a construir una aplicación de evaluación llamada `chatbot_evaluator.py`. La aplicación compara respuestas generadas por un chatbot contra respuestas de referencia definidas en un **Golden Dataset**.
 
-### Software y librerías
+El laboratorio trabaja con tres niveles de evaluación:
 
-| Librería / Herramienta | Versión       | Propósito                            |
-|------------------------|---------------|--------------------------------------|
-| Python                 | 3.11.x        | Entorno de ejecución                 |
-| openai                 | 1.35.x        | Generación de respuestas y G-Eval    |
-| rouge-score            | 0.1.2         | Cálculo de métricas ROUGE            |
-| nltk                   | 3.8.x         | Cálculo de métricas BLEU             |
-| pandas                 | 2.2.x         | Análisis tabular de resultados       |
-| pydantic               | 2.7.x         | Modelos de datos tipados             |
-| python-dotenv          | 1.0.x         | Gestión segura de credenciales       |
-| jinja2                 | 3.1.x         | Generación de reporte HTML           |
+1. **Evaluación con fixtures locales:** usa respuestas simuladas para ejecutar el flujo sin consumir API.
+2. **Métricas léxicas:** calcula ROUGE-1, ROUGE-2, ROUGE-L y BLEU para medir similitud textual.
+3. **Evaluación semántica opcional:** usa un modelo juez con un patrón tipo G-Eval para calificar fidelidad, relevancia, coherencia y fluencia.
 
-### Configuración del entorno
+También generarás reportes en Markdown, HTML y JSON. Estos reportes te permitirán revisar promedios, mejores respuestas, peores respuestas, divergencias entre métricas y casos que requieren revisión humana.
 
-**Paso 1 — Crear directorio y entorno virtual:**
+La práctica original propone crear un Golden Dataset, evaluar respuestas con ROUGE/BLEU, ejecutar G-Eval opcional y generar reportes profesionales. Esta versión mantiene esa base, pero la organiza con una estructura progresiva, detallada y adecuada para Windows, Visual Studio Code y Git Bash.
 
-```bash
-mkdir lab10_evaluacion
-cd lab10_evaluacion
-python -m venv .venv
+---
 
-# Activar en macOS/Linux:
-source .venv/bin/activate
+### 🎯 Objetivos de aprendizaje
 
-# Activar en Windows (PowerShell):
-.venv\Scripts\Activate.ps1
+Al finalizar esta práctica, tú serás capaz de:
+
+1. Preparar un entorno local en Windows para evaluar respuestas generadas por chatbots.
+2. Crear un Golden Dataset con preguntas, respuestas de referencia, categorías y dificultad.
+3. Crear fixtures locales para ejecutar una evaluación sin consumir API.
+4. Implementar modelos de datos con Pydantic para validar entradas y resultados.
+5. Calcular métricas ROUGE-1, ROUGE-2, ROUGE-L y BLEU.
+6. Interpretar diferencias entre similitud textual y fidelidad factual.
+7. Implementar una evaluación tipo G-Eval con salida JSON estructurada.
+8. Separar el modelo generador del modelo juez.
+9. Usar cache para evitar llamadas repetidas y reducir costo.
+10. Generar reportes Markdown, HTML y JSON.
+11. Analizar divergencias entre métricas automáticas.
+12. Complementar la evaluación automática con revisión humana.
+
+---
+
+### ✅ Prerrequisitos
+
+Antes de iniciar, asegúrate de cumplir con lo siguiente:
+
+1. Tener conocimientos básicos de Python.
+2. Saber ejecutar comandos desde Git Bash.
+3. Saber crear y activar entornos virtuales.
+4. Conocer la estructura básica de archivos JSON.
+5. Comprender qué es un chatbot y qué significa evaluar una respuesta.
+6. Conocer la diferencia conceptual entre evaluación léxica y evaluación semántica.
+7. Tener Visual Studio Code instalado.
+8. Tener Python 3.11 o superior instalado.
+9. Tener acceso a internet para instalar dependencias desde PyPI.
+10. Tener API key de OpenAI solo si vas a ejecutar la ruta opcional con generación o G-Eval.
+
+> [!NOTE]
+> No necesitas API key para la ruta base del laboratorio. La ejecución principal puede hacerse con `--use-fixtures --skip-geval`, sin llamadas a modelos externos.
+
+---
+
+### 💻 Hardware
+
+| Recurso | Requisito mínimo | Recomendado |
+|---|---:|---:|
+| Equipo | Laptop o PC con Windows | Laptop o PC con Windows 11 |
+| CPU | 2 núcleos | 4 núcleos o más |
+| RAM | 8 GB | 16 GB |
+| Almacenamiento libre | 500 MB | 1 GB |
+| GPU | No requerida | No requerida |
+| Internet | Requerido para instalación | 10 Mbps o superior |
+
+---
+
+### 🧰 Software
+
+| Software / Paquete | Uso |
+|---|---|
+| Visual Studio Code | Edición de código |
+| Git Bash | Ejecución de comandos |
+| Python 3.11 o superior | Runtime de la práctica |
+| pip | Instalación de dependencias |
+| `openai` | Generación opcional y juez LLM opcional |
+| `rouge-score` | Cálculo de métricas ROUGE |
+| `nltk` | Tokenización y cálculo de BLEU |
+| `pandas` | Análisis tabular de resultados |
+| `pydantic` | Validación de estructuras de datos |
+| `python-dotenv` | Carga de variables de entorno |
+| `jinja2` | Plantilla para reporte HTML |
+| `markdown` | Conversión de Markdown a HTML |
+| `tabulate` | Tablas Markdown desde pandas |
+| `tenacity` | Reintentos con backoff |
+
+---
+
+### 📋 Datos generales de la práctica
+
+| Elemento | Detalle |
+|---|---|
+| Duración estimada | 40 minutos |
+| Complejidad | Media - Alta |
+| Nivel de Bloom | Aplicar, analizar, evaluar y crear |
+| Modalidad | Individual o equipos de 2 personas |
+| Sistema operativo | Windows |
+| Editor | Visual Studio Code |
+| Terminal | Git Bash |
+| Lenguaje | Python |
+| Costo base | $0 USD usando fixtures locales y `--skip-geval` |
+| Costo opcional | Bajo, si ejecutas generación con API o G-Eval |
+| Entregable principal | `chatbot_evaluator.py` y reportes de evaluación |
+| Entregable secundario | `golden_dataset.json`, `fixtures_responses.json`, cache y checklist de revisión |
+
+---
+
+## 🛡️ Consideraciones para estudiantes
+
+<table>
+<tr>
+<td><strong>🔐 Seguridad</strong><br>No compartas claves ni subas `.env`.</td>
+<td><strong>💸 Costo</strong><br>La ruta base no consume API.</td>
+<td><strong>📊 Evaluación</strong><br>Una métrica alta no siempre implica verdad factual.</td>
+</tr>
+</table>
+
+1. No escribas tu API key dentro del código.
+2. No entregues el archivo `.env`.
+3. No uses datos reales de clientes en el Golden Dataset.
+4. No incluyas correos reales, teléfonos, tokens, contraseñas ni información sensible.
+5. Ejecuta primero la ruta sin API con `--use-fixtures --skip-geval`.
+6. Ejecuta G-Eval solo después de validar que el pipeline base funciona.
+7. Usa cache para evitar costos repetidos.
+8. No tomes ROUGE o BLEU como verdad absoluta; son métricas de similitud textual.
+9. BLEU puede ser bajo en respuestas abiertas aunque la respuesta sea correcta.
+10. La revisión humana sigue siendo necesaria en casos extremos, críticos o divergentes.
+
+---
+
+## 🏗️ Arquitectura del laboratorio
+
+```text
+Golden Dataset
+      │
+      ├── Fixtures locales ───────────────┐
+      │                                   │
+      └── Modelo generador opcional ──────┤
+                                          ▼
+                                 Respuestas evaluadas
+                                          │
+             ┌────────────────────────────┼────────────────────────────┐
+             ▼                            ▼                            ▼
+        ROUGE/BLEU                  G-Eval opcional              Revisión humana
+      métricas léxicas              LLM-as-a-Judge               casos extremos
+             └────────────────────────────┼────────────────────────────┘
+                                          ▼
+                         Reporte Markdown + HTML + JSON
 ```
 
-**Paso 2 — Crear `requirements.txt` e instalar dependencias:**
+---
+
+## 🚀 Sección 2. Desarrollo de la práctica
+
+---
+
+# 🧩 Tarea 1. Preparar el proyecto local en Windows
+
+## 🎯 Objetivo de la tarea
+
+Crear la carpeta del laboratorio, abrirla en Visual Studio Code, crear el entorno virtual, instalar dependencias y preparar los archivos base de configuración.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea la carpeta del laboratorio
+
+**📝 Descripción del paso:**  
+Vas a crear una carpeta nueva para el laboratorio. Esta carpeta será la raíz del proyecto y ahí guardarás todos los archivos: datasets JSON, script principal, reportes, cache, configuración y entorno virtual. Ejecuta estos comandos desde Git Bash; no necesitas crear archivos manualmente en este paso.
+
+**⚙️ Contenido del paso:**
 
 ```bash
-cat > requirements.txt << 'EOF'
-openai==1.35.3
-rouge-score==0.1.2
-nltk==3.8.1
-pandas==2.2.2
-pydantic==2.7.4
-python-dotenv==1.0.1
-jinja2==3.1.4
-EOF
+mkdir -p ~/labs-ia-gen/lab-10-evaluacion-chatbot
+cd ~/labs-ia-gen/lab-10-evaluacion-chatbot
+```
 
+**✅ Validación del paso:**
+
+```bash
+pwd
+```
+
+**📌 Resultado esperado:**
+
+```text
+/c/Users/TU_USUARIO/labs-ia-gen/lab-10-evaluacion-chatbot
+```
+
+---
+
+### ✅ Paso 2. Abre el proyecto en Visual Studio Code
+
+**📝 Descripción del paso:**  
+Vas a abrir en Visual Studio Code la carpeta `lab-10-evaluacion-chatbot` que acabas de crear. A partir de este punto, todos los archivos nuevos del laboratorio deben crearse dentro de esta carpeta.
+
+**⚙️ Contenido del paso:**
+
+```bash
+code .
+```
+
+Si `code .` no funciona, abre VS Code manualmente y selecciona:
+
+```text
+File > Open Folder > labs-ia-gen > lab-10-evaluacion-chatbot
+```
+
+**✅ Validación del paso:**  
+Confirma que VS Code muestre la carpeta `lab-10-evaluacion-chatbot`.
+
+**📌 Resultado esperado:**  
+El proyecto está abierto en Visual Studio Code.
+
+---
+
+### ✅ Paso 3. Crea y activa el entorno virtual
+
+**📝 Descripción del paso:**  
+Vas a crear un entorno virtual llamado `.venv` dentro de la carpeta del laboratorio y después lo vas a activar. Este entorno evita mezclar dependencias del laboratorio con otros proyectos de Python en tu equipo.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python -m venv .venv
+source .venv/Scripts/activate
+```
+
+**✅ Validación del paso:**
+
+```bash
+python --version
+which python
+```
+
+**📌 Resultado esperado:**  
+La ruta de Python debe apuntar a `.venv/Scripts/python` o incluir `.venv`.
+
+---
+
+### ✅ Paso 4. Crea `requirements.txt`
+
+**📝 Descripción del paso:**  
+Vas a crear el archivo `requirements.txt` en la raíz del proyecto. Este archivo define las librerías necesarias para calcular métricas, validar datos, generar reportes, cargar configuración y ejecutar llamadas opcionales a modelos.
+
+**⚙️ Contenido del paso:**
+
+```bash
+cat > requirements.txt << 'REQ'
+openai>=1.90,<2
+rouge-score==0.1.2
+nltk>=3.9,<4
+pandas>=2.2,<3
+pydantic>=2.10,<3
+python-dotenv>=1.0,<2
+jinja2>=3.1,<4
+markdown>=3.6,<4
+tabulate>=0.9,<1
+tenacity>=8.5,<10
+REQ
+```
+
+**✅ Validación del paso:**
+
+```bash
+cat requirements.txt
+```
+
+**📌 Resultado esperado:**  
+El archivo contiene todas las dependencias del laboratorio.
+
+---
+
+### ✅ Paso 5. Instala dependencias
+
+**📝 Descripción del paso:**  
+Vas a instalar dentro del entorno virtual activo todas las dependencias declaradas en `requirements.txt`. Antes de ejecutar este paso, confirma que Git Bash muestre `(.venv)` al inicio de la línea.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-**Paso 3 — Descargar recursos de NLTK:**
+**✅ Validación del paso:**
 
 ```bash
-python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
+python -c "import openai, nltk, pandas, pydantic, dotenv, markdown, jinja2, tabulate, tenacity; print('Dependencias instaladas correctamente')"
 ```
 
-**Paso 4 — Crear archivo `.env` y `.gitignore`:**
+**📌 Resultado esperado:**
+
+```text
+Dependencias instaladas correctamente
+```
+
+---
+
+### ✅ Paso 6. Descarga recursos de NLTK
+
+**📝 Descripción del paso:**  
+Vas a descargar los recursos de tokenización que usa NLTK para calcular BLEU. Este paso crea archivos en el directorio local de datos de NLTK del usuario, no dentro del proyecto. Algunas versiones de NLTK pueden pedir también `punkt_tab`; por eso se incluye una validación adicional.
+
+**⚙️ Contenido del paso:**
 
 ```bash
-cat > .env << 'EOF'
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPENAI_MODEL_GENERATION=gpt-4o-mini
-OPENAI_MODEL_JUDGE=gpt-4o
-EOF
+python - << 'PY'
+import nltk
+nltk.download('punkt')
+try:
+    nltk.download('punkt_tab')
+except Exception:
+    pass
+print('✅ Recursos NLTK listos')
+PY
+```
 
-cat > .gitignore << 'EOF'
+**✅ Validación del paso:**
+
+```bash
+python - << 'PY'
+import nltk
+print('NLTK disponible:', nltk.__version__)
+PY
+```
+
+**📌 Resultado esperado:**  
+NLTK queda listo para tokenizar texto durante el cálculo de BLEU.
+
+---
+
+### ✅ Paso 7. Crea carpetas de trabajo
+
+**📝 Descripción del paso:**  
+Vas a crear las carpetas `reports/` y `cache/`. La carpeta `reports/` almacenará los reportes Markdown, HTML y JSON. La carpeta `cache/` guardará respuestas generadas y resultados G-Eval para evitar llamadas repetidas a la API.
+
+**⚙️ Contenido del paso:**
+
+```bash
+mkdir -p reports cache
+```
+
+**✅ Validación del paso:**
+
+```bash
+ls -la
+```
+
+**📌 Resultado esperado:**
+
+```text
+reports/
+cache/
+```
+
+---
+
+### ✅ Paso 8. Crea `.env.example`, `.env` y `.gitignore`
+
+**📝 Descripción del paso:**  
+Vas a crear tres archivos en la raíz del proyecto. `.env.example` documenta las variables esperadas, `.env` guarda configuración local y `.gitignore` evita subir credenciales, entorno virtual, cache y reportes generados.
+
+**⚙️ Contenido del paso:**
+
+```bash
+cat > .env.example << 'ENV'
+# Copia este archivo como .env si vas a usar la ruta con API.
+OPENAI_API_KEY=sk-tu_clave_aqui
+OPENAI_MODEL_GENERATION=gpt-4o-mini
+OPENAI_MODEL_JUDGE=gpt-4o-mini
+ENV
+
+cat > .env << 'ENV'
+# Ruta base sin API: puedes dejar esta clave vacía si usarás --use-fixtures --skip-geval
+OPENAI_API_KEY=
+OPENAI_MODEL_GENERATION=gpt-4o-mini
+OPENAI_MODEL_JUDGE=gpt-4o-mini
+ENV
+
+cat > .gitignore << 'GIT'
 .env
 .venv/
 __pycache__/
 *.pyc
 *.pyo
 reports/
-EOF
+cache/
+GIT
 ```
 
-> ⚠️ **Seguridad:** Nunca subas el archivo `.env` a un repositorio. Verifica que `.gitignore` lo incluya antes de hacer cualquier commit.
+**🔧 Qué debes cambiar:**  
+Solo agrega tu API key en `.env` si vas a ejecutar generación con modelo o G-Eval. Para la ruta base no necesitas modificar `OPENAI_API_KEY`.
 
-> 💡 **Control de costos:** Se usa `gpt-4o-mini` para generar las respuestas del chatbot (más económico) y `gpt-4o` solo para el rol de juez en G-Eval. Esto equilibra calidad de evaluación con costo.
-
----
-
-## Instrucciones Paso a Paso
-
----
-
-### Paso 1 — Crear el Golden Dataset
-
-**Objetivo:** Diseñar un archivo `golden_dataset.json` con 20 pares pregunta-respuesta de referencia sobre historia de la computación, organizados por categoría y nivel de dificultad.
-
-#### Instrucciones
-
-1. Crea el archivo `golden_dataset.json` en el directorio `lab10_evaluacion/`:
+**✅ Validación del paso:**
 
 ```bash
-cat > golden_dataset.json << 'ENDJSON'
+grep -q '^.env$' .gitignore && echo '✅ .env está protegido'
+```
+
+**📌 Resultado esperado:**
+
+```text
+✅ .env está protegido
+```
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 1 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%201%20del%20Laboratorio%2010.%20Prepar%C3%A9%20un%20proyecto%20local%20en%20Windows%20con%20VS%20Code%2C%20Git%20Bash%2C%20entorno%20virtual%2C%20requirements.txt%2C%20carpetas%20reports%20y%20cache%2C%20.env.example%2C%20.env%20y%20.gitignore%20para%20evaluar%20la%20fidelidad%20de%20un%20chatbot.)
+
+---
+
+# 🧩 Tarea 2. Crear el Golden Dataset
+
+## 🎯 Objetivo de la tarea
+
+Crear un dataset de referencia con preguntas, respuestas esperadas, categoría y dificultad. Este archivo será la fuente de verdad contra la que compararás las respuestas generadas.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea `golden_dataset.json`
+
+**📝 Descripción del paso:**  
+Vas a crear el archivo `golden_dataset.json` en la raíz del proyecto. Este archivo contiene 20 ejemplos de evaluación. Cada ejemplo incluye un identificador, una pregunta, una respuesta de referencia, una categoría y un nivel de dificultad. No edites otro archivo en este paso.
+
+**⚙️ Contenido del paso:**
+
+```bash
+cat > golden_dataset.json << 'JSON'
 [
-  {
-    "id": 1,
-    "pregunta": "¿Quién es considerado el padre de la computación moderna?",
-    "respuesta_referencia": "Alan Turing es considerado el padre de la computación moderna. Desarrolló la máquina de Turing en 1936, un modelo matemático abstracto que define los fundamentos teóricos de la computación.",
-    "categoria": "factual",
-    "nivel_dificultad": "easy"
-  },
-  {
-    "id": 2,
-    "pregunta": "¿Qué fue el proyecto ENIAC y cuándo se completó?",
-    "respuesta_referencia": "ENIAC (Electronic Numerical Integrator and Computer) fue la primera computadora electrónica de propósito general. Fue completada en 1945 en la Universidad de Pensilvania por John Mauchly y J. Presper Eckert.",
-    "categoria": "factual",
-    "nivel_dificultad": "easy"
-  },
-  {
-    "id": 3,
-    "pregunta": "¿Cuál fue la contribución de Grace Hopper al desarrollo del software?",
-    "respuesta_referencia": "Grace Hopper desarrolló el primer compilador de la historia, el A-0, en 1952. También lideró el desarrollo de COBOL, uno de los primeros lenguajes de programación de alto nivel orientado a negocios.",
-    "categoria": "factual",
-    "nivel_dificultad": "medium"
-  },
-  {
-    "id": 4,
-    "pregunta": "¿Qué es la Ley de Moore y cuál es su relevancia actual?",
-    "respuesta_referencia": "La Ley de Moore, formulada por Gordon Moore en 1965, establece que el número de transistores en un microprocesador se duplica aproximadamente cada dos años. Actualmente enfrenta limitaciones físicas debido al tamaño atómico de los transistores, aunque sigue siendo una guía de referencia en la industria.",
-    "categoria": "inferencia",
-    "nivel_dificultad": "medium"
-  },
-  {
-    "id": 5,
-    "pregunta": "¿Cuál fue el papel de Ada Lovelace en la historia de la programación?",
-    "respuesta_referencia": "Ada Lovelace es reconocida como la primera programadora de la historia. Trabajó con Charles Babbage en la Máquina Analítica y escribió el primer algoritmo diseñado para ser procesado por una máquina, en 1843.",
-    "categoria": "factual",
-    "nivel_dificultad": "easy"
-  },
-  {
-    "id": 6,
-    "pregunta": "¿Qué diferencia fundamental existe entre la arquitectura Von Neumann y la arquitectura Harvard?",
-    "respuesta_referencia": "La arquitectura Von Neumann utiliza un único bus compartido para datos e instrucciones, lo que puede causar cuellos de botella. La arquitectura Harvard separa físicamente la memoria y los buses de datos e instrucciones, permitiendo accesos simultáneos y mayor velocidad en aplicaciones específicas como microcontroladores.",
-    "categoria": "inferencia",
-    "nivel_dificultad": "hard"
-  },
-  {
-    "id": 7,
-    "pregunta": "¿Qué fue ARPANET y cómo se relaciona con el Internet actual?",
-    "respuesta_referencia": "ARPANET fue la primera red de computadoras de área amplia, desarrollada por el Departamento de Defensa de Estados Unidos en 1969. Es el precursor directo de Internet, ya que estableció los protocolos de comunicación en paquetes que evolucionaron hacia TCP/IP.",
-    "categoria": "factual",
-    "nivel_dificultad": "easy"
-  },
-  {
-    "id": 8,
-    "pregunta": "¿Qué impacto tuvo la creación del microprocesador Intel 4004 en la industria tecnológica?",
-    "respuesta_referencia": "El Intel 4004, lanzado en 1971, fue el primer microprocesador comercial integrado en un solo chip. Su creación democratizó la computación al reducir drásticamente el tamaño y costo de los procesadores, sentando las bases para las computadoras personales y la revolución digital.",
-    "categoria": "inferencia",
-    "nivel_dificultad": "medium"
-  },
-  {
-    "id": 9,
-    "pregunta": "¿Cuáles fueron los principales lenguajes de programación de la década de 1950?",
-    "respuesta_referencia": "Los principales lenguajes de programación de la década de 1950 fueron FORTRAN (1957), desarrollado por IBM para cálculos científicos, y COBOL (1959), orientado a aplicaciones de negocios. También destacó LISP (1958), diseñado para procesamiento de listas e inteligencia artificial.",
-    "categoria": "factual",
-    "nivel_dificultad": "medium"
-  },
-  {
-    "id": 10,
-    "pregunta": "¿Por qué el desarrollo del sistema operativo UNIX fue significativo para la computación moderna?",
-    "respuesta_referencia": "UNIX, desarrollado en Bell Labs por Ken Thompson y Dennis Ritchie en 1969, fue significativo porque introdujo conceptos como la portabilidad entre hardware diferente, el diseño modular y la filosofía de herramientas pequeñas combinables. Influyó directamente en Linux, macOS y otros sistemas modernos.",
-    "categoria": "inferencia",
-    "nivel_dificultad": "hard"
-  },
-  {
-    "id": 11,
-    "pregunta": "¿Qué es el test de Turing y qué pretende medir?",
-    "respuesta_referencia": "El test de Turing, propuesto por Alan Turing en 1950, es una prueba para evaluar si una máquina puede exhibir comportamiento inteligente indistinguible del humano. Un evaluador humano interactúa por texto con una máquina y un humano; si no puede distinguir cuál es cuál, la máquina supera el test.",
-    "categoria": "factual",
-    "nivel_dificultad": "easy"
-  },
-  {
-    "id": 12,
-    "pregunta": "¿Cuál fue la importancia del lenguaje C en el desarrollo del software de sistemas?",
-    "respuesta_referencia": "El lenguaje C, creado por Dennis Ritchie en 1972, fue fundamental porque combinó la eficiencia del lenguaje ensamblador con la legibilidad de un lenguaje de alto nivel. Permitió reescribir UNIX en C, estableciendo el paradigma de escribir sistemas operativos en lenguajes de alto nivel.",
-    "categoria": "inferencia",
-    "nivel_dificultad": "medium"
-  },
-  {
-    "id": 13,
-    "pregunta": "¿Qué fue la 'burbuja puntocom' y cuáles fueron sus principales causas?",
-    "respuesta_referencia": "La burbuja puntocom fue una burbuja especulativa entre 1995 y 2001 en torno a empresas de Internet. Sus principales causas fueron la sobrevaluación de startups sin modelos de negocio sostenibles, la especulación masiva de inversores y la creencia irracional en un crecimiento ilimitado del comercio electrónico.",
-    "categoria": "inferencia",
-    "nivel_dificultad": "hard"
-  },
-  {
-    "id": 14,
-    "pregunta": "¿Qué es el código abierto (open source) y cuál fue su impacto en la industria del software?",
-    "respuesta_referencia": "El código abierto es un modelo de desarrollo donde el código fuente es público y puede ser modificado y distribuido libremente. Su impacto fue transformador: proyectos como Linux, Apache y Python demostraron que el software colaborativo podía competir y superar al software propietario en calidad y adopción.",
-    "categoria": "resumen",
-    "nivel_dificultad": "medium"
-  },
-  {
-    "id": 15,
-    "pregunta": "¿Cómo funcionan los transistores y por qué reemplazaron a los tubos de vacío?",
-    "respuesta_referencia": "Los transistores son semiconductores que actúan como interruptores o amplificadores de señales eléctricas. Reemplazaron a los tubos de vacío porque son más pequeños, consumen menos energía, generan menos calor, son más confiables y tienen una vida útil mucho mayor.",
-    "categoria": "factual",
-    "nivel_dificultad": "medium"
-  },
-  {
-    "id": 16,
-    "pregunta": "¿Cuál fue la contribución de Tim Berners-Lee a la computación global?",
-    "respuesta_referencia": "Tim Berners-Lee inventó la World Wide Web en 1989 mientras trabajaba en el CERN. Desarrolló el protocolo HTTP, el lenguaje HTML y el primer navegador web, creando la infraestructura que transformó Internet de una red académica en un sistema de información global accesible.",
-    "categoria": "factual",
-    "nivel_dificultad": "easy"
-  },
-  {
-    "id": 17,
-    "pregunta": "¿Qué lecciones dejó el fracaso del proyecto Multics para el diseño de sistemas operativos?",
-    "respuesta_referencia": "El proyecto Multics, aunque influyente, fue excesivamente ambicioso y complejo, lo que dificultó su implementación práctica. Sus lecciones llevaron a Bell Labs a diseñar UNIX con una filosofía opuesta: simplicidad, modularidad y herramientas con una sola responsabilidad bien definida.",
-    "categoria": "inferencia",
-    "nivel_dificultad": "hard"
-  },
-  {
-    "id": 18,
-    "pregunta": "Resume los hitos más importantes de la evolución de los lenguajes de programación desde 1950 hasta 2000.",
-    "respuesta_referencia": "La evolución de los lenguajes de programación desde 1950 hasta 2000 incluyó: la programación en ensamblador (1950s), los primeros lenguajes de alto nivel como FORTRAN y COBOL (1957-1959), la programación estructurada con C y Pascal (1970s), la orientación a objetos con Smalltalk, C++ y Java (1980s-1990s), y el surgimiento de lenguajes de scripting como Python y JavaScript (1990s).",
-    "categoria": "resumen",
-    "nivel_dificultad": "hard"
-  },
-  {
-    "id": 19,
-    "pregunta": "¿Por qué se considera que el desarrollo de la GUI (interfaz gráfica de usuario) fue un punto de inflexión en la adopción masiva de computadoras?",
-    "respuesta_referencia": "La GUI eliminó la barrera de la línea de comandos, haciendo las computadoras accesibles para usuarios sin conocimientos técnicos. Xerox PARC desarrolló el concepto en los 1970s, y Apple lo popularizó con el Macintosh en 1984, seguido por Windows, lo que desencadenó la adopción masiva de computadoras personales.",
-    "categoria": "inferencia",
-    "nivel_dificultad": "medium"
-  },
-  {
-    "id": 20,
-    "pregunta": "¿Qué es la computación cuántica y en qué se diferencia fundamentalmente de la computación clásica?",
-    "respuesta_referencia": "La computación cuántica utiliza qubits que pueden existir en superposición de estados (0 y 1 simultáneamente) gracias a principios de mecánica cuántica, a diferencia de los bits clásicos que solo pueden ser 0 o 1. Esto permite resolver ciertos problemas exponencialmente más rápido, como factorización de números grandes y simulación molecular.",
-    "categoria": "factual",
-    "nivel_dificultad": "hard"
-  }
+  {"id": 1, "pregunta": "¿Quién es considerado una figura fundacional de la computación moderna?", "respuesta_referencia": "Alan Turing es considerado una figura fundacional de la computación moderna. En 1936 propuso la máquina de Turing, un modelo matemático abstracto que ayudó a formalizar qué significa computar.", "categoria": "factual", "nivel_dificultad": "easy"},
+  {"id": 2, "pregunta": "¿Qué fue ENIAC y cuándo se completó?", "respuesta_referencia": "ENIAC fue una de las primeras computadoras electrónicas digitales de propósito general. Fue completada en 1945 en la Universidad de Pensilvania por John Mauchly y J. Presper Eckert.", "categoria": "factual", "nivel_dificultad": "easy"},
+  {"id": 3, "pregunta": "¿Cuál fue la contribución de Grace Hopper al desarrollo del software?", "respuesta_referencia": "Grace Hopper contribuyó al desarrollo de compiladores y lenguajes de alto nivel. Participó en el desarrollo del compilador A-0 y fue una figura clave en la evolución de COBOL, un lenguaje orientado a aplicaciones de negocio.", "categoria": "factual", "nivel_dificultad": "medium"},
+  {"id": 4, "pregunta": "¿Qué es la Ley de Moore y cuál es su relevancia actual?", "respuesta_referencia": "La Ley de Moore es una observación formulada por Gordon Moore en 1965 sobre el crecimiento del número de transistores en los circuitos integrados. Ha servido como referencia para la industria, aunque actualmente enfrenta límites físicos, económicos y de fabricación.", "categoria": "inferencia", "nivel_dificultad": "medium"},
+  {"id": 5, "pregunta": "¿Cuál fue el papel de Ada Lovelace en la historia de la programación?", "respuesta_referencia": "Ada Lovelace es frecuentemente reconocida como la primera programadora. Trabajó sobre la Máquina Analítica de Charles Babbage y escribió notas que incluían un algoritmo destinado a ser ejecutado por una máquina.", "categoria": "factual", "nivel_dificultad": "easy"},
+  {"id": 6, "pregunta": "¿Qué diferencia fundamental existe entre la arquitectura Von Neumann y la arquitectura Harvard?", "respuesta_referencia": "La arquitectura Von Neumann usa una memoria compartida para datos e instrucciones, lo que puede crear un cuello de botella. La arquitectura Harvard separa memoria y buses de datos e instrucciones, permitiendo accesos simultáneos en ciertos sistemas.", "categoria": "inferencia", "nivel_dificultad": "hard"},
+  {"id": 7, "pregunta": "¿Qué fue ARPANET y cómo se relaciona con Internet?", "respuesta_referencia": "ARPANET fue una red temprana de conmutación de paquetes financiada por ARPA en Estados Unidos. Es un antecedente directo de Internet; posteriormente, la adopción de TCP/IP en 1983 fue clave para la evolución hacia la red moderna.", "categoria": "factual", "nivel_dificultad": "easy"},
+  {"id": 8, "pregunta": "¿Qué impacto tuvo el microprocesador Intel 4004?", "respuesta_referencia": "El Intel 4004, lanzado en 1971, fue uno de los primeros microprocesadores comerciales integrados en un chip. Ayudó a reducir tamaño y costo de sistemas computacionales y abrió camino a la expansión de dispositivos programables y computadoras personales.", "categoria": "inferencia", "nivel_dificultad": "medium"},
+  {"id": 9, "pregunta": "¿Cuáles fueron lenguajes importantes de programación de la década de 1950?", "respuesta_referencia": "Entre los lenguajes importantes de la década de 1950 se encuentran FORTRAN, orientado a cálculo científico; LISP, asociado al procesamiento simbólico e inteligencia artificial; y COBOL, diseñado para aplicaciones de negocio.", "categoria": "factual", "nivel_dificultad": "medium"},
+  {"id": 10, "pregunta": "¿Por qué UNIX fue significativo para la computación moderna?", "respuesta_referencia": "UNIX fue significativo por su diseño modular, portabilidad y filosofía de herramientas pequeñas que pueden combinarse. Influyó directamente en sistemas posteriores como Linux, BSD y macOS, además de consolidar prácticas importantes de software de sistemas.", "categoria": "inferencia", "nivel_dificultad": "hard"},
+  {"id": 11, "pregunta": "¿Qué es el test de Turing?", "respuesta_referencia": "El test de Turing, propuesto por Alan Turing en 1950, evalúa si una máquina puede producir respuestas conversacionales indistinguibles de las de una persona para un evaluador humano bajo ciertas condiciones.", "categoria": "factual", "nivel_dificultad": "easy"},
+  {"id": 12, "pregunta": "¿Cuál fue la importancia del lenguaje C en software de sistemas?", "respuesta_referencia": "El lenguaje C, creado por Dennis Ritchie, fue importante porque combinó eficiencia cercana al hardware con mayor portabilidad que el ensamblador. Permitió reescribir gran parte de UNIX y se volvió base de muchos sistemas operativos y herramientas.", "categoria": "inferencia", "nivel_dificultad": "medium"},
+  {"id": 13, "pregunta": "¿Qué fue la burbuja puntocom?", "respuesta_referencia": "La burbuja puntocom fue un periodo de especulación financiera alrededor de empresas de Internet, principalmente entre mediados de los años 1990 y 2001. Muchas compañías fueron sobrevaloradas pese a no tener modelos de negocio sostenibles.", "categoria": "inferencia", "nivel_dificultad": "hard"},
+  {"id": 14, "pregunta": "¿Qué es el código abierto y cuál fue su impacto?", "respuesta_referencia": "El código abierto es un modelo en el que el código fuente puede ser estudiado, modificado y distribuido bajo ciertas licencias. Su impacto fue enorme en infraestructura, desarrollo colaborativo y adopción de proyectos como Linux, Apache, Python y muchas herramientas modernas.", "categoria": "resumen", "nivel_dificultad": "medium"},
+  {"id": 15, "pregunta": "¿Por qué los transistores reemplazaron a los tubos de vacío?", "respuesta_referencia": "Los transistores reemplazaron a los tubos de vacío porque eran más pequeños, consumían menos energía, generaban menos calor y eran más confiables. Esto permitió construir computadoras más compactas, rápidas y eficientes.", "categoria": "factual", "nivel_dificultad": "medium"},
+  {"id": 16, "pregunta": "¿Cuál fue la contribución de Tim Berners-Lee?", "respuesta_referencia": "Tim Berners-Lee propuso y desarrolló la World Wide Web mientras trabajaba en el CERN. Su trabajo integró ideas como HTTP, HTML, URL y el primer navegador/editor, facilitando el acceso global a información enlazada en Internet.", "categoria": "factual", "nivel_dificultad": "easy"},
+  {"id": 17, "pregunta": "¿Qué lecciones dejó Multics para el diseño de sistemas operativos?", "respuesta_referencia": "Multics mostró el potencial de sistemas multiusuario avanzados, pero también los riesgos de una complejidad excesiva. Algunas de sus lecciones influyeron en UNIX, que adoptó una filosofía más simple, modular y orientada a herramientas pequeñas.", "categoria": "inferencia", "nivel_dificultad": "hard"},
+  {"id": 18, "pregunta": "Resume hitos importantes de la evolución de lenguajes de programación entre 1950 y 2000.", "respuesta_referencia": "Entre 1950 y 2000 destacan el uso de ensamblador, FORTRAN y COBOL en los años 1950, LISP para IA, C y Pascal en programación estructurada, Smalltalk y C++ en orientación a objetos, Java en los años 1990 y lenguajes de scripting como Python y JavaScript.", "categoria": "resumen", "nivel_dificultad": "hard"},
+  {"id": 19, "pregunta": "¿Por qué la interfaz gráfica de usuario impulsó la adopción masiva de computadoras?", "respuesta_referencia": "La interfaz gráfica redujo la dependencia de comandos de texto y permitió interactuar mediante ventanas, iconos y punteros. Ideas desarrolladas en Xerox PARC e impulsadas comercialmente por sistemas como Macintosh y Windows facilitaron el uso por personas no técnicas.", "categoria": "inferencia", "nivel_dificultad": "medium"},
+  {"id": 20, "pregunta": "¿Qué diferencia a la computación cuántica de la computación clásica?", "respuesta_referencia": "La computación clásica usa bits que representan 0 o 1. La computación cuántica usa qubits, que pueden aprovechar superposición y entrelazamiento. Esto puede ofrecer ventajas en ciertos problemas, como simulación cuántica y algunos algoritmos especializados.", "categoria": "factual", "nivel_dificultad": "hard"}
 ]
-ENDJSON
+JSON
 ```
 
-2. Verifica que el archivo se creó correctamente:
+**✅ Validación del paso:**
 
 ```bash
-python -c "
+python - << 'PY'
 import json
-with open('golden_dataset.json') as f:
+from collections import Counter
+
+with open('golden_dataset.json', encoding='utf-8') as f:
     data = json.load(f)
+
 print(f'Total de entradas: {len(data)}')
-categorias = set(d['categoria'] for d in data)
-dificultades = set(d['nivel_dificultad'] for d in data)
-print(f'Categorías: {categorias}')
-print(f'Dificultades: {dificultades}')
-"
+print('Categorías:', Counter(d['categoria'] for d in data))
+print('Dificultades:', Counter(d['nivel_dificultad'] for d in data))
+
+assert len(data) == 20
+assert all('id' in d for d in data)
+assert all('pregunta' in d and 'respuesta_referencia' in d for d in data)
+assert all('categoria' in d and 'nivel_dificultad' in d for d in data)
+print('✅ Golden Dataset válido')
+PY
 ```
 
-#### Salida esperada
+**📌 Resultado esperado:**
 
-```
+```text
 Total de entradas: 20
-Categorías: {'factual', 'inferencia', 'resumen'}
-Dificultades: {'easy', 'medium', 'hard'}
+✅ Golden Dataset válido
 ```
-
-#### Verificación
-
-El dataset debe tener exactamente 20 entradas con las tres categorías y tres niveles de dificultad representados.
 
 ---
 
-### Paso 2 — Definir los modelos de datos con Pydantic
+### ✅ Paso 2. Inspecciona una muestra del Golden Dataset
 
-**Objetivo:** Crear el archivo principal `chatbot_evaluator.py` con los modelos de datos tipados que estructurarán todos los resultados del pipeline de evaluación.
+**📝 Descripción del paso:**  
+Vas a revisar los primeros registros para confirmar que el archivo se puede leer y que las claves principales tienen sentido. Este paso no modifica archivos; solo imprime una vista rápida del dataset.
 
-#### Instrucciones
+**⚙️ Contenido del paso:**
 
-1. Crea el archivo `chatbot_evaluator.py` con la siguiente estructura base:
-
-```python
-# chatbot_evaluator.py
-"""
-Framework de evaluación de fidelidad para chatbots.
-Compara respuestas generadas contra un Golden Dataset usando
-métricas léxicas (ROUGE, BLEU) y semánticas (G-Eval con LLM-as-Judge).
-"""
-
-from __future__ import annotations
-
+```bash
+python - << 'PY'
 import json
-import os
-import time
+with open('golden_dataset.json', encoding='utf-8') as f:
+    data = json.load(f)
+for item in data[:3]:
+    print('-' * 70)
+    print('ID:', item['id'])
+    print('Pregunta:', item['pregunta'])
+    print('Categoría:', item['categoria'])
+    print('Dificultad:', item['nivel_dificultad'])
+PY
+```
+
+**✅ Validación del paso:**  
+Debes ver los primeros 3 ejemplos con pregunta, categoría y dificultad.
+
+**📌 Resultado esperado:**  
+El Golden Dataset es legible y está listo para ser usado por el evaluador.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 2 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%202%20del%20Laboratorio%2010.%20Cre%C3%A9%20un%20Golden%20Dataset%20en%20JSON%20con%20preguntas%2C%20respuestas%20de%20referencia%2C%20categor%C3%ADas%20y%20niveles%20de%20dificultad%20para%20evaluar%20fidelidad%20factual%20de%20un%20chatbot.)
+
+---
+
+# 🧩 Tarea 3. Crear fixtures para evaluación sin API
+
+## 🎯 Objetivo de la tarea
+
+Crear respuestas simuladas para ejecutar el pipeline completo sin consumir tokens ni depender de una API externa.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea `fixtures_responses.json`
+
+**📝 Descripción del paso:**  
+Vas a crear el archivo `fixtures_responses.json` en la raíz del proyecto. Este archivo contiene una respuesta generada simulada para cada ID del Golden Dataset. Las respuestas incluyen casos buenos, parciales y uno intencionalmente problemático para observar cómo se comportan las métricas.
+
+**⚙️ Contenido del paso:**
+
+```bash
+cat > fixtures_responses.json << 'JSON'
+[
+  {"id": 1, "respuesta_generada": "Alan Turing es una de las figuras centrales de la computación moderna. Su máquina teórica de 1936 formalizó la idea de algoritmo y computación."},
+  {"id": 2, "respuesta_generada": "ENIAC fue una computadora electrónica digital de propósito general terminada en 1945 en la Universidad de Pensilvania por Mauchly y Eckert."},
+  {"id": 3, "respuesta_generada": "Grace Hopper fue clave en la creación de compiladores y en la evolución de COBOL, ayudando a acercar la programación a lenguajes más legibles."},
+  {"id": 4, "respuesta_generada": "La Ley de Moore dice que la capacidad de los chips crece con el tiempo. Hoy sigue siendo una referencia, aunque ya no se cumple de forma tan directa por límites físicos y costos."},
+  {"id": 5, "respuesta_generada": "Ada Lovelace trabajó con Charles Babbage y escribió notas para la Máquina Analítica. Por ello suele ser reconocida como una de las primeras personas en describir un programa."},
+  {"id": 6, "respuesta_generada": "Von Neumann separa memoria de datos e instrucciones, mientras Harvard usa una sola memoria compartida. Esto hace a Von Neumann más rápida en todos los casos."},
+  {"id": 7, "respuesta_generada": "ARPANET fue una red temprana de conmutación de paquetes y se considera un antecedente importante de Internet. La adopción de TCP/IP fue decisiva para su evolución."},
+  {"id": 8, "respuesta_generada": "El Intel 4004 ayudó a integrar procesamiento en un chip comercial, reduciendo tamaño y costo, y abrió el camino a dispositivos programables más pequeños."},
+  {"id": 9, "respuesta_generada": "En los años 1950 destacaron FORTRAN para cálculo científico, LISP para procesamiento simbólico y COBOL para aplicaciones empresariales."},
+  {"id": 10, "respuesta_generada": "UNIX influyó por su portabilidad, su diseño modular y su filosofía de herramientas pequeñas. Su legado aparece en Linux, BSD, macOS y muchos entornos modernos."},
+  {"id": 11, "respuesta_generada": "El test de Turing evalúa si una máquina puede conversar de manera que un evaluador no distinga claramente si responde una persona o una máquina."},
+  {"id": 12, "respuesta_generada": "C fue importante para software de sistemas porque ofrecía eficiencia y portabilidad. Permitió escribir sistemas operativos y herramientas cercanas al hardware sin depender totalmente de ensamblador."},
+  {"id": 13, "respuesta_generada": "La burbuja puntocom fue una etapa de inversión especulativa en empresas de Internet. Muchas compañías crecieron en valoración sin ingresos o modelos sostenibles y luego colapsaron."},
+  {"id": 14, "respuesta_generada": "El código abierto permite estudiar, modificar y compartir código bajo licencias específicas. Su impacto se ve en Linux, Apache, Python y la colaboración global de software."},
+  {"id": 15, "respuesta_generada": "Los transistores sustituyeron a los tubos de vacío por ser más pequeños, más eficientes, menos calientes y más confiables."},
+  {"id": 16, "respuesta_generada": "Tim Berners-Lee creó la World Wide Web en el CERN, integrando HTML, HTTP y URLs para facilitar el acceso a información enlazada."},
+  {"id": 17, "respuesta_generada": "Multics mostró ideas avanzadas, pero también una complejidad que dificultó su implementación. UNIX aprendió de esto y favoreció simplicidad y modularidad."},
+  {"id": 18, "respuesta_generada": "De 1950 a 2000 hubo una evolución desde ensamblador y FORTRAN hasta COBOL, LISP, C, Pascal, C++, Java, Python y JavaScript, con cambios hacia abstracción, objetos y scripting."},
+  {"id": 19, "respuesta_generada": "La GUI facilitó usar computadoras sin memorizar comandos. Ventanas, iconos y punteros hicieron la interacción más intuitiva y favorecieron la adopción masiva."},
+  {"id": 20, "respuesta_generada": "La computación cuántica usa qubits y fenómenos como superposición, mientras la clásica usa bits. Puede aportar ventajas para problemas específicos, aunque no reemplaza todo cómputo clásico."}
+]
+JSON
+```
+
+**✅ Validación del paso:**
+
+```bash
+python - << 'PY'
+import json
+with open('fixtures_responses.json', encoding='utf-8') as f:
+    data = json.load(f)
+assert len(data) == 20
+assert all('id' in d and 'respuesta_generada' in d for d in data)
+print('✅ Fixtures válidos para ejecución sin API')
+PY
+```
+
+**📌 Resultado esperado:**
+
+```text
+✅ Fixtures válidos para ejecución sin API
+```
+
+---
+
+### ✅ Paso 2. Verifica correspondencia entre Golden Dataset y fixtures
+
+**📝 Descripción del paso:**  
+Vas a confirmar que cada entrada del Golden Dataset tiene una respuesta fixture con el mismo ID. Este paso evita errores posteriores donde una pregunta quede sin respuesta generada.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python - << 'PY'
+import json
+with open('golden_dataset.json', encoding='utf-8') as f:
+    golden = json.load(f)
+with open('fixtures_responses.json', encoding='utf-8') as f:
+    fixtures = json.load(f)
+
+golden_ids = {item['id'] for item in golden}
+fixture_ids = {item['id'] for item in fixtures}
+
+print('IDs Golden:', len(golden_ids))
+print('IDs Fixtures:', len(fixture_ids))
+print('Faltantes:', sorted(golden_ids - fixture_ids))
+print('Sobrantes:', sorted(fixture_ids - golden_ids))
+
+assert golden_ids == fixture_ids
+print('✅ Cada pregunta tiene una respuesta fixture')
+PY
+```
+
+**📌 Resultado esperado:**  
+No deben aparecer IDs faltantes ni sobrantes.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 3 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%203%20del%20Laboratorio%2010.%20Cre%C3%A9%20fixtures%20locales%20para%20evaluar%20respuestas%20sin%20consumir%20API%20y%20comparar%20respuestas%20generadas%20contra%20referencias%20usando%20m%C3%A9tricas%20autom%C3%A1ticas.)
+
+---
+
+# 🧩 Tarea 4. Implementar `chatbot_evaluator.py`
+
+## 🎯 Objetivo de la tarea
+
+Crear el framework principal de evaluación con carga de datos, validación de estructuras, generación opcional, métricas ROUGE/BLEU, G-Eval opcional, cache y generación de reportes.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Crea el archivo principal `chatbot_evaluator.py`
+
+**📝 Descripción del paso:**  
+Vas a crear el archivo `chatbot_evaluator.py` en la raíz del proyecto. Este será el script principal del laboratorio. Cópialo completo como un solo bloque para evitar errores de indentación, imports faltantes o funciones incompletas.
+
+**⚙️ Contenido del paso:**
+
+```bash
+cat > chatbot_evaluator.py << 'PY'
+from __future__ import annotations
+import argparse, json, os, re, time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
-
-import nltk
-import pandas as pd
+import markdown, nltk, pandas as pd
 from dotenv import load_dotenv
+from jinja2 import Template
 from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
 from openai import OpenAI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from rouge_score import rouge_scorer
-
-# ─── Configuración inicial ───────────────────────────────────────────────────
-
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random_exponential
+try:
+    from openai import APIError, RateLimitError
+except Exception:
+    APIError = Exception
+    RateLimitError = Exception
 load_dotenv()
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-MODEL_GENERATION = os.getenv("OPENAI_MODEL_GENERATION", "gpt-4o-mini")
-MODEL_JUDGE = os.getenv("OPENAI_MODEL_JUDGE", "gpt-4o")
-
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-# ─── Modelos de datos ─────────────────────────────────────────────────────────
-
-class GoldenEntry(BaseModel):
-    """Una entrada del Golden Dataset."""
-    id: int
-    pregunta: str
-    respuesta_referencia: str
-    categoria: str
-    nivel_dificultad: str
-
-
-class RougeScores(BaseModel):
-    """Puntuaciones ROUGE para un par de textos."""
-    rouge1_precision: float
-    rouge1_recall: float
-    rouge1_f1: float
-    rouge2_precision: float
-    rouge2_recall: float
-    rouge2_f1: float
-    rougeL_precision: float
-    rougeL_recall: float
-    rougeL_f1: float
-
-
-class GEvalResult(BaseModel):
-    """Resultado de la evaluación G-Eval con LLM como juez."""
-    fidelidad: float = Field(ge=0, le=5, description="Precisión factual respecto a la referencia")
-    relevancia: float = Field(ge=0, le=5, description="Qué tan bien responde a la pregunta")
-    coherencia: float = Field(ge=0, le=5, description="Fluidez lógica y consistencia interna")
-    fluencia: float = Field(ge=0, le=5, description="Calidad gramatical y naturalidad del lenguaje")
-    justificacion: str = Field(description="Explicación textual del juez LLM")
-    score_promedio: float = Field(ge=0, le=5)
-
+MODEL_GENERATION=os.getenv("OPENAI_MODEL_GENERATION","gpt-4o-mini")
+MODEL_JUDGE=os.getenv("OPENAI_MODEL_JUDGE","gpt-4o-mini")
+OPENAI_API_KEY=os.getenv("OPENAI_API_KEY","").strip()
+CACHE_DIR=Path("cache"); REPORTS_DIR=Path("reports"); CACHE_DIR.mkdir(exist_ok=True); REPORTS_DIR.mkdir(exist_ok=True)
+class GoldenEntry(BaseModel): id:int; pregunta:str; respuesta_referencia:str; categoria:str; nivel_dificultad:str
+class FixtureResponse(BaseModel): id:int; respuesta_generada:str
+class RougeScores(BaseModel): rouge1_precision:float; rouge1_recall:float; rouge1_f1:float; rouge2_precision:float; rouge2_recall:float; rouge2_f1:float; rougeL_precision:float; rougeL_recall:float; rougeL_f1:float
+class GEvalJudgeOutput(BaseModel):
+    fidelidad:float=Field(ge=0,le=5); relevancia:float=Field(ge=0,le=5); coherencia:float=Field(ge=0,le=5); fluencia:float=Field(ge=0,le=5); justificacion:str
+    @field_validator("justificacion")
     @classmethod
-    def from_scores(
-        cls,
-        fidelidad: float,
-        relevancia: float,
-        coherencia: float,
-        fluencia: float,
-        justificacion: str,
-    ) -> "GEvalResult":
-        promedio = (fidelidad + relevancia + coherencia + fluencia) / 4
-        return cls(
-            fidelidad=fidelidad,
-            relevancia=relevancia,
-            coherencia=coherencia,
-            fluencia=fluencia,
-            justificacion=justificacion,
-            score_promedio=round(promedio, 4),
-        )
-
-
-class EvaluationEntry(BaseModel):
-    """Resultado completo de evaluación para una entrada del dataset."""
-    golden: GoldenEntry
-    respuesta_generada: str
-    rouge_scores: RougeScores
-    bleu_score: float
-    geval_result: Optional[GEvalResult] = None
-
-
-class EvaluationResults(BaseModel):
-    """Contenedor de todos los resultados de evaluación."""
-    entries: list[EvaluationEntry]
-    model_generation: str
-    model_judge: str
-    timestamp: str
-```
-
-2. Guarda el archivo. No lo ejecutes aún; continuarás añadiendo funciones en los pasos siguientes.
-
-#### Verificación
-
-```bash
-python -c "from chatbot_evaluator import GoldenEntry, GEvalResult, EvaluationResults; print('Modelos Pydantic importados correctamente')"
-```
-
----
-
-### Paso 3 — Implementar el módulo de generación de respuestas
-
-**Objetivo:** Añadir la función que obtiene respuestas del chatbot para cada pregunta del Golden Dataset.
-
-#### Instrucciones
-
-1. Agrega las siguientes funciones al final de `chatbot_evaluator.py`:
-
-```python
-# ─── Módulo de generación ─────────────────────────────────────────────────────
-
-def load_golden_dataset(path: str = "golden_dataset.json") -> list[GoldenEntry]:
-    """Carga y valida el Golden Dataset desde un archivo JSON."""
-    with open(path, encoding="utf-8") as f:
-        raw = json.load(f)
-    return [GoldenEntry(**entry) for entry in raw]
-
-
-def generate_chatbot_responses(
-    golden_dataset: list[GoldenEntry],
-    model: str = MODEL_GENERATION,
-) -> list[str]:
-    """
-    Genera respuestas del chatbot para cada pregunta del Golden Dataset.
-
-    Usa gpt-4o-mini por defecto para minimizar costos en la fase de generación.
-    El modelo juez (G-Eval) se configura por separado.
-    """
-    responses = []
-    total = len(golden_dataset)
-
-    print(f"\n{'='*60}")
-    print(f"Generando respuestas con modelo: {model}")
-    print(f"Total de preguntas: {total}")
-    print(f"{'='*60}")
-
-    for i, entry in enumerate(golden_dataset, 1):
-        print(f"  [{i:02d}/{total}] Procesando: {entry.pregunta[:60]}...")
-
-        try:
-            completion = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "Eres un asistente experto en historia de la computación. "
-                            "Responde de forma precisa, clara y concisa en español. "
-                            "Limita tu respuesta a 3-4 oraciones como máximo."
-                        ),
-                    },
-                    {"role": "user", "content": entry.pregunta},
-                ],
-                temperature=0.3,
-                max_tokens=300,
-            )
-            response_text = completion.choices[0].message.content.strip()
-            responses.append(response_text)
-
-        except Exception as e:
-            print(f"    ⚠️  Error en entrada {entry.id}: {e}")
-            responses.append("")
-
-        # Pausa breve para respetar rate limits
-        time.sleep(0.5)
-
-    print(f"\n✅ Generación completada: {len(responses)} respuestas obtenidas.\n")
-    return responses
-```
-
-#### Verificación rápida (opcional, consume tokens)
-
-```bash
-python -c "
-from chatbot_evaluator import load_golden_dataset, generate_chatbot_responses
-dataset = load_golden_dataset()
-# Solo probamos con la primera entrada para verificar conectividad
-respuestas = generate_chatbot_responses(dataset[:1])
-print('Respuesta de prueba:', respuestas[0][:100])
-"
-```
-
----
-
-### Paso 4 — Implementar los módulos ROUGE y BLEU
-
-**Objetivo:** Añadir las funciones de cálculo de métricas léxicas ROUGE y BLEU.
-
-#### Instrucciones
-
-1. Añade el siguiente bloque al final de `chatbot_evaluator.py`:
-
-```python
-# ─── Módulo ROUGE ─────────────────────────────────────────────────────────────
-
-def calculate_rouge_scores(
-    predictions: list[str],
-    references: list[str],
-) -> list[RougeScores]:
-    """
-    Calcula métricas ROUGE-1, ROUGE-2 y ROUGE-L para cada par predicción/referencia.
-
-    Usa use_stemmer=True para normalizar variantes morfológicas del español,
-    reduciendo penalizaciones injustas por conjugaciones o plurales.
-    """
-    scorer = rouge_scorer.RougeScorer(
-        ["rouge1", "rouge2", "rougeL"],
-        use_stemmer=True,
-    )
-
-    results = []
-    for pred, ref in zip(predictions, references):
-        # Manejar respuestas vacías
-        if not pred.strip():
-            results.append(RougeScores(
-                rouge1_precision=0.0, rouge1_recall=0.0, rouge1_f1=0.0,
-                rouge2_precision=0.0, rouge2_recall=0.0, rouge2_f1=0.0,
-                rougeL_precision=0.0, rougeL_recall=0.0, rougeL_f1=0.0,
-            ))
-            continue
-
-        scores = scorer.score(ref, pred)
-        results.append(RougeScores(
-            rouge1_precision=round(scores["rouge1"].precision, 4),
-            rouge1_recall=round(scores["rouge1"].recall, 4),
-            rouge1_f1=round(scores["rouge1"].fmeasure, 4),
-            rouge2_precision=round(scores["rouge2"].precision, 4),
-            rouge2_recall=round(scores["rouge2"].recall, 4),
-            rouge2_f1=round(scores["rouge2"].fmeasure, 4),
-            rougeL_precision=round(scores["rougeL"].precision, 4),
-            rougeL_recall=round(scores["rougeL"].recall, 4),
-            rougeL_f1=round(scores["rougeL"].fmeasure, 4),
-        ))
-
-    return results
-
-
-# ─── Módulo BLEU ──────────────────────────────────────────────────────────────
-
-def calculate_bleu_scores(
-    predictions: list[str],
-    references: list[str],
-) -> list[float]:
-    """
-    Calcula BLEU-4 para cada par predicción/referencia.
-
-    Usa SmoothingFunction.method1 para evitar log(0) cuando algún
-    n-grama de orden superior no tiene coincidencias (frecuente en
-    oraciones cortas o con vocabulario muy distinto).
-    """
-    smoothing = SmoothingFunction().method1
-    bleu_scores = []
-
-    for pred, ref in zip(predictions, references):
-        if not pred.strip():
-            bleu_scores.append(0.0)
-            continue
-
-        # Tokenización simple por espacios (adecuada para esta demo)
-        ref_tokens = [ref.lower().split()]
-        pred_tokens = pred.lower().split()
-
-        score = sentence_bleu(
-            ref_tokens,
-            pred_tokens,
-            weights=(0.25, 0.25, 0.25, 0.25),  # BLEU-4 uniforme
-            smoothing_function=smoothing,
-        )
-        bleu_scores.append(round(score, 4))
-
-    return bleu_scores
-```
-
-#### Verificación
-
-```bash
-python -c "
-from chatbot_evaluator import calculate_rouge_scores, calculate_bleu_scores
-
-ref = ['Alan Turing es considerado el padre de la computación moderna.']
-pred_buena = ['Alan Turing es reconocido como el padre de la computación moderna y desarrolló la máquina de Turing.']
-pred_mala = ['La pizza es un plato italiano muy popular en todo el mundo.']
-
-rouge_buena = calculate_rouge_scores(pred_buena, ref)
-rouge_mala = calculate_rouge_scores(pred_mala, ref)
-bleu_buena = calculate_bleu_scores(pred_buena, ref)
-bleu_mala = calculate_bleu_scores(pred_mala, ref)
-
-print(f'ROUGE-1 F1 (buena): {rouge_buena[0].rouge1_f1}')
-print(f'ROUGE-1 F1 (mala):  {rouge_mala[0].rouge1_f1}')
-print(f'BLEU-4 (buena): {bleu_buena[0]}')
-print(f'BLEU-4 (mala):  {bleu_mala[0]}')
-"
-```
-
-#### Salida esperada
-
-```
-ROUGE-1 F1 (buena): ~0.55–0.70  (valor alto: vocabulario compartido)
-ROUGE-1 F1 (mala):  ~0.05–0.10  (valor bajo: vocabulario completamente diferente)
-BLEU-4 (buena): ~0.15–0.35
-BLEU-4 (mala):  ~0.00–0.02
-```
-
----
-
-### Paso 5 — Implementar el módulo G-Eval
-
-**Objetivo:** Añadir la función que usa GPT-4o como juez para evaluar fidelidad, relevancia, coherencia y fluencia.
-
-#### Instrucciones
-
-1. Añade el siguiente bloque al final de `chatbot_evaluator.py`:
-
-```python
-# ─── Módulo G-Eval ────────────────────────────────────────────────────────────
-
-GEVAL_SYSTEM_PROMPT = """Eres un evaluador experto de sistemas de IA. Tu tarea es evaluar la calidad de una respuesta generada por un chatbot comparándola con una respuesta de referencia escrita por un experto humano.
-
-Evalúa la respuesta generada en CUATRO dimensiones usando una escala del 0 al 5:
-
-- **Fidelidad** (0-5): ¿Los hechos en la respuesta generada son precisos y consistentes con la referencia? 
-  - 5: Todos los hechos son correctos y completos
-  - 3: La mayoría son correctos, algún detalle menor falta o es impreciso
-  - 0: Los hechos son incorrectos o contradicen la referencia
-
-- **Relevancia** (0-5): ¿La respuesta aborda directamente la pregunta formulada?
-  - 5: Responde perfectamente la pregunta sin información irrelevante
-  - 3: Responde parcialmente o incluye algo de información innecesaria
-  - 0: No responde la pregunta o es completamente irrelevante
-
-- **Coherencia** (0-5): ¿El texto fluye de forma lógica y consistente internamente?
-  - 5: Perfectamente estructurado y lógico
-  - 3: Mayormente coherente con alguna inconsistencia menor
-  - 0: Incoherente o contradictorio internamente
-
-- **Fluencia** (0-5): ¿El lenguaje es natural, gramaticalmente correcto y fácil de leer?
-  - 5: Lenguaje completamente natural y sin errores
-  - 3: Comprensible con algunos errores menores
-  - 0: Agramatical o muy difícil de leer
-
-Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
-{
-  "fidelidad": <número 0-5>,
-  "relevancia": <número 0-5>,
-  "coherencia": <número 0-5>,
-  "fluencia": <número 0-5>,
-  "justificacion": "<explicación concisa de 2-3 oraciones>"
-}"""
-
-
-def evaluate_with_geval(
-    question: str,
-    reference: str,
-    prediction: str,
-    model: str = MODEL_JUDGE,
-) -> GEvalResult:
-    """
-    Evalúa una respuesta generada usando GPT-4o como juez (patrón LLM-as-a-Judge).
-
-    Implementa el patrón G-Eval: el LLM recibe la pregunta, la respuesta
-    de referencia y la respuesta generada, y devuelve puntuaciones
-    estructuradas con justificación textual.
-    """
-    user_prompt = f"""**Pregunta:** {question}
-
-**Respuesta de referencia (ground truth):**
-{reference}
-
-**Respuesta generada por el chatbot:**
-{prediction}
-
-Evalúa la respuesta generada según los criterios indicados."""
-
-    try:
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": GEVAL_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.0,  # Determinístico para evaluación reproducible
-            max_tokens=400,
-            response_format={"type": "json_object"},
-        )
-
-        raw_json = completion.choices[0].message.content
-        data = json.loads(raw_json)
-
-        return GEvalResult.from_scores(
-            fidelidad=float(data.get("fidelidad", 0)),
-            relevancia=float(data.get("relevancia", 0)),
-            coherencia=float(data.get("coherencia", 0)),
-            fluencia=float(data.get("fluencia", 0)),
-            justificacion=data.get("justificacion", "Sin justificación disponible."),
-        )
-
-    except Exception as e:
-        print(f"    ⚠️  Error en G-Eval: {e}")
-        return GEvalResult.from_scores(
-            fidelidad=0.0,
-            relevancia=0.0,
-            coherencia=0.0,
-            fluencia=0.0,
-            justificacion=f"Error durante la evaluación: {str(e)}",
-        )
-
-
-def run_geval_evaluation(
-    dataset: list[GoldenEntry],
-    predictions: list[str],
-    model: str = MODEL_JUDGE,
-) -> list[GEvalResult]:
-    """Ejecuta G-Eval sobre todo el dataset con manejo de rate limits."""
-    results = []
-    total = len(dataset)
-
-    print(f"\n{'='*60}")
-    print(f"Ejecutando G-Eval con modelo juez: {model}")
-    print(f"{'='*60}")
-
-    for i, (entry, pred) in enumerate(zip(dataset, predictions), 1):
-        print(f"  [{i:02d}/{total}] Evaluando G-Eval para entrada {entry.id}...")
-        result = evaluate_with_geval(
-            question=entry.pregunta,
-            reference=entry.respuesta_referencia,
-            prediction=pred,
-            model=model,
-        )
-        results.append(result)
-        print(f"    → Score promedio: {result.score_promedio:.2f}/5.0")
-
-        # Pausa para respetar rate limits de GPT-4o
-        time.sleep(1.0)
-
-    print(f"\n✅ G-Eval completado: {len(results)} evaluaciones.\n")
-    return results
-```
-
-#### Verificación
-
-```bash
-python -c "
-from chatbot_evaluator import evaluate_with_geval
-resultado = evaluate_with_geval(
-    question='¿Quién inventó la World Wide Web?',
-    reference='Tim Berners-Lee inventó la World Wide Web en 1989 mientras trabajaba en el CERN.',
-    prediction='La World Wide Web fue creada por Tim Berners-Lee en 1989 en el CERN, Suiza.'
-)
-print(f'Fidelidad:   {resultado.fidelidad}/5')
-print(f'Relevancia:  {resultado.relevancia}/5')
-print(f'Coherencia:  {resultado.coherencia}/5')
-print(f'Fluencia:    {resultado.fluencia}/5')
-print(f'Promedio:    {resultado.score_promedio}/5')
-print(f'Justificación: {resultado.justificacion}')
-"
-```
-
-#### Salida esperada
-
-```
-Fidelidad:   5.0/5
-Relevancia:  5.0/5
-Coherencia:  5.0/5
-Fluencia:    5.0/5
-Promedio:    5.0/5
-Justificación: La respuesta generada es factualmente correcta y completa...
-```
-
----
-
-### Paso 6 — Implementar el módulo de reporte
-
-**Objetivo:** Añadir las funciones que generan el reporte de evaluación en Markdown y HTML.
-
-#### Instrucciones
-
-1. Añade el siguiente bloque al final de `chatbot_evaluator.py`:
-
-```python
-# ─── Módulo de reporte ────────────────────────────────────────────────────────
-
-def build_results_dataframe(results: EvaluationResults) -> pd.DataFrame:
-    """Construye un DataFrame pandas con todas las métricas para análisis."""
-    rows = []
-    for entry in results.entries:
-        row = {
-            "id": entry.golden.id,
-            "pregunta": entry.golden.pregunta[:60] + "...",
-            "categoria": entry.golden.categoria,
-            "dificultad": entry.golden.nivel_dificultad,
-            "rouge1_f1": entry.rouge_scores.rouge1_f1,
-            "rouge2_f1": entry.rouge_scores.rouge2_f1,
-            "rougeL_f1": entry.rouge_scores.rougeL_f1,
-            "bleu4": entry.bleu_score,
-        }
-        if entry.geval_result:
-            row.update({
-                "geval_fidelidad": entry.geval_result.fidelidad,
-                "geval_relevancia": entry.geval_result.relevancia,
-                "geval_coherencia": entry.geval_result.coherencia,
-                "geval_fluencia": entry.geval_result.fluencia,
-                "geval_promedio": entry.geval_result.score_promedio,
-                "geval_justificacion": entry.geval_result.justificacion,
-            })
+    def validar_justificacion(cls,v:str)->str: return v.strip() or "Sin justificación disponible."
+class GEvalResult(GEvalJudgeOutput):
+    score_promedio:float; judge_model:str
+    @classmethod
+    def from_output(cls,o:GEvalJudgeOutput,judge_model:str)->"GEvalResult": return cls(**o.model_dump(),score_promedio=round((o.fidelidad+o.relevancia+o.coherencia+o.fluencia)/4,4),judge_model=judge_model)
+class EvaluationEntry(BaseModel): golden:GoldenEntry; respuesta_generada:str; rouge_scores:RougeScores; bleu_score:float; geval_result:Optional[GEvalResult]=None
+class EvaluationResults(BaseModel): entries:list[EvaluationEntry]; model_generation:str; model_judge:str; used_fixtures:bool; used_geval:bool; timestamp:str
+def get_openai_client()->OpenAI:
+    if not OPENAI_API_KEY: raise RuntimeError("OPENAI_API_KEY no está configurada. Usa --use-fixtures --skip-geval para ejecutar sin API.")
+    return OpenAI(api_key=OPENAI_API_KEY)
+def load_golden_dataset(path:str="golden_dataset.json")->list[GoldenEntry]:
+    data=[GoldenEntry(**e) for e in json.loads(Path(path).read_text(encoding="utf-8"))]
+    if len({e.id for e in data})!=len(data): raise ValueError("IDs duplicados en Golden Dataset")
+    return data
+def load_fixture_responses(path:str="fixtures_responses.json")->dict[int,str]:
+    return {FixtureResponse(**x).id:FixtureResponse(**x).respuesta_generada for x in json.loads(Path(path).read_text(encoding="utf-8"))}
+def load_or_none(path:Path): return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+def save_json(path:Path,data)->None: path.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
+@retry(wait=wait_random_exponential(multiplier=1,min=2,max=30),stop=stop_after_attempt(4),retry=retry_if_exception_type((RateLimitError,APIError)),reraise=True)
+def call_generation_model(client:OpenAI,question:str,model:str)->str:
+    r=client.chat.completions.create(model=model,messages=[{"role":"system","content":"Eres un asistente experto en historia de la computación. Responde de forma precisa, clara y concisa en español."},{"role":"user","content":question}],temperature=0.2,max_tokens=320)
+    return (r.choices[0].message.content or "").strip()
+def get_predictions(dataset,use_fixtures,refresh_cache,model):
+    cache_path=CACHE_DIR/f"generated_responses_{model}.json"
+    if use_fixtures:
+        print("✅ Usando fixtures locales. No se consumirán tokens para generación."); fx=load_fixture_responses(); return [fx.get(e.id,"") for e in dataset]
+    if not refresh_cache and (cached:=load_or_none(cache_path)): print(f"✅ Respuestas cargadas desde cache: {cache_path}"); return [i["respuesta_generada"] for i in sorted(cached,key=lambda x:x["id"])]
+    client=get_openai_client(); preds=[]
+    for i,e in enumerate(dataset,1): print(f"[{i:02d}/{len(dataset)}] {e.pregunta[:70]}..."); preds.append(call_generation_model(client,e.pregunta,model)); time.sleep(.3)
+    save_json(cache_path,[{"id":e.id,"pregunta":e.pregunta,"respuesta_generada":p} for e,p in zip(dataset,preds)]); return preds
+def normalize_text(t:str)->str: return re.sub(r"\s+"," ",re.sub(r"[^\wáéíóúñü\s]"," ",t.lower().strip(),flags=re.I))
+def tokenize(t:str)->list[str]:
+    try: return nltk.word_tokenize(normalize_text(t),language="spanish")
+    except Exception: return normalize_text(t).split()
+def calculate_rouge_scores(predictions,references):
+    scorer=rouge_scorer.RougeScorer(["rouge1","rouge2","rougeL"],use_stemmer=True); out=[]
+    for p,r in zip(predictions,references):
+        if not p.strip(): out.append(RougeScores(rouge1_precision=0,rouge1_recall=0,rouge1_f1=0,rouge2_precision=0,rouge2_recall=0,rouge2_f1=0,rougeL_precision=0,rougeL_recall=0,rougeL_f1=0)); continue
+        s=scorer.score(r,p); out.append(RougeScores(rouge1_precision=round(s["rouge1"].precision,4),rouge1_recall=round(s["rouge1"].recall,4),rouge1_f1=round(s["rouge1"].fmeasure,4),rouge2_precision=round(s["rouge2"].precision,4),rouge2_recall=round(s["rouge2"].recall,4),rouge2_f1=round(s["rouge2"].fmeasure,4),rougeL_precision=round(s["rougeL"].precision,4),rougeL_recall=round(s["rougeL"].recall,4),rougeL_f1=round(s["rougeL"].fmeasure,4)))
+    return out
+def calculate_bleu_scores(predictions,references):
+    sm=SmoothingFunction().method1; return [0.0 if not p.strip() else round(sentence_bleu([tokenize(r)],tokenize(p),weights=(.25,.25,.25,.25),smoothing_function=sm),4) for p,r in zip(predictions,references)]
+GEVAL_SYSTEM_PROMPT="""Eres un evaluador experto. Evalúa con escala 0 a 5 en fidelidad, relevancia, coherencia y fluencia. Devuelve JSON válido: fidelidad, relevancia, coherencia, fluencia, justificacion."""
+@retry(wait=wait_random_exponential(multiplier=1,min=2,max=30),stop=stop_after_attempt(4),retry=retry_if_exception_type((RateLimitError,APIError)),reraise=True)
+def call_judge_model(client,prompt,model):
+    r=client.chat.completions.create(model=model,messages=[{"role":"system","content":GEVAL_SYSTEM_PROMPT},{"role":"user","content":prompt}],temperature=0,max_tokens=500,response_format={"type":"json_object"}); return r.choices[0].message.content or "{}"
+def evaluate_with_geval(entry,prediction,model,client):
+    prompt=f"Pregunta:\n{entry.pregunta}\n\nReferencia:\n{entry.respuesta_referencia}\n\nRespuesta generada:\n{prediction}\n\nEvalúa la respuesta."
+    try: return GEvalResult.from_output(GEvalJudgeOutput.model_validate_json(call_judge_model(client,prompt,model)),model)
+    except Exception as exc: return GEvalResult.from_output(GEvalJudgeOutput(fidelidad=0,relevancia=0,coherencia=0,fluencia=0,justificacion=f"Error durante G-Eval: {exc}"),model)
+def get_geval_results(dataset,predictions,skip_geval,refresh_cache,model):
+    if skip_geval: print("✅ G-Eval omitido. Solo se calcularán métricas léxicas."); return None
+    cache_path=CACHE_DIR/f"geval_results_{model}.json"
+    if not refresh_cache and (cached:=load_or_none(cache_path)): print(f"✅ Resultados G-Eval cargados desde cache: {cache_path}"); return [GEvalResult(**x) for x in cached]
+    client=get_openai_client(); res=[evaluate_with_geval(e,p,model,client) for e,p in zip(dataset,predictions)]; save_json(cache_path,[x.model_dump() for x in res]); return res
+def build_results_dataframe(results):
+    rows=[]
+    for e in results.entries:
+        row={"id":e.golden.id,"categoria":e.golden.categoria,"dificultad":e.golden.nivel_dificultad,"pregunta":e.golden.pregunta,"rouge1_f1":e.rouge_scores.rouge1_f1,"rouge2_f1":e.rouge_scores.rouge2_f1,"rougeL_f1":e.rouge_scores.rougeL_f1,"bleu4":e.bleu_score}
+        if e.geval_result: row.update({"geval_fidelidad":e.geval_result.fidelidad,"geval_relevancia":e.geval_result.relevancia,"geval_coherencia":e.geval_result.coherencia,"geval_fluencia":e.geval_result.fluencia,"geval_promedio":e.geval_result.score_promedio,"geval_justificacion":e.geval_result.justificacion})
         rows.append(row)
-
     return pd.DataFrame(rows)
-
-
-def generate_evaluation_report(results: EvaluationResults) -> str:
-    """
-    Genera un reporte completo de evaluación en formato Markdown.
-
-    Incluye:
-    - Tabla comparativa de todas las métricas
-    - Promedios por categoría y dificultad
-    - Top 3 mejores y peores respuestas
-    - Análisis de correlación entre métricas léxicas y G-Eval
-    - Conclusiones sobre la calidad del chatbot
-    """
-    df = build_results_dataframe(results)
-    has_geval = "geval_promedio" in df.columns
-
-    lines = []
-
-    # ── Encabezado ──────────────────────────────────────────────────────────
-    lines.append("# Reporte de Evaluación de Fidelidad del Chatbot\n")
-    lines.append(f"**Modelo evaluado:** `{results.model_generation}`  ")
-    lines.append(f"**Modelo juez (G-Eval):** `{results.model_judge}`  ")
-    lines.append(f"**Fecha:** {results.timestamp}  ")
-    lines.append(f"**Total de ejemplos:** {len(results.entries)}\n")
-    lines.append("---\n")
-
-    # ── Resumen de métricas globales ─────────────────────────────────────────
-    lines.append("## 1. Resumen de Métricas Globales\n")
-    lines.append("| Métrica | Promedio | Mínimo | Máximo |")
-    lines.append("|---------|----------|--------|--------|")
-
-    metric_cols = ["rouge1_f1", "rouge2_f1", "rougeL_f1", "bleu4"]
-    metric_labels = ["ROUGE-1 F1", "ROUGE-2 F1", "ROUGE-L F1", "BLEU-4"]
-    if has_geval:
-        metric_cols += ["geval_fidelidad", "geval_relevancia", "geval_coherencia",
-                        "geval_fluencia", "geval_promedio"]
-        metric_labels += ["G-Eval Fidelidad", "G-Eval Relevancia", "G-Eval Coherencia",
-                          "G-Eval Fluencia", "G-Eval Promedio"]
-
-    for col, label in zip(metric_cols, metric_labels):
-        if col in df.columns:
-            avg = df[col].mean()
-            mn = df[col].min()
-            mx = df[col].max()
-            lines.append(f"| {label} | {avg:.4f} | {mn:.4f} | {mx:.4f} |")
-
-    lines.append("")
-
-    # ── Promedios por categoría ──────────────────────────────────────────────
-    lines.append("## 2. Análisis por Categoría\n")
-    agg_cols = ["rouge1_f1", "rouge2_f1", "rougeL_f1", "bleu4"]
-    if has_geval:
-        agg_cols.append("geval_promedio")
-
-    cat_group = df.groupby("categoria")[agg_cols].mean().round(4)
-    lines.append(cat_group.to_markdown())
-    lines.append("")
-
-    # ── Promedios por dificultad ─────────────────────────────────────────────
-    lines.append("## 3. Análisis por Nivel de Dificultad\n")
-    diff_order = ["easy", "medium", "hard"]
-    diff_group = df.groupby("dificultad")[agg_cols].mean().round(4)
-    diff_group = diff_group.reindex([d for d in diff_order if d in diff_group.index])
-    lines.append(diff_group.to_markdown())
-    lines.append("")
-
-    # ── Top 3 mejores respuestas ─────────────────────────────────────────────
-    lines.append("## 4. Top 3 Mejores Respuestas\n")
-    sort_col = "geval_promedio" if has_geval else "rouge1_f1"
-    top3 = df.nlargest(3, sort_col)
-
-    for _, row in top3.iterrows():
-        entry = next(e for e in results.entries if e.golden.id == row["id"])
-        lines.append(f"### Entrada #{entry.golden.id} — Score: {row[sort_col]:.4f}\n")
-        lines.append(f"**Pregunta:** {entry.golden.pregunta}\n")
-        lines.append(f"**Referencia:** {entry.golden.respuesta_referencia}\n")
-        lines.append(f"**Generada:** {entry.respuesta_generada}\n")
-        lines.append(
-            f"**Métricas:** ROUGE-1={row['rouge1_f1']:.4f} | "
-            f"ROUGE-L={row['rougeL_f1']:.4f} | BLEU-4={row['bleu4']:.4f}"
-        )
-        if has_geval and entry.geval_result:
-            lines.append(
-                f" | G-Eval={row['geval_promedio']:.4f}"
-            )
-            lines.append(f"\n**Justificación G-Eval:** {entry.geval_result.justificacion}\n")
-        else:
-            lines.append("\n")
-
-    # ── Top 3 peores respuestas ──────────────────────────────────────────────
-    lines.append("## 5. Top 3 Peores Respuestas\n")
-    bottom3 = df.nsmallest(3, sort_col)
-
-    for _, row in bottom3.iterrows():
-        entry = next(e for e in results.entries if e.golden.id == row["id"])
-        lines.append(f"### Entrada #{entry.golden.id} — Score: {row[sort_col]:.4f}\n")
-        lines.append(f"**Pregunta:** {entry.golden.pregunta}\n")
-        lines.append(f"**Referencia:** {entry.golden.respuesta_referencia}\n")
-        lines.append(f"**Generada:** {entry.respuesta_generada}\n")
-        lines.append(
-            f"**Métricas:** ROUGE-1={row['rouge1_f1']:.4f} | "
-            f"ROUGE-L={row['rougeL_f1']:.4f} | BLEU-4={row['bleu4']:.4f}"
-        )
-        if has_geval and entry.geval_result:
-            lines.append(f" | G-Eval={row['geval_promedio']:.4f}")
-            lines.append(f"\n**Justificación G-Eval:** {entry.geval_result.justificacion}\n")
-        else:
-            lines.append("\n")
-
-    # ── Análisis de correlación ──────────────────────────────────────────────
-    if has_geval:
-        lines.append("## 6. Correlación entre Métricas Léxicas y G-Eval\n")
-        corr_cols = ["rouge1_f1", "rouge2_f1", "rougeL_f1", "bleu4", "geval_promedio"]
-        corr_matrix = df[corr_cols].corr().round(4)
-        lines.append(corr_matrix.to_markdown())
-        lines.append("")
-        lines.append(
-            "> **Interpretación:** Una correlación alta entre ROUGE/BLEU y G-Eval indica "
-            "que las métricas léxicas son buenos proxies de calidad para este dominio. "
-            "Una correlación baja sugiere que el chatbot usa vocabulario diferente al de "
-            "la referencia pero puede ser semánticamente correcto (o incorrecto).\n"
-        )
-
-    # ── Tabla completa ───────────────────────────────────────────────────────
-    lines.append("## 7. Tabla Completa de Resultados\n")
-    display_cols = ["id", "categoria", "dificultad", "rouge1_f1", "rouge2_f1",
-                    "rougeL_f1", "bleu4"]
-    if has_geval:
-        display_cols.append("geval_promedio")
-    lines.append(df[display_cols].to_markdown(index=False))
-    lines.append("")
-
-    # ── Conclusiones ────────────────────────────────────────────────────────
-    lines.append("## 8. Conclusiones\n")
-
-    avg_rouge1 = df["rouge1_f1"].mean()
-    avg_bleu = df["bleu4"].mean()
-
-    lines.append(f"- **ROUGE-1 F1 promedio:** {avg_rouge1:.4f} — "
-                 f"{'Aceptable' if avg_rouge1 > 0.4 else 'Bajo: el chatbot usa vocabulario diferente a la referencia'}.")
-    lines.append(f"- **BLEU-4 promedio:** {avg_bleu:.4f} — "
-                 f"{'Razonable para texto libre' if avg_bleu > 0.1 else 'Muy bajo: esperado en generación libre con sinónimos'}.")
-
-    if has_geval:
-        avg_geval = df["geval_promedio"].mean()
-        avg_fidelidad = df["geval_fidelidad"].mean()
-        lines.append(f"- **G-Eval promedio:** {avg_geval:.4f}/5.0 — "
-                     f"{'Buena calidad general' if avg_geval > 3.5 else 'Calidad mejorable'}.")
-        lines.append(f"- **Fidelidad promedio (G-Eval):** {avg_fidelidad:.4f}/5.0 — "
-                     f"{'Los hechos son mayormente correctos' if avg_fidelidad > 3.5 else 'Hay problemas de precisión factual'}.")
-
-        # Detectar divergencia léxico vs semántico
-        corr_rouge_geval = df["rouge1_f1"].corr(df["geval_promedio"])
-        lines.append(
-            f"- **Correlación ROUGE-1 ↔ G-Eval:** {corr_rouge_geval:.4f} — "
-            f"{'Alta: las métricas léxicas son buen proxy' if abs(corr_rouge_geval) > 0.6 else 'Baja: el chatbot puede ser correcto semánticamente aunque use vocabulario diferente'}."
-        )
-
-    lines.append(
-        "\n**Recomendación:** Para sistemas de producción, combinar métricas léxicas "
-        "(rápidas y sin costo) como filtro inicial con G-Eval (más costoso pero preciso) "
-        "para los casos límite o en auditorías periódicas de calidad."
-    )
-
+def generate_evaluation_report(results):
+    df=build_results_dataframe(results); has_geval="geval_promedio" in df.columns; sort_col="geval_promedio" if has_geval else "rouge1_f1"; metrics=["rouge1_f1","rouge2_f1","rougeL_f1","bleu4"]+(["geval_promedio"] if has_geval else [])
+    lines=["# Reporte de Evaluación de Fidelidad del Chatbot\n",f"**Fecha:** {results.timestamp}  ",f"**Modelo evaluado:** `{results.model_generation}`  ",f"**Modelo juez:** `{results.model_judge}`  ",f"**Uso de fixtures:** `{results.used_fixtures}`  ",f"**Uso de G-Eval:** `{results.used_geval}`  ",f"**Total de ejemplos:** {len(results.entries)}\n","---\n","## 1. Resumen global\n",df[metrics].agg(["mean","min","max"]).T.round(4).to_markdown(),"\n","## 2. Análisis por categoría\n",df.groupby("categoria")[metrics].mean().round(4).to_markdown(),"\n","## 3. Análisis por dificultad\n",df.groupby("dificultad")[metrics].mean().round(4).to_markdown(),"\n"]
+    for title,data in [("## 4. Top 3 mejores respuestas",df.nlargest(3,sort_col)),("## 5. Top 3 peores respuestas",df.nsmallest(3,sort_col))]:
+        lines.append(title+"\n")
+        for _,row in data.iterrows():
+            ent=next(x for x in results.entries if x.golden.id==row["id"]); lines += [f"### ID {ent.golden.id} — score `{row[sort_col]:.4f}`\n",f"**Pregunta:** {ent.golden.pregunta}\n",f"**Referencia:** {ent.golden.respuesta_referencia}\n",f"**Respuesta generada:** {ent.respuesta_generada}\n",f"**ROUGE-1:** {ent.rouge_scores.rouge1_f1} | **ROUGE-L:** {ent.rouge_scores.rougeL_f1} | **BLEU-4:** {ent.bleu_score}\n"]
+            if ent.geval_result: lines.append(f"**G-Eval:** {ent.geval_result.score_promedio}/5 — {ent.geval_result.justificacion}\n")
+    lines += ["## 6. Tabla completa de resultados\n",df[["id","categoria","dificultad","rouge1_f1","rouge2_f1","rougeL_f1","bleu4"]+(["geval_promedio"] if has_geval else [])].round(4).to_markdown(index=False),"\n","## 7. Matriz de interpretación\n","| Caso | Interpretación | Acción recomendada |\n|---|---|---|\n| ROUGE alto + G-Eval alto | Respuesta cercana y correcta | Mantener |\n| ROUGE bajo + G-Eval alto | Parafraseo correcto | No penalizar automáticamente |\n| ROUGE alto + G-Eval bajo | Texto similar con posible error factual | Revisar manualmente |\n| ROUGE bajo + G-Eval bajo | Respuesta incorrecta o irrelevante | Corregir prompt, datos o modelo |\n","## 8. Conclusiones\n",f"- ROUGE-1 F1 promedio: `{df['rouge1_f1'].mean():.4f}`.",f"- BLEU-4 promedio: `{df['bleu4'].mean():.4f}`.","- Recomendación: usa métricas léxicas como filtro económico y G-Eval/revisión humana para casos críticos o divergentes."]
     return "\n".join(lines)
+def export_html_report(markdown_content,output_path):
+    body=markdown.markdown(markdown_content,extensions=["tables","fenced_code"]); html=f"<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>Reporte</title></head><body>{body}</body></html>"; Path(output_path).write_text(html,encoding="utf-8")
+def run_pipeline(use_fixtures,skip_geval,refresh_cache):
+    print("\n"+"="*72); print("FRAMEWORK DE EVALUACIÓN DE FIDELIDAD DE CHATBOT"); print("="*72)
+    data=load_golden_dataset(); print(f"✅ Golden Dataset cargado: {len(data)} entradas"); preds=get_predictions(data,use_fixtures,refresh_cache,MODEL_GENERATION); refs=[e.respuesta_referencia for e in data]
+    print("✅ Calculando ROUGE..."); rouge=calculate_rouge_scores(preds,refs); print("✅ Calculando BLEU..."); bleu=calculate_bleu_scores(preds,refs); geval=get_geval_results(data,preds,skip_geval,refresh_cache,MODEL_JUDGE)
+    entries=[EvaluationEntry(golden=g,respuesta_generada=p,rouge_scores=r,bleu_score=b,geval_result=geval[i] if geval else None) for i,(g,p,r,b) in enumerate(zip(data,preds,rouge,bleu))]
+    results=EvaluationResults(entries=entries,model_generation=MODEL_GENERATION if not use_fixtures else "fixtures-locales",model_judge=MODEL_JUDGE if not skip_geval else "no-aplica",used_fixtures=use_fixtures,used_geval=not skip_geval,timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    report=generate_evaluation_report(results); md=REPORTS_DIR/"evaluation_report.md"; html=REPORTS_DIR/"evaluation_report.html"; js=REPORTS_DIR/"evaluation_results.json"; md.write_text(report,encoding="utf-8"); export_html_report(report,str(html)); save_json(js,results.model_dump())
+    df=build_results_dataframe(results); print(f"ROUGE-1 F1 promedio: {df['rouge1_f1'].mean():.4f}"); print(f"BLEU-4 promedio: {df['bleu4'].mean():.4f}"); print(f"✅ {md}\n✅ {html}\n✅ {js}")
+if __name__=="__main__":
+    parser=argparse.ArgumentParser(description="Evalúa fidelidad de un chatbot contra un Golden Dataset."); parser.add_argument("--use-fixtures",action="store_true"); parser.add_argument("--skip-geval",action="store_true"); parser.add_argument("--refresh-cache",action="store_true"); args=parser.parse_args(); run_pipeline(args.use_fixtures,args.skip_geval,args.refresh_cache)
+
+PY
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -m py_compile chatbot_evaluator.py && echo '✅ Sintaxis OK'
+```
+
+**📌 Resultado esperado:**
+
+```text
+✅ Sintaxis OK
 ```
 
 ---
 
-### Paso 7 — Implementar el pipeline principal y exportación
+### ✅ Paso 2. Revisa la ayuda del script
 
-**Objetivo:** Añadir la función `main()` que orquesta todo el pipeline y exporta los resultados.
+**📝 Descripción del paso:**  
+Vas a ejecutar el script con `--help` para confirmar que expone correctamente sus opciones de ejecución. Este paso no evalúa datos todavía; solo valida la interfaz de línea de comandos.
 
-#### Instrucciones
+**⚙️ Contenido del paso:**
 
-1. Añade el bloque final a `chatbot_evaluator.py`:
+```bash
+python chatbot_evaluator.py --help
+```
 
-```python
-# ─── Exportación HTML ─────────────────────────────────────────────────────────
+**✅ Validación del paso:**  
+Debes ver las opciones `--use-fixtures`, `--skip-geval` y `--refresh-cache`.
 
-def export_html_report(markdown_content: str, output_path: str) -> None:
-    """
-    Convierte el reporte Markdown a HTML usando una plantilla Jinja2 mínima.
-    Requiere: pip install jinja2
-    """
-    try:
-        from jinja2 import Template
+**📌 Resultado esperado:**  
+El script está listo para ejecutar la ruta base y las rutas opcionales.
 
-        html_template = Template("""<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Evaluación de Chatbot</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-               max-width: 1100px; margin: 40px auto; padding: 0 20px;
-               color: #333; line-height: 1.6; }
-        h1 { color: #1a1a2e; border-bottom: 3px solid #4a90d9; padding-bottom: 10px; }
-        h2 { color: #16213e; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 40px; }
-        h3 { color: #0f3460; }
-        table { border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 0.9em; }
-        th { background-color: #4a90d9; color: white; padding: 10px 12px; text-align: left; }
-        td { padding: 8px 12px; border-bottom: 1px solid #eee; }
-        tr:hover { background-color: #f5f9ff; }
-        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
-        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
-        blockquote { border-left: 4px solid #4a90d9; margin: 0; padding: 10px 20px;
-                     background: #f0f7ff; border-radius: 0 5px 5px 0; }
-        strong { color: #1a1a2e; }
-        hr { border: none; border-top: 1px solid #ddd; margin: 30px 0; }
-    </style>
-</head>
-<body>
-{{ content }}
-</body>
-</html>""")
+---
 
-        # Conversión Markdown → HTML básica (sin dependencias extra)
-        import re
-        html_content = markdown_content
+## 💬 Prompt de apoyo para explicar lo realizado
 
-        # Encabezados
-        html_content = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html_content, flags=re.MULTILINE)
-        html_content = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html_content, flags=re.MULTILINE)
-        html_content = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html_content, flags=re.MULTILINE)
+[Explicar la Tarea 4 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%204%20del%20Laboratorio%2010.%20Implement%C3%A9%20chatbot_evaluator.py%20con%20Pydantic%2C%20carga%20de%20datos%2C%20generaci%C3%B3n%20opcional%2C%20ROUGE%2C%20BLEU%2C%20G-Eval%20opcional%2C%20cache%20y%20reportes%20Markdown%2C%20HTML%20y%20JSON.)
 
-        # Negritas e itálicas
-        html_content = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_content)
-        html_content = re.sub(r'\*(.+?)\*', r'<em>\1</em>', html_content)
+---
 
-        # Código inline
-        html_content = re.sub(r'`(.+?)`', r'<code>\1</code>', html_content)
+# 🧩 Tarea 5. Ejecutar evaluación sin API
 
-        # Blockquotes
-        html_content = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', html_content, flags=re.MULTILINE)
+## 🎯 Objetivo de la tarea
 
-        # Separadores
-        html_content = html_content.replace('\n---\n', '\n<hr>\n')
+Validar todo el pipeline base usando fixtures locales y omitiendo G-Eval para no consumir tokens.
 
-        # Saltos de línea para párrafos
-        html_content = re.sub(r'\n{2,}', '</p>\n<p>', html_content)
-        html_content = f'<p>{html_content}</p>'
+---
 
-        final_html = html_template.render(content=html_content)
+## 🛠️ Pasos
 
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(final_html)
+### ✅ Paso 1. Ejecuta con fixtures y sin G-Eval
 
-        print(f"✅ Reporte HTML exportado: {output_path}")
+**📝 Descripción del paso:**  
+Vas a ejecutar `chatbot_evaluator.py` usando `--use-fixtures --skip-geval`. Con esto el script leerá `golden_dataset.json`, cargará respuestas desde `fixtures_responses.json`, calculará ROUGE y BLEU, y generará reportes sin llamar a ningún modelo externo.
 
-    except Exception as e:
-        print(f"⚠️  No se pudo generar el HTML: {e}")
+**⚙️ Contenido del paso:**
 
+```bash
+python chatbot_evaluator.py --use-fixtures --skip-geval
+```
 
-# ─── Pipeline principal ───────────────────────────────────────────────────────
+**✅ Validación del paso:**  
+La salida debe indicar que se usaron fixtures, que se calcularon ROUGE y BLEU, y que G-Eval fue omitido.
 
-def main(skip_geval: bool = False) -> None:
-    """
-    Orquesta el pipeline completo de evaluación:
-    1. Carga el Golden Dataset
-    2. Genera respuestas del chatbot
-    3. Calcula métricas ROUGE y BLEU
-    4. Ejecuta G-Eval (opcional)
-    5. Genera y exporta el reporte
-    """
-    from datetime import datetime
+**📌 Resultado esperado:**
 
-    print("\n" + "="*60)
-    print("  FRAMEWORK DE EVALUACIÓN DE FIDELIDAD DE CHATBOT")
-    print("="*60)
-
-    # 1. Cargar dataset
-    print("\n[1/5] Cargando Golden Dataset...")
-    dataset = load_golden_dataset("golden_dataset.json")
-    print(f"      ✅ {len(dataset)} entradas cargadas.")
-
-    # 2. Generar respuestas
-    print("\n[2/5] Generando respuestas del chatbot...")
-    predictions = generate_chatbot_responses(dataset, model=MODEL_GENERATION)
-
-    # 3. Calcular ROUGE
-    print("\n[3/5] Calculando métricas ROUGE...")
-    references = [e.respuesta_referencia for e in dataset]
-    rouge_results = calculate_rouge_scores(predictions, references)
-    print(f"      ✅ ROUGE calculado para {len(rouge_results)} pares.")
-
-    # 4. Calcular BLEU
-    print("\n[4/5] Calculando métricas BLEU...")
-    bleu_results = calculate_bleu_scores(predictions, references)
-    print(f"      ✅ BLEU calculado para {len(bleu_results)} pares.")
-
-    # 5. G-Eval (opcional)
-    geval_results = None
-    if not skip_geval:
-        print("\n[5/5] Ejecutando G-Eval (LLM-as-Judge)...")
-        print("      ⚠️  Esto consume tokens de GPT-4o (~$0.20-0.50 USD)")
-        geval_results = run_geval_evaluation(dataset, predictions, model=MODEL_JUDGE)
-    else:
-        print("\n[5/5] G-Eval omitido (skip_geval=True).")
-
-    # Ensamblar resultados
-    entries = []
-    for i, (golden, pred, rouge, bleu) in enumerate(
-        zip(dataset, predictions, rouge_results, bleu_results)
-    ):
-        entry = EvaluationEntry(
-            golden=golden,
-            respuesta_generada=pred,
-            rouge_scores=rouge,
-            bleu_score=bleu,
-            geval_result=geval_results[i] if geval_results else None,
-        )
-        entries.append(entry)
-
-    eval_results = EvaluationResults(
-        entries=entries,
-        model_generation=MODEL_GENERATION,
-        model_judge=MODEL_JUDGE,
-        timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    )
-
-    # Generar reporte
-    print("\n[6/6] Generando reporte de evaluación...")
-    Path("reports").mkdir(exist_ok=True)
-
-    report_md = generate_evaluation_report(eval_results)
-
-    md_path = "reports/evaluation_report.md"
-    with open(md_path, "w", encoding="utf-8") as f:
-        f.write(report_md)
-    print(f"      ✅ Reporte Markdown: {md_path}")
-
-    html_path = "reports/evaluation_report.html"
-    export_html_report(report_md, html_path)
-
-    # Guardar resultados en JSON para análisis posterior
-    json_path = "reports/evaluation_results.json"
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(eval_results.model_dump(), f, ensure_ascii=False, indent=2)
-    print(f"      ✅ Datos JSON: {json_path}")
-
-    # Resumen en consola
-    df = build_results_dataframe(eval_results)
-    print("\n" + "="*60)
-    print("  RESUMEN DE MÉTRICAS GLOBALES")
-    print("="*60)
-    print(f"  ROUGE-1 F1 promedio: {df['rouge1_f1'].mean():.4f}")
-    print(f"  ROUGE-2 F1 promedio: {df['rouge2_f1'].mean():.4f}")
-    print(f"  ROUGE-L F1 promedio: {df['rougeL_f1'].mean():.4f}")
-    print(f"  BLEU-4 promedio:     {df['bleu4'].mean():.4f}")
-    if "geval_promedio" in df.columns:
-        print(f"  G-Eval promedio:     {df['geval_promedio'].mean():.4f}/5.0")
-    print("="*60)
-    print("\n✅ Evaluación completada. Revisa la carpeta 'reports/'.\n")
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Evalúa la fidelidad de un chatbot contra un Golden Dataset."
-    )
-    parser.add_argument(
-        "--skip-geval",
-        action="store_true",
-        help="Omite la evaluación G-Eval (sin costo de GPT-4o como juez).",
-    )
-    args = parser.parse_args()
-    main(skip_geval=args.skip_geval)
+```text
+✅ Golden Dataset cargado: 20 entradas
+✅ Usando fixtures locales. No se consumirán tokens para generación.
+✅ Calculando ROUGE...
+✅ Calculando BLEU...
+✅ G-Eval omitido. Solo se calcularán métricas léxicas.
 ```
 
 ---
 
-## Validación y Pruebas
+### ✅ Paso 2. Verifica archivos generados
 
-### Ejecución completa del pipeline
+**📝 Descripción del paso:**  
+Vas a listar la carpeta `reports/` para confirmar que el evaluador generó los tres archivos principales: reporte Markdown, reporte HTML y resultados JSON.
 
-**Opción A — Sin G-Eval (sin costo adicional, solo ROUGE y BLEU):**
-
-```bash
-python chatbot_evaluator.py --skip-geval
-```
-
-**Opción B — Pipeline completo con G-Eval (costo estimado: ~$0.20–$0.50 USD):**
-
-```bash
-python chatbot_evaluator.py
-```
-
-### Verificación de los archivos generados
+**⚙️ Contenido del paso:**
 
 ```bash
 ls -la reports/
 ```
 
-Debes ver:
+**✅ Validación del paso:**  
+Debes encontrar:
 
-```
-reports/
-├── evaluation_report.md     (~15-25 KB)
-├── evaluation_report.html   (~20-35 KB)
-└── evaluation_results.json  (~30-50 KB)
+```text
+evaluation_report.md
+evaluation_report.html
+evaluation_results.json
 ```
 
-### Verificación del contenido del reporte
+**📌 Resultado esperado:**  
+La ruta base del laboratorio generó evidencias completas sin usar API.
+
+---
+
+### ✅ Paso 3. Valida el JSON de resultados
+
+**📝 Descripción del paso:**  
+Vas a abrir `reports/evaluation_results.json` con Python para verificar que contiene 20 entradas evaluadas y que el archivo registra correctamente si se usaron fixtures y si G-Eval fue omitido.
+
+**⚙️ Contenido del paso:**
 
 ```bash
-# Verificar que el reporte contiene todas las secciones esperadas
-python -c "
-with open('reports/evaluation_report.md', 'r', encoding='utf-8') as f:
-    content = f.read()
+python - << 'PY'
+import json
+with open('reports/evaluation_results.json', encoding='utf-8') as f:
+    data = json.load(f)
+entries = data['entries']
+assert len(entries) == 20
+print('Total evaluado:', len(entries))
+print('Usó fixtures:', data['used_fixtures'])
+print('Usó G-Eval:', data['used_geval'])
+print('✅ JSON de resultados válido')
+PY
+```
 
-secciones = [
-    '## 1. Resumen de Métricas Globales',
-    '## 2. Análisis por Categoría',
-    '## 3. Análisis por Nivel de Dificultad',
-    '## 4. Top 3 Mejores Respuestas',
-    '## 5. Top 3 Peores Respuestas',
-    '## 7. Tabla Completa de Resultados',
-    '## 8. Conclusiones'
+**📌 Resultado esperado:**
+
+```text
+Total evaluado: 20
+Usó fixtures: True
+Usó G-Eval: False
+✅ JSON de resultados válido
+```
+
+---
+
+### ✅ Paso 4. Abre el reporte Markdown
+
+**📝 Descripción del paso:**  
+Vas a abrir el reporte Markdown en VS Code para revisar el resumen global, análisis por categoría, análisis por dificultad, mejores respuestas, peores respuestas y tabla completa de resultados.
+
+**⚙️ Contenido del paso:**
+
+```bash
+code reports/evaluation_report.md
+```
+
+**✅ Validación del paso:**  
+El archivo debe abrirse y mostrar secciones de análisis generadas automáticamente.
+
+**📌 Resultado esperado:**  
+Puedes revisar la calidad de las respuestas fixture sin consumo de API.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 5 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%205%20del%20Laboratorio%2010.%20Ejecut%C3%A9%20la%20evaluaci%C3%B3n%20sin%20API%20usando%20fixtures%20locales%20y%20--skip-geval%2C%20generando%20reportes%20en%20Markdown%2C%20HTML%20y%20JSON.)
+
+---
+
+# 🧩 Tarea 6. Analizar métricas léxicas ROUGE y BLEU
+
+## 🎯 Objetivo de la tarea
+
+Interpretar las métricas de similitud textual y reconocer sus límites al evaluar respuestas abiertas de chatbots.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Revisa el resumen global del reporte
+
+**📝 Descripción del paso:**  
+Vas a abrir `reports/evaluation_report.md` y localizar la sección `## 1. Resumen global`. Ahí encontrarás promedios, mínimos y máximos para ROUGE-1, ROUGE-2, ROUGE-L y BLEU.
+
+**⚙️ Contenido del paso:**
+
+```bash
+code reports/evaluation_report.md
+```
+
+**✅ Validación del paso:**  
+Busca la sección:
+
+```text
+## 1. Resumen global
+```
+
+**📌 Resultado esperado:**  
+Puedes identificar qué métricas son más altas y cuáles son más estrictas.
+
+---
+
+### ✅ Paso 2. Interpreta ROUGE
+
+**📝 Descripción del paso:**  
+Vas a interpretar qué observa cada variante de ROUGE. Este paso es analítico: no modifica archivos. Úsalo para explicar por qué una respuesta puede tener buen ROUGE-1 pero menor ROUGE-2.
+
+**⚙️ Contenido del paso:**
+
+| Métrica | Qué observa | Cómo interpretarla |
+|---|---|---|
+| ROUGE-1 | Coincidencia de palabras individuales | Útil para cobertura general |
+| ROUGE-2 | Coincidencia de pares de palabras | Más estricta, suele ser menor |
+| ROUGE-L | Subsecuencia común más larga | Tolera algo de reordenamiento |
+
+> [!NOTE]
+> En este laboratorio se usa `use_stemmer=True` como aproximación. No es un stemmer especializado para español; en producción conviene usar normalización específica del idioma.
+
+**✅ Validación del paso:**  
+Explica con tus palabras por qué ROUGE-2 puede ser menor que ROUGE-1.
+
+**📌 Resultado esperado:**  
+Comprendes que ROUGE mide superposición textual, no necesariamente verdad factual.
+
+---
+
+### ✅ Paso 3. Interpreta BLEU
+
+**📝 Descripción del paso:**  
+Vas a revisar BLEU como métrica de coincidencia de n-gramas. BLEU fue diseñado originalmente para traducción automática, por lo que puede penalizar respuestas correctas que estén redactadas de forma diferente a la referencia.
+
+**⚙️ Contenido del paso:**
+
+| Valor BLEU | Interpretación didáctica |
+|---:|---|
+| 0.00 - 0.05 | Baja coincidencia de n-gramas |
+| 0.05 - 0.15 | Normal en respuestas libres |
+| 0.15 - 0.35 | Coincidencia textual razonable |
+| > 0.35 | Respuesta muy cercana a la referencia |
+
+**✅ Validación del paso:**  
+Identifica si BLEU promedio es menor que ROUGE-1.
+
+**📌 Resultado esperado:**  
+Comprendes por qué BLEU puede ser bajo aunque una respuesta sea aceptable.
+
+---
+
+### ✅ Paso 4. Extrae métricas desde JSON
+
+**📝 Descripción del paso:**  
+Vas a leer `reports/evaluation_results.json` para calcular manualmente el promedio de ROUGE-1 y BLEU. Esto valida que el reporte no es una caja negra: los datos base están disponibles en JSON.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python - << 'PY'
+import json
+with open('reports/evaluation_results.json', encoding='utf-8') as f:
+    data = json.load(f)
+rouge1 = [e['rouge_scores']['rouge1_f1'] for e in data['entries']]
+bleu = [e['bleu_score'] for e in data['entries']]
+print(f'ROUGE-1 promedio: {sum(rouge1)/len(rouge1):.4f}')
+print(f'BLEU-4 promedio: {sum(bleu)/len(bleu):.4f}')
+PY
+```
+
+**✅ Validación del paso:**  
+Los valores deben coincidir o ser consistentes con los del reporte Markdown.
+
+**📌 Resultado esperado:**  
+Puedes extraer métricas desde el JSON para análisis externo.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 6 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%206%20del%20Laboratorio%2010.%20Analic%C3%A9%20m%C3%A9tricas%20l%C3%A9xicas%20ROUGE%20y%20BLEU%20para%20interpretar%20similitud%20textual%2C%20cobertura%20y%20limitaciones%20en%20respuestas%20abiertas%20de%20chatbots.)
+
+---
+
+# 🧩 Tarea 7. Ejecutar G-Eval opcional con cache
+
+## 🎯 Objetivo de la tarea
+
+Evaluar respuestas con un modelo juez usando criterios de fidelidad, relevancia, coherencia y fluencia.
+
+> [!WARNING]
+> Esta tarea consume API. Ejecútala solo después de completar correctamente la ruta sin API.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Configura `.env` para usar API
+
+**📝 Descripción del paso:**  
+Vas a abrir el archivo `.env` en VS Code y agregar tu API key real. Este paso es necesario solo si vas a ejecutar G-Eval o generación con modelo. No modifiques `.env.example`; ese archivo solo documenta la estructura.
+
+**⚙️ Contenido del paso:**
+
+```env
+OPENAI_API_KEY=sk-tu_clave_real
+OPENAI_MODEL_GENERATION=gpt-4o-mini
+OPENAI_MODEL_JUDGE=gpt-4o-mini
+```
+
+**✅ Validación del paso:**
+
+```bash
+python - << 'PY'
+from dotenv import load_dotenv
+import os
+
+load_dotenv(dotenv_path=".env")
+
+print('API key configurada:', bool(os.getenv('OPENAI_API_KEY')))
+print('Modelo juez:', os.getenv('OPENAI_MODEL_JUDGE'))
+PY
+```
+
+**📌 Resultado esperado:**
+
+```text
+API key configurada: True
+```
+
+---
+
+### ✅ Paso 2. Ejecuta G-Eval sobre fixtures
+
+**📝 Descripción del paso:**  
+Vas a mantener las respuestas locales de `fixtures_responses.json`, pero usarás un modelo juez para calificarlas. Esta ruta permite probar G-Eval sin pagar generación de respuestas.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python chatbot_evaluator.py --use-fixtures
+```
+
+**✅ Validación del paso:**  
+La salida debe mostrar que se ejecuta G-Eval y que se generan resultados del juez.
+
+**📌 Resultado esperado:**  
+El reporte se regenera con columnas o secciones relacionadas con G-Eval.
+
+---
+
+### ✅ Paso 3. Verifica cache de G-Eval
+
+**📝 Descripción del paso:**  
+Vas a revisar la carpeta `cache/`. El script guarda los resultados del juez para evitar repetir llamadas si vuelves a ejecutar el mismo flujo.
+
+**⚙️ Contenido del paso:**
+
+```bash
+ls -la cache/
+```
+
+**✅ Validación del paso:**  
+Debes ver un archivo similar a:
+
+```text
+geval_results_gpt-4o-mini.json
+```
+
+**📌 Resultado esperado:**  
+La evaluación G-Eval quedó cacheada.
+
+---
+
+### ✅ Paso 4. Repite la ejecución usando cache
+
+**📝 Descripción del paso:**  
+Vas a ejecutar nuevamente el mismo comando. Esta vez el script debe cargar resultados desde cache en lugar de hacer llamadas nuevas al juez, siempre que no uses `--refresh-cache`.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python chatbot_evaluator.py --use-fixtures
+```
+
+**✅ Validación del paso:**  
+Debe aparecer un mensaje indicando que los resultados G-Eval se cargaron desde cache.
+
+**📌 Resultado esperado:**  
+Evitas llamadas repetidas y reduces costo.
+
+---
+
+### ✅ Paso 5. Fuerza regeneración de cache solo si lo necesitas
+
+**📝 Descripción del paso:**  
+Vas a ejecutar con `--refresh-cache` únicamente si quieres recalcular resultados del juez. Este paso puede consumir API otra vez.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python chatbot_evaluator.py --use-fixtures --refresh-cache
+```
+
+**✅ Validación del paso:**  
+El script vuelve a evaluar los 20 ejemplos con el modelo juez.
+
+**📌 Resultado esperado:**  
+La cache se actualiza con resultados nuevos.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 7 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%207%20del%20Laboratorio%2010.%20Configur%C3%A9%20G-Eval%20opcional%20con%20API%20key%2C%20us%C3%A9%20un%20modelo%20juez%2C%20activ%C3%A9%20cache%20y%20compar%C3%A9%20fidelidad%2C%20relevancia%2C%20coherencia%20y%20fluencia.)
+
+---
+
+# 🧩 Tarea 8. Ejecutar ruta completa con modelo generador opcional
+
+## 🎯 Objetivo de la tarea
+
+Generar respuestas con un modelo, evaluarlas contra el Golden Dataset y comparar resultados con o sin G-Eval.
+
+> [!WARNING]
+> Esta tarea consume API porque genera respuestas. El costo dependerá del modelo, el número de ejemplos y si también ejecutas G-Eval.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Ejecuta generación y métricas léxicas sin G-Eval
+
+**📝 Descripción del paso:**  
+Vas a pedir al modelo configurado en `.env` que genere respuestas para las 20 preguntas del Golden Dataset. Después calcularás ROUGE y BLEU, pero omitirás G-Eval para reducir costo.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python chatbot_evaluator.py --skip-geval
+```
+
+**✅ Validación del paso:**  
+La salida debe indicar que el modelo generó respuestas y que se calcularon ROUGE/BLEU.
+
+**📌 Resultado esperado:**  
+Se genera o actualiza `cache/generated_responses_gpt-4o-mini.json` y los reportes en `reports/`.
+
+---
+
+### ✅ Paso 2. Ejecuta pipeline completo
+
+**📝 Descripción del paso:**  
+Vas a ejecutar el flujo completo: generación de respuestas, cálculo de métricas léxicas y G-Eval con modelo juez. Hazlo solo cuando ya tengas controlado el costo y hayas validado la ruta base.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python chatbot_evaluator.py
+```
+
+**✅ Validación del paso:**  
+Debe generarse un reporte con métricas ROUGE/BLEU y G-Eval.
+
+**📌 Resultado esperado:**  
+Tienes una evaluación completa de respuestas generadas por modelo.
+
+---
+
+### ✅ Paso 3. Revisa cache
+
+**📝 Descripción del paso:**  
+Vas a listar la carpeta `cache/` para confirmar que existen archivos de respuestas generadas y, si ejecutaste G-Eval, resultados del juez.
+
+**⚙️ Contenido del paso:**
+
+```bash
+ls -la cache/
+```
+
+**✅ Validación del paso:**  
+Debes ver cache de generación y cache del juez si ejecutaste el pipeline completo.
+
+**📌 Resultado esperado:**  
+El pipeline puede repetirse sin recalcular todo, salvo que uses `--refresh-cache`.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 8 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%208%20del%20Laboratorio%2010.%20Ejecut%C3%A9%20la%20ruta%20completa%20con%20modelo%20generador%20opcional%2C%20calcul%C3%A9%20m%C3%A9tricas%20y%20evalu%C3%A9%20resultados%20con%20o%20sin%20G-Eval%20usando%20cache.)
+
+---
+
+# 🧩 Tarea 9. Analizar divergencias entre métricas
+
+## 🎯 Objetivo de la tarea
+
+Identificar casos donde ROUGE/BLEU y G-Eval no coinciden, para entender cuándo una respuesta puede ser correcta aunque no se parezca textualmente a la referencia, o viceversa.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Abre el reporte
+
+**📝 Descripción del paso:**  
+Vas a abrir `reports/evaluation_report.md` y revisar las secciones de correlación y divergencias. Si ejecutaste con `--skip-geval`, esas secciones pueden no aparecer porque no existe evaluación con juez.
+
+**⚙️ Contenido del paso:**
+
+```bash
+code reports/evaluation_report.md
+```
+
+**✅ Validación del paso:**  
+Busca estas secciones:
+
+```text
+## 6. Correlación entre métricas
+## 7. Casos de divergencia
+```
+
+**📌 Resultado esperado:**  
+Puedes ubicar los casos donde las métricas discrepan.
+
+---
+
+### ✅ Paso 2. Interpreta patrones de divergencia
+
+**📝 Descripción del paso:**  
+Vas a clasificar cada divergencia usando una matriz de interpretación. Este paso es analítico; no modifica archivos automáticamente.
+
+**⚙️ Contenido del paso:**
+
+| Patrón | Significado probable |
+|---|---|
+| ROUGE bajo + G-Eval alto | La respuesta parafrasea correctamente |
+| ROUGE alto + G-Eval bajo | La respuesta usa palabras similares pero puede tener errores factuales |
+| BLEU bajo + G-Eval alto | Normal en respuestas abiertas |
+| Todo bajo | Respuesta deficiente o fuera de tema |
+
+**✅ Validación del paso:**  
+Selecciona al menos un caso del reporte y clasifícalo con esta tabla.
+
+**📌 Resultado esperado:**  
+Puedes explicar por qué no basta con una sola métrica.
+
+---
+
+### ✅ Paso 3. Genera lista de casos extremos
+
+**📝 Descripción del paso:**  
+Vas a leer `reports/evaluation_results.json` y calcular diferencias entre G-Eval normalizado y ROUGE-1. Este paso solo mostrará resultados si ejecutaste G-Eval.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python - << 'PY'
+import json
+with open('reports/evaluation_results.json', encoding='utf-8') as f:
+    data = json.load(f)
+
+rows = []
+for e in data['entries']:
+    r1 = e['rouge_scores']['rouge1_f1']
+    g = e.get('geval_result')
+    if g:
+        rows.append((e['golden']['id'], r1, g['score_promedio'], g['score_promedio']/5 - r1))
+
+if not rows:
+    print('No hay resultados G-Eval. Ejecuta sin --skip-geval para analizar divergencias semánticas.')
+else:
+    for row in sorted(rows, key=lambda x: abs(x[3]), reverse=True)[:5]:
+        print(f'ID={row[0]} ROUGE1={row[1]:.4f} GEVAL={row[2]:.2f} DIV={row[3]:.4f}')
+PY
+```
+
+**✅ Validación del paso:**  
+Si existe G-Eval, deben aparecer los IDs con mayor divergencia.
+
+**📌 Resultado esperado:**  
+Identificas casos prioritarios para revisión humana.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 9 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%209%20del%20Laboratorio%2010.%20Analic%C3%A9%20divergencias%20entre%20ROUGE%2C%20BLEU%20y%20G-Eval%20para%20detectar%20par%C3%A1frasis%20correctas%2C%20errores%20factuales%2C%20respuestas%20incompletas%20o%20limitaciones%20de%20m%C3%A9tricas.)
+
+---
+
+# 🧩 Tarea 10. Realizar revisión humana y cerrar evidencias
+
+## 🎯 Objetivo de la tarea
+
+Complementar métricas automáticas con criterio humano y confirmar que los entregables finales están completos y seguros.
+
+---
+
+## 🛠️ Pasos
+
+### ✅ Paso 1. Revisa los peores casos
+
+**📝 Descripción del paso:**  
+Vas a abrir `reports/evaluation_report.md` y revisar la sección `Top 3 peores respuestas`. El objetivo es determinar si los peores casos realmente son incorrectos o si fueron penalizados por redacción diferente.
+
+**⚙️ Contenido del paso:**
+
+```bash
+code reports/evaluation_report.md
+```
+
+Busca:
+
+```text
+## 5. Top 3 peores respuestas
+```
+
+**✅ Validación del paso:**  
+Completa en tus notas una tabla como esta:
+
+| ID | Problema detectado | ¿La respuesta es factualmente correcta? | Acción recomendada |
+|---|---|---|---|
+|  |  |  |  |
+|  |  |  |  |
+|  |  |  |  |
+
+**📌 Resultado esperado:**  
+Tienes una interpretación humana de los casos débiles.
+
+---
+
+### ✅ Paso 2. Revisa casos divergentes
+
+**📝 Descripción del paso:**  
+Si ejecutaste G-Eval, vas a revisar los casos donde ROUGE/BLEU y G-Eval no coinciden. Esto ayuda a distinguir entre paráfrasis correcta, error factual, respuesta incompleta o limitación de una métrica.
+
+**⚙️ Contenido del paso:**
+
+```text
+## 7. Casos de divergencia
+```
+
+Clasifica cada caso:
+
+| ID | ROUGE | G-Eval | Interpretación | Acción |
+|---|---:|---:|---|---|
+|  |  |  | Parafraseo correcto / error factual / irrelevante |  |
+
+**✅ Validación del paso:**  
+Al menos un caso divergente queda clasificado.
+
+**📌 Resultado esperado:**  
+La evaluación automática queda complementada con criterio humano.
+
+---
+
+### ✅ Paso 3. Valida entregables
+
+**📝 Descripción del paso:**  
+Vas a ejecutar una revisión rápida para confirmar que los archivos principales existen y no están vacíos. Esta validación ayuda a preparar la entrega final.
+
+**⚙️ Contenido del paso:**
+
+```bash
+python - << 'PY'
+from pathlib import Path
+files = [
+    'golden_dataset.json',
+    'fixtures_responses.json',
+    'chatbot_evaluator.py',
+    'reports/evaluation_report.md',
+    'reports/evaluation_report.html',
+    'reports/evaluation_results.json',
+]
+for f in files:
+    p = Path(f)
+    print(('✅' if p.exists() else '❌'), f, p.stat().st_size if p.exists() else '')
+PY
+```
+
+**📌 Resultado esperado:**  
+Todos los archivos obligatorios existen y tienen contenido.
+
+---
+
+### ✅ Paso 4. Entrega evidencias seguras
+
+**📝 Descripción del paso:**  
+Vas a separar archivos seguros de entrega y archivos que no deben compartirse. No entregues `.env`, `.venv/` ni cache si contiene resultados de API que no quieras compartir.
+
+**⚙️ Contenido del paso:**
+
+Puedes entregar:
+
+```text
+golden_dataset.json
+fixtures_responses.json
+chatbot_evaluator.py
+requirements.txt
+reports/evaluation_report.md
+reports/evaluation_report.html
+reports/evaluation_results.json
+```
+
+No entregues:
+
+```text
+.env
+.venv/
+cache/ si contiene resultados privados o costosos
+```
+
+**✅ Validación del paso:**
+
+```bash
+grep -r "sk-" . --include="*.py" --include="*.json" --include="*.md" 2>/dev/null   && echo "⚠️ Posibles claves encontradas"   || echo "✅ No se encontraron claves en archivos entregables"
+```
+
+**📌 Resultado esperado:**  
+Tu entrega no contiene credenciales ni información sensible.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar la Tarea 10 en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20qu%C3%A9%20hice%20en%20la%20Tarea%2010%20del%20Laboratorio%2010.%20Realic%C3%A9%20revisi%C3%B3n%20humana%20de%20casos%20extremos%2C%20valid%C3%A9%20entregables%20y%20cerr%C3%A9%20evidencias%20seguras%20del%20laboratorio%20de%20evaluaci%C3%B3n%20de%20fidelidad.)
+
+---
+
+# 🏁 Resultado final esperado del laboratorio
+
+Al finalizar la práctica, debes contar con:
+
+1. Proyecto local creado en Windows.
+2. Entorno virtual Python funcional.
+3. Dependencias instaladas correctamente.
+4. Archivo `.env` protegido por `.gitignore`.
+5. Golden Dataset `golden_dataset.json` con 20 entradas.
+6. Fixtures locales `fixtures_responses.json` con 20 respuestas.
+7. Script principal `chatbot_evaluator.py`.
+8. Carpeta `reports/` con reportes Markdown, HTML y JSON.
+9. Carpeta `cache/` para resultados generados y G-Eval opcional.
+10. Métricas ROUGE-1, ROUGE-2, ROUGE-L y BLEU calculadas.
+11. Ruta base sin API validada.
+12. Ruta opcional con G-Eval documentada.
+13. Casos de divergencia identificados si se ejecutó G-Eval.
+14. Checklist de revisión humana aplicado.
+15. Evidencias seguras listas para entregar.
+
+---
+
+# ✅ Validación integral del laboratorio
+
+Ejecuta esta validación después de completar el laboratorio base:
+
+```bash
+cat > validation_test.py << 'PY'
+import json
+from pathlib import Path
+
+print('=' * 70)
+print('VALIDACIÓN INTEGRAL — Laboratorio 10')
+print('=' * 70)
+
+required = [
+    'golden_dataset.json',
+    'fixtures_responses.json',
+    'chatbot_evaluator.py',
+    'reports/evaluation_report.md',
+    'reports/evaluation_report.html',
+    'reports/evaluation_results.json',
 ]
 
-for seccion in secciones:
-    status = '✅' if seccion in content else '❌'
-    print(f'{status} {seccion}')
-"
-```
+failed = 0
 
-### Verificación de métricas mínimas esperadas
+for item in required:
+    path = Path(item)
+    if path.exists() and path.stat().st_size > 0:
+        print(f'✅ {item}')
+    else:
+        print(f'❌ {item}')
+        failed += 1
 
-```bash
-python -c "
-import json
-with open('reports/evaluation_results.json', 'r', encoding='utf-8') as f:
+if failed:
+    print(f'\n❌ Validación fallida: faltan {failed} archivo(s) requerido(s).')
+    raise SystemExit(1)
+
+with open('reports/evaluation_results.json', encoding='utf-8') as f:
     data = json.load(f)
 
 entries = data['entries']
-rouge1_scores = [e['rouge_scores']['rouge1_f1'] for e in entries]
-bleu_scores = [e['bleu_score'] for e in entries]
 
-avg_rouge1 = sum(rouge1_scores) / len(rouge1_scores)
-avg_bleu = sum(bleu_scores) / len(bleu_scores)
+assert len(entries) == 20, f'Se esperaban 20 entradas, hay {len(entries)}'
 
-print(f'Total de entradas evaluadas: {len(entries)}')
-print(f'ROUGE-1 F1 promedio: {avg_rouge1:.4f}')
-print(f'BLEU-4 promedio: {avg_bleu:.4f}')
+rouge1 = [e['rouge_scores']['rouge1_f1'] for e in entries]
+bleu = [e['bleu_score'] for e in entries]
 
-# Validaciones básicas
-assert len(entries) == 20, f'Se esperaban 20 entradas, se encontraron {len(entries)}'
-assert avg_rouge1 > 0.0, 'ROUGE-1 promedio debe ser mayor a 0'
-assert avg_bleu > 0.0, 'BLEU-4 promedio debe ser mayor a 0'
-print('\\n✅ Todas las validaciones pasaron correctamente.')
-"
+assert sum(rouge1) / len(rouge1) > 0, 'ROUGE-1 promedio debe ser > 0'
+assert sum(bleu) / len(bleu) >= 0, 'BLEU debe ser >= 0'
+
+print('\nResumen:')
+print(f'Entradas: {len(entries)}')
+print(f'ROUGE-1 promedio: {sum(rouge1) / len(rouge1):.4f}')
+print(f'BLEU promedio: {sum(bleu) / len(bleu):.4f}')
+print('\n🎉 Validación completada')
+PY
+```
+```bash
+python validation_test.py
 ```
 
-#### Salida esperada (valores aproximados)
-
-```
-Total de entradas evaluadas: 20
-ROUGE-1 F1 promedio: 0.3200–0.5500  (varía según el modelo)
-BLEU-4 promedio:     0.0500–0.1500  (esperado bajo en generación libre)
-
-✅ Todas las validaciones pasaron correctamente.
-```
-
-> 💡 **Nota sobre los valores:** Los valores de ROUGE-1 entre 0.30 y 0.55 son completamente normales para respuestas generadas por LLMs. Un BLEU-4 bajo (0.05–0.15) es esperado porque los modelos modernos usan vocabulario diferente al de la referencia aunque sean semánticamente correctos. Esto es precisamente por lo que G-Eval añade valor.
+**📌 Resultado esperado:**  
+La validación confirma que los archivos obligatorios existen, que hay 20 entradas evaluadas y que las métricas fueron calculadas.
 
 ---
 
-## Resolución de Problemas
+# 📊 Criterios de evaluación sugeridos
 
-### Problema 1: `ModuleNotFoundError: No module named 'rouge_score'`
+| Criterio | Ponderación |
+|---|---:|
+| Preparación correcta del entorno local | 10% |
+| Configuración segura de `.env` y `.gitignore` | 10% |
+| Golden Dataset válido | 10% |
+| Fixtures locales sin API | 10% |
+| Script `chatbot_evaluator.py` funcional | 20% |
+| Métricas ROUGE/BLEU calculadas | 15% |
+| Reportes Markdown/HTML/JSON generados | 10% |
+| G-Eval opcional con cache documentado | 10% |
+| Revisión humana y entrega segura | 5% |
+| Total | 100% |
 
-**Síntoma:** Al ejecutar `chatbot_evaluator.py`, aparece el error `ModuleNotFoundError: No module named 'rouge_score'` o similar para `nltk` o `pandas`.
+---
 
-**Causa:** El entorno virtual no está activado, o las dependencias se instalaron en el Python del sistema en lugar del entorno virtual del lab.
+# ⚠️ Errores comunes que debes evitar
+
+1. Ejecutar G-Eval antes de probar la ruta sin API.
+2. Subir `.env` a un repositorio.
+3. Usar datos reales de clientes en el Golden Dataset.
+4. Confundir ROUGE alto con respuesta factualmente correcta.
+5. Confundir BLEU bajo con respuesta necesariamente incorrecta.
+6. Borrar `reports/` y pensar que la evaluación no funcionó.
+7. Leer resultados antiguos desde cache sin darte cuenta.
+8. Ejecutar `--refresh-cache` muchas veces y consumir API innecesariamente.
+9. Usar un modelo juez sin documentar cuál fue.
+10. Omitir la revisión humana de los casos extremos.
+
+---
+
+# 🧯 Solución de problemas
+
+## Problema 1. `ModuleNotFoundError`
+
+**Causa probable:**  
+El entorno virtual no está activo o no instalaste dependencias.
 
 **Solución:**
 
 ```bash
-# 1. Verificar que el entorno virtual está activo
-# (debe aparecer (.venv) al inicio del prompt)
-which python  # macOS/Linux: debe apuntar a .venv/bin/python
-# Windows: where python  (debe apuntar a .venv\Scripts\python.exe)
-
-# 2. Si no está activo, activarlo:
-source .venv/bin/activate        # macOS/Linux
-.venv\Scripts\Activate.ps1       # Windows PowerShell
-
-# 3. Reinstalar dependencias dentro del entorno activo:
+source .venv/Scripts/activate
 pip install -r requirements.txt
-
-# 4. Verificar la instalación:
-python -c "import rouge_score, nltk, pandas, openai; print('Todas las dependencias OK')"
+python -c "import rouge_score, nltk, pandas, pydantic; print('✅ Dependencias OK')"
 ```
 
 ---
 
-### Problema 2: G-Eval devuelve `GEvalResult` con todos los scores en 0.0 y error en la justificación
+## Problema 2. `DataFrame.to_markdown()` falla
 
-**Síntoma:** Todas las entradas de G-Eval muestran `score_promedio: 0.0` y la justificación dice `"Error durante la evaluación: ..."`.
-
-**Causa más común:** La `OPENAI_API_KEY` en el archivo `.env` es inválida, ha expirado, no tiene acceso al modelo `gpt-4o`, o el límite de gasto mensual ha sido alcanzado.
+**Causa probable:**  
+Falta la librería `tabulate`.
 
 **Solución:**
 
 ```bash
-# 1. Verificar que el archivo .env existe y tiene la key correcta
-cat .env  # No compartas esta salida con nadie
+pip install 'tabulate>=0.9,<1'
+python chatbot_evaluator.py --use-fixtures --skip-geval
+```
 
-# 2. Probar la API key directamente
-python -c "
+---
+
+## Problema 3. NLTK solicita `punkt_tab`
+
+**Causa probable:**  
+Algunas versiones recientes de NLTK separan recursos adicionales para tokenización.
+
+**Solución:**
+
+```bash
+python - << 'PY'
+import nltk
+nltk.download('punkt')
+nltk.download('punkt_tab')
+print('✅ Recursos NLTK listos')
+PY
+```
+
+---
+
+## Problema 4. G-Eval falla por API key
+
+**Causa probable:**  
+`.env` no tiene API key, tiene un valor incorrecto o el entorno no cargó variables.
+
+**Solución:**
+
+```bash
+cat .env
+python - << 'PY'
 from dotenv import load_dotenv
 import os
-from openai import OpenAI
 load_dotenv()
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-try:
-    resp = client.chat.completions.create(
-        model='gpt-4o',
-        messages=[{'role': 'user', 'content': 'Di hola'}],
-        max_tokens=10
-    )
-    print('✅ API key válida. Respuesta:', resp.choices[0].message.content)
-except Exception as e:
-    print(f'❌ Error de API: {e}')
-"
-
-# 3. Si el modelo gpt-4o no está disponible, cambiar el juez en .env:
-# OPENAI_MODEL_JUDGE=gpt-4o-mini
-# (menos preciso pero más económico y con mayor disponibilidad)
-
-# 4. Verificar límites en https://platform.openai.com/usage
+key = os.getenv('OPENAI_API_KEY')
+print('Key configurada:', bool(key))
+PY
 ```
 
 ---
 
-## Limpieza
+## Problema 5. Resultados no cambian aunque modificaste el código
 
-Una vez completado el laboratorio, ejecuta los siguientes pasos para liberar recursos:
+**Causa probable:**  
+Estás leyendo resultados desde `cache/`.
+
+**Solución:**
 
 ```bash
-# 1. Desactivar el entorno virtual
-deactivate
-
-# 2. (Opcional) Eliminar el entorno virtual si no lo necesitas más
-# rm -rf .venv  # macOS/Linux
-# Remove-Item -Recurse -Force .venv  # Windows PowerShell
-
-# 3. Verificar que .env NO está en el repositorio antes de hacer commit
-git status  # .env no debe aparecer como archivo rastreado
-git check-ignore -v .env  # Debe confirmar que está ignorado
-
-# 4. Los reportes generados son seguros para compartir (no contienen credenciales)
-ls reports/
+python chatbot_evaluator.py --use-fixtures --refresh-cache
+rm -f cache/*.json
 ```
 
-> ⚠️ **Importante:** Nunca elimines el archivo `.env` sin antes guardar tu API key en un gestor de contraseñas. El archivo `.env` es el único lugar donde está almacenada localmente.
+---
+
+# 🧹 Limpieza del entorno
+
+Ejecuta estos comandos si deseas limpiar archivos generados:
+
+```bash
+rm -rf reports/
+rm -rf cache/
+rm -f validation_test.py
+```
+
+Para desactivar el entorno virtual:
+
+```bash
+deactivate
+```
+
+Para eliminar el entorno virtual completo:
+
+```bash
+rm -rf .venv/
+```
+
+Antes de compartir el proyecto, valida que no haya claves en archivos de entrega:
+
+```bash
+grep -r "sk-" . --include="*.py" --include="*.json" --include="*.md" 2>/dev/null   && echo "⚠️ Posibles claves encontradas"   || echo "✅ No se encontraron claves en archivos entregables"
+```
 
 ---
 
-## Resumen
+# 📚 Resumen conceptual
 
-En este laboratorio construiste un framework completo de evaluación de fidelidad para chatbots. Los conceptos clave que aplicaste:
+En este laboratorio construiste un framework completo para evaluar la fidelidad de respuestas de un chatbot contra un Golden Dataset. La arquitectura final separa responsabilidades:
 
-| Componente | Tecnología | Lección aplicada |
-|------------|------------|-----------------|
-| Golden Dataset | JSON + Pydantic v2 | Diseño de datos de evaluación estructurados |
-| Generación de respuestas | OpenAI SDK (`gpt-4o-mini`) | Separación de modelo evaluado vs. modelo juez |
-| Métricas ROUGE | `rouge-score` con `use_stemmer=True` | Evaluación orientada al recall con normalización morfológica |
-| Métricas BLEU | `nltk` con `SmoothingFunction.method1` | Evaluación orientada a la precisión con suavizado para textos cortos |
-| G-Eval | GPT-4o + `response_format: json_object` | Patrón LLM-as-a-Judge con evaluación multidimensional |
-| Reporte | `pandas` + Markdown + HTML | Análisis tabular, correlaciones y casos extremos |
+| Capa | Archivo / técnica | Función |
+|---|---|---|
+| Dataset de referencia | `golden_dataset.json` | Define preguntas y respuestas esperadas |
+| Respuestas simuladas | `fixtures_responses.json` | Permite evaluar sin API |
+| Métricas léxicas | ROUGE / BLEU | Miden similitud textual |
+| Evaluación semántica | G-Eval opcional | Evalúa fidelidad, relevancia, coherencia y fluencia |
+| Persistencia operativa | `cache/` | Reduce costo y llamadas repetidas |
+| Evidencia | `reports/` | Guarda resultados Markdown, HTML y JSON |
 
-### Hallazgos esperados
-
-- **BLEU-4 bajo (0.05–0.15) no significa mala calidad:** Los LLMs modernos parafrasean naturalmente, usando sinónimos que penalizan las métricas léxicas pero que G-Eval reconoce como correctos.
-- **ROUGE-L es más robusto que ROUGE-2** para capturar estructura sin penalizar reordenamientos menores de palabras.
-- **G-Eval añade valor crítico** especialmente en preguntas de tipo `inferencia` y `resumen`, donde la equivalencia semántica es más importante que la coincidencia léxica exacta.
-- **La correlación ROUGE ↔ G-Eval** en dominios factuales tiende a ser moderada (~0.4–0.6), confirmando que ambas métricas capturan dimensiones complementarias de la calidad.
-
-### Recursos adicionales
-
-- [Artículo original ROUGE — Lin, 2004](https://aclanthology.org/W04-1013/)
-- [Artículo original BLEU — Papineni et al., 2002](https://aclanthology.org/P02-1040/)
-- [G-Eval: NLG Evaluation using GPT-4 — Liu et al., 2023](https://arxiv.org/abs/2303.16634)
-- [Documentación rouge-score](https://github.com/google-research/google-research/tree/master/rouge)
-- [NLTK BLEU Score API](https://www.nltk.org/api/nltk.translate.bleu_score.html)
-
----
+La clave del diseño está en no depender de una sola métrica. ROUGE y BLEU son útiles como filtros económicos, pero pueden penalizar paráfrasis correctas. G-Eval aporta una evaluación más semántica, pero también debe revisarse críticamente. Por eso, una práctica profesional combina métricas automáticas, análisis de divergencias y revisión humana.
