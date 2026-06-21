@@ -1,156 +1,533 @@
-# Práctica 8 — Agente con Function Calling para Tareas Matemáticas y Consulta de Datos
+<div align="center">
 
-## 1. Metadatos
+# 🧪 Laboratorio 8
 
-| Campo | Valor |
+## Agente con Function Calling para tareas matemáticas, consulta de datos y herramientas controladas
+
+![Nivel](https://img.shields.io/badge/Nivel-Intermedio%20Alto-2563EB?style=flat-square)
+![Sistema](https://img.shields.io/badge/Sistema-Windows-0F766E?style=flat-square)
+![Editor](https://img.shields.io/badge/Editor-VS%20Code-7C3AED?style=flat-square)
+![Terminal](https://img.shields.io/badge/Terminal-Git%20Bash-475569?style=flat-square)
+![Lenguaje](https://img.shields.io/badge/Lenguaje-Python-CA8A04?style=flat-square)
+![API](https://img.shields.io/badge/API-OpenAI%20Function%20Calling-111111?style=flat-square)
+
+</div>
+
+> [!IMPORTANT]
+> En este laboratorio construirás un agente controlado y observable. El objetivo no es solo “llamar funciones”, sino entender cómo un modelo decide qué herramienta usar, cómo se ejecutan esas herramientas, cómo se controla el riesgo y cómo se valida el comportamiento del agente.
+
+<table>
+<tr>
+<td width="25%"><strong>🎯 Enfoque</strong><br>Agentes con herramientas</td>
+<td width="25%"><strong>⏱️ Duración</strong><br>58 minutos</td>
+<td width="25%"><strong>🧠 Bloom</strong><br>Aplicar, analizar, evaluar y crear</td>
+<td width="25%"><strong>📦 Entregable</strong><br>Agente CLI + herramientas + pruebas</td>
+</tr>
+</table>
+
+---
+
+## 🧭 Sección 1. Información general de la práctica
+
+### 📋 Datos generales de la práctica
+
+| Elemento | Detalle |
 |---|---|
+| **Nombre** | Agente con Function Calling para tareas matemáticas y consulta de datos |
 | **Duración estimada** | 58 minutos |
 | **Complejidad** | Alta |
-| **Nivel Bloom** | Crear |
-| **Módulo** | 8 — Agentes vs. Workflows |
-| **Costo API estimado** | < $0.10 USD (GPT-4o-mini recomendado) |
+| **Nivel Bloom** | Aplicar, analizar, evaluar y crear |
+| **Costo estimado** | Bajo, aproximadamente $0.10–$0.20 USD según pruebas y reintentos |
+| **Modalidad** | Individual o parejas |
+| **Entregables** | Código Python, datasets CSV, logs, reporte opcional y matriz de evaluación |
 
 ---
 
-## 2. Descripción General
+### 📌 Descripción general
 
-En este laboratorio construirás un **agente conversacional completo** (`math_data_agent.py`) que implementa el bucle agentico ReAct usando la API de Function Calling de OpenAI. El agente dispondrá de cinco herramientas especializadas: evaluación matemática segura, consulta de tipos de cambio en tiempo real, estadísticas sobre datasets CSV, búsqueda en Wikipedia y generación de reportes Markdown. Aplicarás los conceptos de la Lección 8.1 sobre el ciclo **Observar → Pensar → Actuar**, incluyendo manejo de múltiples `tool_calls` en paralelo, límite de iteraciones y confirmación humana para acciones con efectos secundarios.
+En este laboratorio construirás un agente conversacional en Python llamado `math_data_agent.py`. El agente usará **Function Calling** para decidir dinámicamente cuándo invocar herramientas externas y cómo combinar sus resultados para responder una consulta.
+
+A diferencia de un workflow tradicional, donde tú programas una secuencia fija de pasos, aquí registrarás herramientas y permitirás que el modelo decida cuál usar, con qué argumentos y en qué orden. Esto te permitirá observar el patrón agentico:
+
+```text
+Observar → Decidir herramienta → Ejecutar acción → Integrar resultado → Responder
+```
+
+El agente contará con cinco herramientas:
+
+| Herramienta | Propósito |
+|---|---|
+| `calculate_expression` | Evalúa expresiones matemáticas de forma segura usando `ast`, sin `eval()` |
+| `get_currency_exchange` | Consulta tipos de cambio con API pública y fallback local |
+| `query_statistics` | Calcula estadísticas sobre datasets CSV locales |
+| `search_wikipedia_summary` | Recupera resúmenes desde Wikipedia con fallback local |
+| `create_calculation_report` | Genera reportes Markdown con confirmación humana |
+
+Además, implementarás:
+
+- JSON Schema para describir herramientas.
+- Dispatcher de funciones.
+- Bucle agentico con límite de iteraciones.
+- Manejo de múltiples `tool_calls` en una misma iteración.
+- Ejecución paralela controlada para herramientas seguras.
+- Human-in-the-Loop para acciones con efecto secundario.
+- Logging estructurado de llamadas a herramientas.
+- Suite de pruebas con trazabilidad de herramientas usadas.
+- Comparación final entre agente y workflow.
 
 ---
 
-## 3. Objetivos de Aprendizaje
+### 🎯 Objetivos de aprendizaje
 
-- [ ] Implementar el bucle agentico completo (ReAct loop) con la API de OpenAI: recepción de mensaje → selección de tool → ejecución → retorno de resultado → respuesta final.
-- [ ] Diseñar esquemas JSON Schema correctos para cinco herramientas distintas que el LLM pueda seleccionar e invocar autónomamente.
-- [ ] Manejar múltiples `tool_calls` en paralelo y aplicar el patrón Human-in-the-Loop para herramientas con efectos secundarios en disco.
-- [ ] Aplicar evaluación matemática segura sin `eval()`, usando `ast` y operadores explícitamente permitidos.
-- [ ] Verificar el comportamiento del agente con al menos cinco queries complejas que encadenan múltiples herramientas.
+Al finalizar este laboratorio, podrás:
 
----
-
-## 4. Prerrequisitos
-
-### Conocimientos previos
-- Haber completado Labs 02-00-01 y 03-00-01 (uso del SDK de OpenAI y manejo de errores).
-- Comprensión del formato de mensajes con `tool_calls` en la API de OpenAI (roles `assistant` y `tool`).
-- Conocimiento básico de JSON Schema (tipos, `required`, `properties`).
-- Familiaridad con `pandas` para operaciones estadísticas básicas.
-
-### Acceso y credenciales
-- `OPENAI_API_KEY` activa con acceso a `gpt-4o-mini` o `gpt-4o`.
-- Conexión a internet para Frankfurter API y Wikipedia API (ambas gratuitas, sin API key).
-- Python 3.11 instalado y entorno virtual disponible.
-
-> ⚠️ **Advertencia de costos:** Este lab usa `gpt-4o-mini` por defecto para minimizar costos. No cambies el modelo a `gpt-4o` a menos que sea necesario. El costo estimado con `gpt-4o-mini` para completar todas las pruebas es inferior a $0.05 USD.
+1. Diseñar herramientas invocables por un modelo mediante JSON Schema.
+2. Implementar un bucle agentico basado en Function Calling.
+3. Diferenciar un agente de un workflow mediante comportamiento observable.
+4. Ejecutar herramientas de forma segura y controlada.
+5. Proteger acciones con efecto secundario usando confirmación humana.
+6. Implementar evaluación matemática segura sin `eval()`.
+7. Consultar fuentes externas con fallback para entornos de aula.
+8. Ejecutar y validar múltiples herramientas solicitadas por el modelo.
+9. Registrar trazabilidad de herramientas usadas por consulta.
+10. Evaluar si el agente respondió correctamente y si eligió herramientas adecuadas.
 
 ---
 
-## 5. Entorno del Laboratorio
+### ✅ Prerrequisitos
 
-### Hardware requerido
+#### 3.1 Conocimientos previos
+
+Antes de iniciar, asegúrate de conocer:
+
+- Uso básico de Python.
+- Creación de entornos virtuales.
+- Lectura y escritura de archivos.
+- Fundamentos de JSON y JSON Schema.
+- Conceptos básicos de APIs HTTP.
+- Uso básico de `pandas`.
+- Conceptos del módulo: agentes, workflows, herramientas y Human-in-the-Loop.
+
+#### 3.2 Laboratorios recomendados antes de este
+
+| Laboratorio previo | Motivo |
+|---|---|
+| Laboratorio 2 | Uso de endpoints y validación de solicitudes |
+| Laboratorio 3 | Cliente LLM robusto, respuestas estructuradas y reintentos |
+| Laboratorio 4 | Trazabilidad, reportes y seguridad en automatizaciones |
+
+---
+
+### 💻 Hardware y software requerido
+
+#### Hardware
 
 | Recurso | Mínimo | Recomendado |
-|---|---|---|
+|---|---:|---:|
+| CPU | 2 núcleos | 4 núcleos |
 | RAM | 8 GB | 16 GB |
-| CPU | 4 núcleos | 4+ núcleos |
-| Almacenamiento libre | 500 MB | 1 GB |
-| Conexión a internet | 5 Mbps | 10 Mbps |
+| Disco libre | 500 MB | 1 GB |
+| Internet | 10 Mbps | 25 Mbps |
 
-### Software y dependencias
+#### Software
 
-| Paquete | Versión | Propósito |
+| Software | Versión recomendada | Uso |
 |---|---|---|
-| `python` | 3.11.x | Intérprete |
-| `openai` | 1.35.x | SDK Function Calling |
-| `requests` | 2.31.x | Llamadas HTTP a APIs externas |
-| `pandas` | 2.1.x | Operaciones estadísticas |
-| `wikipedia-api` | 0.6.x | Búsqueda en Wikipedia |
-| `python-dotenv` | 1.0.x | Gestión de variables de entorno |
-| `tenacity` | 8.3.x | Reintentos con backoff |
+| Windows | 10/11 | Sistema operativo |
+| Visual Studio Code | Actual | Editor de código |
+| Git Bash | Actual | Terminal del laboratorio |
+| Python | 3.11+ | Runtime principal |
+| OpenAI SDK | `>=1.90,<2` | Function Calling |
+| pandas | `>=2.2,<3` | Consulta de datasets |
+| requests | `>=2.32,<3` | APIs externas |
+| wikipedia-api | `>=0.8,<1` | Consulta de Wikipedia |
+| python-dotenv | `>=1.0,<2` | Variables de entorno |
+| tenacity | `>=8.5,<10` | Reintentos con backoff |
 
-### Configuración del entorno
+---
+
+### 🛡️ Consideraciones importantes para estudiantes
+
+> [!WARNING]
+> Este laboratorio usa una API de pago. Aunque el costo estimado es bajo, valida que tengas límites de gasto configurados en tu proveedor.
+
+> [!CAUTION]
+> No escribas tu API key dentro del código. Usa siempre el archivo `.env` y verifica que esté incluido en `.gitignore`.
+
+> [!NOTE]
+> Las APIs públicas como Frankfurter o Wikipedia pueden fallar por red, disponibilidad o restricciones temporales. Por eso el laboratorio incluye fallbacks locales para que puedas continuar aunque alguna API externa no responda.
+
+> [!TIP]
+> Si un resultado cambia con el tiempo, como tipos de cambio, documenta la fecha y fuente. No trates esos valores como constantes.
+
+> [!NOTE]
+> Este laboratorio no usa ChromaDB. Si en tu terminal aparecen mensajes como `Failed to send telemetry event ClientStartEvent` o `ClientCreateCollectionEvent`, normalmente provienen de otra práctica, librería o ambiente reutilizado con ChromaDB. Trátalos como advertencias de telemetría no críticas si el proceso principal sigue funcionando; no indican que el agente, los CSV o Function Calling hayan fallado.
+
+---
+
+### 🧠 Diferencia conceptual: agente vs. workflow
+
+Antes de programar, observa la diferencia principal:
+
+| Caso | Workflow | Agente |
+|---|---|---|
+| Conversión de moneda | El código siempre llama a la herramienta de moneda | El modelo decide si necesita moneda |
+| Estadísticas | El flujo decide dataset, columna y operación | El modelo elige herramienta y argumentos |
+| Reporte | El sistema siempre exporta | El modelo solo exporta si el usuario lo pide |
+| Error externo | El flujo suele romperse si un paso falla | El agente puede explicar el error y sugerir alternativa |
+| Secuencia | Fija | Dinámica |
+
+En este laboratorio no programarás una ruta fija como:
+
+```text
+1. Calcular
+2. Consultar moneda
+3. Consultar CSV
+4. Responder
+```
+
+En su lugar, registrarás herramientas y permitirás que el modelo decida si las necesita.
+
+---
+
+### 🗂️ Estructura final del proyecto
+
+Al finalizar tendrás esta estructura:
+
+```text
+lab-08-agente-function-calling/
+├── .env
+├── .gitignore
+├── requirements.txt
+├── tools_schema.py
+├── tools_impl.py
+├── math_data_agent.py
+├── test_tools.py
+├── test_agent_queries.py
+├── matriz_evaluacion.md
+├── data/
+│   ├── ventas.csv
+│   └── temperaturas.csv
+├── logs/
+│   └── agent.log
+└── reports/
+    └── reporte_YYYYMMDD_HHMMSS.md
+```
+
+---
+
+## 🚀 Sección 2. Desarrollo de la práctica
+
+---
+
+# 🧩 Tarea 1. Preparar el proyecto local
+
+## 🎯 Objetivo de la tarea
+
+Crear el directorio del laboratorio, abrirlo en VS Code, configurar el entorno virtual, instalar dependencias y proteger archivos sensibles.
+
+### ✅ Paso 1.1. Crear carpeta del laboratorio
+
+**📝 Descripción del paso:**
+
+Ejecuta estos comandos en Git Bash. Con ellos crearás la carpeta del laboratorio y entrarás en ella para que todos los archivos, scripts, datos, logs y reportes se generen en una sola ubicación controlada.
+
+Ejecuta en **Git Bash**:
 
 ```bash
-# 1. Crear y activar entorno virtual
-python -m venv venv_lab08
-# Windows:
-venv_lab08\Scripts\activate
-# macOS/Linux:
-source venv_lab08/bin/activate
+mkdir -p ~/labs-ia-gen/lab-08-agente-function-calling
+cd ~/labs-ia-gen/lab-08-agente-function-calling
+```
 
-# 2. Instalar dependencias
-pip install openai==1.35.0 requests==2.31.0 pandas==2.1.4 \
-            wikipedia-api==0.6.0 python-dotenv==1.0.1 tenacity==8.3.0
+**✅ Validación del paso:**
 
-# 3. Crear estructura del proyecto
-mkdir lab08 && cd lab08
-mkdir data logs
+```bash
+pwd
+```
 
-# 4. Crear archivo .env (NUNCA lo subas a Git)
-cat > .env << 'EOF'
-OPENAI_API_KEY=sk-...tu_clave_aqui...
+**📌 Resultado esperado:**
+
+La ruta debe terminar en:
+
+```text
+/labs-ia-gen/lab-08-agente-function-calling
+```
+
+---
+
+### ✅ Paso 1.2. Abrir el proyecto en Visual Studio Code
+
+**📝 Descripción del paso:**
+
+Ejecuta este comando desde la carpeta `lab-08-agente-function-calling`. VS Code se abrirá usando esa carpeta como proyecto, para que puedas crear y editar los archivos del laboratorio desde el explorador lateral.
+
+```bash
+code .
+```
+
+**✅ Validación del paso:**
+
+Confirma que VS Code muestra una carpeta vacía llamada:
+
+```text
+lab-08-agente-function-calling
+```
+
+---
+
+### ✅ Paso 1.3. Crear y activar entorno virtual
+
+**📝 Descripción del paso:**
+
+Ejecuta estos comandos en Git Bash dentro de la carpeta del laboratorio. Primero crearás la carpeta `.venv/` con un entorno virtual local y después lo activarás para que las instalaciones de paquetes se apliquen solo a esta práctica.
+
+```bash
+python -m venv .venv
+source .venv/Scripts/activate
+```
+
+**✅ Validación del paso:**
+
+```bash
+python --version
+which python
+```
+
+**📌 Resultado esperado:**
+
+La ruta de Python debe incluir `.venv`.
+
+---
+
+### ✅ Paso 1.4. Crear `requirements.txt`
+
+**📝 Descripción del paso:**
+
+Crea el archivo `requirements.txt` en la raíz del proyecto. Este archivo lista las librerías que instalarás para usar Function Calling, hacer solicitudes HTTP, leer CSV, consultar Wikipedia, cargar variables de entorno y aplicar reintentos.
+
+```bash
+cat > requirements.txt << 'EOF'
+openai>=1.90,<2
+requests>=2.32,<3
+pandas>=2.2,<3
+wikipedia-api>=0.8,<1
+python-dotenv>=1.0,<2
+tenacity>=8.5,<10
 EOF
+```
 
-# 5. Crear .gitignore
+**✅ Validación del paso:**
+
+```bash
+cat requirements.txt
+```
+
+---
+
+### ✅ Paso 1.5. Instalar dependencias
+
+**📝 Descripción del paso:**
+
+Ejecuta estos comandos en Git Bash con el entorno virtual activado. El primer comando actualiza `pip` y el segundo instala todas las dependencias declaradas en `requirements.txt`.
+
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**✅ Validación del paso:**
+
+```bash
+python -c "import openai, requests, pandas, wikipediaapi, dotenv, tenacity; print('Dependencias instaladas correctamente')"
+```
+
+**📌 Resultado esperado:**
+
+```text
+Dependencias instaladas correctamente
+```
+
+---
+
+### ✅ Paso 1.6. Crear `.env`
+
+**📝 Descripción del paso:**
+
+Crea el archivo `.env` en la raíz del proyecto. En este archivo guardarás la API key, el modelo que usará el agente y la bandera para permitir fallbacks locales cuando una API externa no responda.
+
+```bash
+cat > .env << 'EOF'
+OPENAI_API_KEY=pega_aqui_tu_api_key
+OPENAI_MODEL=gpt-4o-mini
+USE_OFFLINE_FALLBACKS=true
+EOF
+```
+
+**✅ Validación del paso:**
+
+```bash
+cat .env
+```
+
+> [!IMPORTANT]
+> Antes de continuar, reemplaza `pega_aqui_tu_api_key` por tu API key real.
+
+---
+
+### ✅ Paso 1.7. Crear `.gitignore`
+
+**📝 Descripción del paso:**
+
+Crea el archivo `.gitignore` en la raíz del proyecto. Este archivo evita que se suban credenciales, el entorno virtual, logs, reportes y datasets generados si después decides versionar el proyecto con Git.
+
+```bash
 cat > .gitignore << 'EOF'
 .env
-venv_lab08/
+.venv/
 __pycache__/
 *.pyc
 logs/
-data/*.csv
 reports/
+data/*.csv
 EOF
 ```
 
-### Datasets de prueba
-
-Ejecuta este script para crear los datasets CSV locales que usará la herramienta de estadísticas:
+**✅ Validación del paso:**
 
 ```bash
-python - << 'EOF'
-import pandas as pd
-import os
+grep ".env" .gitignore
+```
 
-os.makedirs("data", exist_ok=True)
+**📌 Resultado esperado:**
 
-# Dataset 1: ventas mensuales
-pd.DataFrame({
-    "mes": ["Ene","Feb","Mar","Abr","May","Jun"],
-    "ventas": [15200, 18400, 21300, 17800, 23100, 25600],
-    "costos": [9100, 10200, 11800, 9900, 12400, 13200],
-    "unidades": [152, 184, 213, 178, 231, 256]
-}).to_csv("data/ventas.csv", index=False)
-
-# Dataset 2: temperaturas ciudad
-pd.DataFrame({
-    "ciudad": ["Madrid","Barcelona","Sevilla","Bilbao","Valencia"],
-    "temp_max": [28.5, 26.3, 35.2, 22.1, 30.8],
-    "temp_min": [14.2, 16.1, 20.3, 11.5, 17.9],
-    "humedad": [45, 68, 32, 78, 55]
-}).to_csv("data/temperaturas.csv", index=False)
-
-print("✅ Datasets creados: data/ventas.csv, data/temperaturas.csv")
-EOF
+```text
+.env
 ```
 
 ---
 
-## 6. Desarrollo Paso a Paso
+## 💬 Prompt de apoyo para explicar lo realizado
 
-### Paso 1 — Definir los esquemas JSON Schema de las cinco herramientas
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20por%20qu%C3%A9%20un%20laboratorio%20con%20agentes%20necesita%20variables%20de%20entorno%2C%20logs%2C%20l%C3%ADmites%20de%20costo%20y%20un%20archivo%20.gitignore%20bien%20configurado.)
 
-**Objetivo:** Crear el módulo `tools_schema.py` con los esquemas que el LLM usará para seleccionar e invocar cada herramienta. Un esquema bien diseñado es la diferencia entre un agente que selecciona la herramienta correcta y uno que falla.
+---
 
-#### Instrucciones
+# 🧩 Tarea 2. Crear datasets locales de prueba
 
-1. Crea el archivo `tools_schema.py` en la carpeta `lab08/`:
+## 🎯 Objetivo de la tarea
 
-```python
-# tools_schema.py
+Crear datasets CSV pequeños para que el agente pueda responder preguntas usando datos estructurados locales.
+
+---
+
+### ✅ Paso 2.1. Crear carpetas `data`, `logs` y `reports`
+
+**📝 Descripción del paso:**
+
+Ejecuta este comando en Git Bash desde la raíz del proyecto. Crearás tres carpetas: `data/` para datasets CSV, `logs/` para trazabilidad del agente y `reports/` para archivos Markdown generados por herramientas con efecto secundario.
+
+```bash
+mkdir -p data logs reports
+```
+
+**✅ Validación del paso:**
+
+```bash
+ls -la
+```
+
+**📌 Resultado esperado:**
+
+Debes ver:
+
+```text
+data/
+logs/
+reports/
+```
+
+---
+
+### ✅ Paso 2.2. Crear datasets CSV
+
+**📝 Descripción del paso:**
+
+Crea el archivo `crear_datasets.py` en la raíz del proyecto y ejecútalo. El script generará dos archivos CSV dentro de `data/`: `ventas.csv` y `temperaturas.csv`, que después serán consultados por la herramienta `query_statistics`.
+
+```bash
+cat > crear_datasets.py << 'EOF'
+import os
+import pandas as pd
+
+os.makedirs("data", exist_ok=True)
+
+ventas = pd.DataFrame({
+    "mes": ["Ene", "Feb", "Mar", "Abr", "May", "Jun"],
+    "ventas": [15200, 18400, 21300, 17800, 23100, 25600],
+    "costos": [9100, 10200, 11800, 9900, 12400, 13200],
+    "unidades": [152, 184, 213, 178, 231, 256]
+})
+
+ventas.to_csv("data/ventas.csv", index=False)
+
+temperaturas = pd.DataFrame({
+    "ciudad": ["Madrid", "Barcelona", "Sevilla", "Bilbao", "Valencia"],
+    "temp_max": [28.5, 26.3, 35.2, 22.1, 30.8],
+    "temp_min": [14.2, 16.1, 20.3, 11.5, 17.9],
+    "humedad": [45, 68, 32, 78, 55]
+})
+
+temperaturas.to_csv("data/temperaturas.csv", index=False)
+
+print("Datasets creados correctamente:")
+print("- data/ventas.csv")
+print("- data/temperaturas.csv")
+EOF
+```
+```bash
+python crear_datasets.py
+```
+
+**✅ Validación del paso:**
+
+```bash
+ls -la data
+```
+```bash
+python -c "import pandas as pd; print(pd.read_csv('data/ventas.csv').head()); print(pd.read_csv('data/temperaturas.csv').head())"
+```
+
+**📌 Resultado esperado:**
+
+Debes ver dos archivos CSV y una vista previa de ambos datasets.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20por%20qu%C3%A9%20un%20agente%20con%20herramientas%20puede%20consultar%20datos%20locales%20y%20APIs%20externas%20en%20una%20misma%20conversaci%C3%B3n%2C%20y%20qu%C3%A9%20riesgos%20existen%20si%20las%20herramientas%20no%20validan%20sus%20argumentos.)
+
+---
+
+# 🧩 Tarea 3. Definir esquemas JSON Schema de herramientas
+
+## 🎯 Objetivo de la tarea
+
+Crear `tools_schema.py` con la descripción formal de las herramientas que el modelo podrá invocar.
+
+---
+
+### ✅ Paso 3.1. Crear `tools_schema.py`
+
+**📝 Descripción del paso:**
+
+Crea el archivo `tools_schema.py` en la raíz del proyecto. En este archivo definirás los JSON Schema que describen al modelo qué herramientas existen, para qué sirven y qué argumentos acepta cada una.
+
+```bash
+cat > tools_schema.py << 'EOF'
 """
-Esquemas JSON Schema para las herramientas del agente math_data_agent.
-Cada esquema define nombre, descripción y parámetros con tipos y restricciones.
+Esquemas JSON Schema para las herramientas del agente.
+Cada herramienta define nombre, descripción y parámetros esperados.
 """
 
 TOOLS = [
@@ -160,19 +537,19 @@ TOOLS = [
             "name": "calculate_expression",
             "description": (
                 "Evalúa expresiones matemáticas de forma segura. "
-                "Soporta operadores +, -, *, /, **, % y funciones abs(), round(). "
-                "NO usa eval(); usa AST para seguridad. "
-                "Ejemplos válidos: '2 + 3 * 4', '(100 - 20) / 4', '2 ** 10'."
+                "Soporta +, -, *, /, **, %, abs() y round(). "
+                "No usa eval(). Rechaza expresiones peligrosas o demasiado costosas."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "expression": {
                         "type": "string",
-                        "description": "Expresión matemática en texto plano. Solo números y operadores permitidos."
+                        "description": "Expresión matemática. Ejemplos: '2 + 3 * 4', '(100 - 20) / 4'."
                     }
                 },
-                "required": ["expression"]
+                "required": ["expression"],
+                "additionalProperties": False
             }
         }
     },
@@ -181,27 +558,27 @@ TOOLS = [
         "function": {
             "name": "get_currency_exchange",
             "description": (
-                "Obtiene el tipo de cambio actual entre dos monedas usando la API pública de Frankfurter. "
-                "Retorna la tasa de cambio y la fecha de actualización. "
-                "Ejemplos de códigos: USD, EUR, GBP, JPY, MXN, COP, ARS, BRL."
+                "Obtiene tipo de cambio entre dos monedas usando una API pública. "
+                "Si la API no responde, puede usar una tasa local de referencia marcada como fallback."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "base": {
                         "type": "string",
-                        "description": "Código ISO 4217 de la moneda base (ej. 'USD', 'EUR').",
+                        "description": "Código ISO 4217 de moneda base. Ejemplo: USD, EUR, MXN.",
                         "minLength": 3,
                         "maxLength": 3
                     },
                     "target": {
                         "type": "string",
-                        "description": "Código ISO 4217 de la moneda destino (ej. 'MXN', 'COP').",
+                        "description": "Código ISO 4217 de moneda destino. Ejemplo: USD, EUR, MXN.",
                         "minLength": 3,
                         "maxLength": 3
                     }
                 },
-                "required": ["base", "target"]
+                "required": ["base", "target"],
+                "additionalProperties": False
             }
         }
     },
@@ -210,30 +587,30 @@ TOOLS = [
         "function": {
             "name": "query_statistics",
             "description": (
-                "Realiza operaciones estadísticas sobre datasets CSV locales precargados. "
-                "Datasets disponibles: 'ventas' (columnas: ventas, costos, unidades), "
-                "'temperaturas' (columnas: temp_max, temp_min, humedad). "
-                "Operaciones disponibles: mean, median, std, max, min."
+                "Calcula estadísticas sobre datasets CSV locales. "
+                "Datasets disponibles: ventas y temperaturas. "
+                "Operaciones: mean, median, std, max, min, sum, count."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "dataset_name": {
                         "type": "string",
-                        "description": "Nombre del dataset sin extensión.",
-                        "enum": ["ventas", "temperaturas"]
+                        "enum": ["ventas", "temperaturas"],
+                        "description": "Nombre del dataset sin extensión."
                     },
                     "operation": {
                         "type": "string",
-                        "description": "Operación estadística a realizar.",
-                        "enum": ["mean", "median", "std", "max", "min"]
+                        "enum": ["mean", "median", "std", "max", "min", "sum", "count"],
+                        "description": "Operación estadística a ejecutar."
                     },
                     "column": {
                         "type": "string",
-                        "description": "Nombre de la columna numérica sobre la que aplicar la operación."
+                        "description": "Columna numérica sobre la cual aplicar la operación."
                     }
                 },
-                "required": ["dataset_name", "operation", "column"]
+                "required": ["dataset_name", "operation", "column"],
+                "additionalProperties": False
             }
         }
     },
@@ -242,25 +619,26 @@ TOOLS = [
         "function": {
             "name": "search_wikipedia_summary",
             "description": (
-                "Obtiene el resumen introductorio de un artículo de Wikipedia en español o inglés. "
-                "Útil para obtener definiciones, contexto histórico o información factual general. "
-                "Retorna los primeros párrafos del artículo más relevante."
+                "Obtiene un resumen introductorio de Wikipedia. "
+                "Útil para definiciones y contexto factual general. "
+                "Si no hay conexión, puede usar resúmenes locales de referencia."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "Término o frase de búsqueda para Wikipedia."
+                        "description": "Tema a buscar. Ejemplo: 'Inteligencia artificial', 'Pi', 'ReAct'."
                     },
                     "language": {
                         "type": "string",
-                        "description": "Idioma de Wikipedia: 'es' para español, 'en' para inglés.",
                         "enum": ["es", "en"],
-                        "default": "es"
+                        "default": "es",
+                        "description": "Idioma de búsqueda."
                     }
                 },
-                "required": ["query"]
+                "required": ["query"],
+                "additionalProperties": False
             }
         }
     },
@@ -269,10 +647,9 @@ TOOLS = [
         "function": {
             "name": "create_calculation_report",
             "description": (
-                "⚠️ HERRAMIENTA CON EFECTO SECUNDARIO: Genera y GUARDA en disco un reporte Markdown "
-                "con los cálculos realizados durante la sesión. "
-                "Solo usar cuando el usuario solicite explícitamente guardar o exportar un reporte. "
-                "Requiere confirmación del usuario antes de ejecutar."
+                "Herramienta con efecto secundario. Genera y guarda un reporte Markdown en disco. "
+                "Solo debe usarse si el usuario pide explícitamente guardar, exportar o generar un reporte. "
+                "Requiere confirmación humana antes de ejecutarse."
             ),
             "parameters": {
                 "type": "object",
@@ -283,79 +660,109 @@ TOOLS = [
                     },
                     "calculations": {
                         "type": "array",
-                        "description": "Lista de cálculos a incluir en el reporte.",
+                        "description": "Lista de cálculos o resultados a incluir.",
                         "items": {
                             "type": "object",
                             "properties": {
                                 "description": {
                                     "type": "string",
-                                    "description": "Descripción del cálculo realizado."
+                                    "description": "Descripción del cálculo o resultado."
                                 },
                                 "result": {
                                     "type": "string",
-                                    "description": "Resultado del cálculo como string."
+                                    "description": "Resultado como texto."
                                 }
                             },
-                            "required": ["description", "result"]
+                            "required": ["description", "result"],
+                            "additionalProperties": False
                         }
                     }
                 },
-                "required": ["title", "calculations"]
+                "required": ["title", "calculations"],
+                "additionalProperties": False
             }
         }
     }
 ]
+EOF
 ```
 
-#### Salida esperada
-
-El archivo `tools_schema.py` debe crearse sin errores. Verifica su sintaxis:
+**✅ Validación del paso:**
 
 ```bash
-python -c "from tools_schema import TOOLS; print(f'✅ {len(TOOLS)} herramientas definidas')"
+python -c "from tools_schema import TOOLS; print(f'{len(TOOLS)} herramientas definidas'); print([t['function']['name'] for t in TOOLS])"
 ```
 
-#### Verificación
+**📌 Resultado esperado:**
 
-```
-✅ 5 herramientas definidas
+```text
+5 herramientas definidas
+['calculate_expression', 'get_currency_exchange', 'query_statistics', 'search_wikipedia_summary', 'create_calculation_report']
 ```
 
 ---
 
-### Paso 2 — Implementar las cinco funciones herramienta
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Objetivo:** Crear `tools_impl.py` con la implementación real de cada herramienta. Aquí aplicarás evaluación matemática segura con `ast`, llamadas HTTP con reintentos y operaciones estadísticas con `pandas`.
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20c%C3%B3mo%20influye%20la%20descripci%C3%B3n%20de%20una%20herramienta%20en%20la%20decisi%C3%B3n%20del%20modelo%20al%20usar%20Function%20Calling.%20Dame%20ejemplos%20de%20buenas%20y%20malas%20descripciones.)
 
-#### Instrucciones
+---
 
-2. Crea el archivo `tools_impl.py`:
+# 🧩 Tarea 4. Implementar herramientas seguras
 
-```python
-# tools_impl.py
+## 🎯 Objetivo de la tarea
+
+Crear `tools_impl.py` con las funciones reales que ejecutará el agente.
+
+---
+
+### ✅ Paso 4.1. Crear `tools_impl.py`
+
+**📝 Descripción del paso:**
+
+Crea el archivo `tools_impl.py` en la raíz del proyecto. En este archivo escribirás la implementación real de las funciones que el agente podrá ejecutar cuando el modelo solicite una herramienta. Implementas cinco herramientas con validación y controles:
+
+- Matemáticas sin `eval()`.
+- Límite de tamaño y potencia.
+- Tipo de cambio con fallback.
+- Estadísticas con `sum` y `count`.
+- Wikipedia con fallback local.
+- Reporte Markdown con sanitización básica.
+
+```bash
+cat > tools_impl.py << 'EOF'
 """
-Implementación de las funciones herramienta del agente math_data_agent.
-Cada función tiene manejo de errores explícito y retorna strings descriptivos en caso de fallo.
+Implementación de herramientas para el agente con Function Calling.
+Incluye validación de argumentos, fallbacks y controles de seguridad.
 """
+
+from __future__ import annotations
 
 import ast
+import logging
 import operator
 import os
-import logging
+import re
 from datetime import datetime
-from typing import List
-import requests
+from typing import Any
+
 import pandas as pd
+import requests
 import wikipediaapi
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
-# ─────────────────────────────────────────────
-# HERRAMIENTA 1: Evaluación matemática segura
-# ─────────────────────────────────────────────
+USE_OFFLINE_FALLBACKS = os.getenv("USE_OFFLINE_FALLBACKS", "true").lower() in {"1", "true", "yes", "si", "sí"}
 
-# Operadores permitidos explícitamente (sin eval())
+# -------------------------------------------------------------------
+# Herramienta 1: evaluación matemática segura
+# -------------------------------------------------------------------
+
+MAX_EXPRESSION_LENGTH = 120
+MAX_ABS_NUMBER = 1_000_000
+MAX_POWER_EXPONENT = 10
+
 _OPERADORES_PERMITIDOS = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
@@ -367,264 +774,372 @@ _OPERADORES_PERMITIDOS = {
     ast.UAdd: operator.pos,
 }
 
-def _evaluar_nodo(nodo):
-    """Evalúa recursivamente un nodo AST usando solo operadores permitidos."""
+_FUNCIONES_PERMITIDAS = {
+    "abs": abs,
+    "round": round,
+}
+
+
+def _validar_numero(valor: Any) -> float:
+    if not isinstance(valor, (int, float)):
+        raise ValueError(f"Solo se permiten números. Valor recibido: {valor!r}")
+    if abs(valor) > MAX_ABS_NUMBER:
+        raise ValueError(f"Número demasiado grande. Límite absoluto: {MAX_ABS_NUMBER}")
+    return valor
+
+
+def _evaluar_nodo(nodo: ast.AST) -> float:
     if isinstance(nodo, ast.Constant):
-        if isinstance(nodo.value, (int, float)):
-            return nodo.value
-        raise ValueError(f"Tipo de constante no permitido: {type(nodo.value)}")
-    
-    elif isinstance(nodo, ast.BinOp):
+        return _validar_numero(nodo.value)
+
+    if isinstance(nodo, ast.BinOp):
         tipo_op = type(nodo.op)
         if tipo_op not in _OPERADORES_PERMITIDOS:
             raise ValueError(f"Operador no permitido: {tipo_op.__name__}")
-        izq = _evaluar_nodo(nodo.left)
-        der = _evaluar_nodo(nodo.right)
-        return _OPERADORES_PERMITIDOS[tipo_op](izq, der)
-    
-    elif isinstance(nodo, ast.UnaryOp):
+
+        izquierdo = _evaluar_nodo(nodo.left)
+        derecho = _evaluar_nodo(nodo.right)
+
+        if isinstance(nodo.op, ast.Pow) and abs(derecho) > MAX_POWER_EXPONENT:
+            raise ValueError(f"Exponente demasiado grande. Límite: {MAX_POWER_EXPONENT}")
+
+        resultado = _OPERADORES_PERMITIDOS[tipo_op](izquierdo, derecho)
+        return _validar_numero(resultado)
+
+    if isinstance(nodo, ast.UnaryOp):
         tipo_op = type(nodo.op)
         if tipo_op not in _OPERADORES_PERMITIDOS:
             raise ValueError(f"Operador unario no permitido: {tipo_op.__name__}")
-        return _OPERADORES_PERMITIDOS[tipo_op](_evaluar_nodo(nodo.operand))
-    
-    elif isinstance(nodo, ast.Call):
-        # Solo abs() y round() están permitidas
-        if isinstance(nodo.func, ast.Name) and nodo.func.id in ("abs", "round"):
-            args = [_evaluar_nodo(a) for a in nodo.args]
-            return abs(*args) if nodo.func.id == "abs" else round(*args)
-        raise ValueError(f"Función no permitida: {ast.dump(nodo.func)}")
-    
+        return _validar_numero(_OPERADORES_PERMITIDOS[tipo_op](_evaluar_nodo(nodo.operand)))
+
+    if isinstance(nodo, ast.Call):
+        if not isinstance(nodo.func, ast.Name) or nodo.func.id not in _FUNCIONES_PERMITIDAS:
+            raise ValueError("Solo se permiten las funciones abs() y round()")
+        args = [_evaluar_nodo(arg) for arg in nodo.args]
+        resultado = _FUNCIONES_PERMITIDAS[nodo.func.id](*args)
+        return _validar_numero(resultado)
+
     raise ValueError(f"Expresión no soportada: {type(nodo).__name__}")
 
 
 def calculate_expression(expression: str) -> dict:
-    """
-    Evalúa una expresión matemática de forma segura usando AST.
-    Retorna dict con 'result' (float) o 'error' (str).
-    """
-    logger.info(f"[TOOL] calculate_expression | expression='{expression}'")
+    """Evalúa una expresión matemática segura usando AST."""
+    logger.info("[TOOL] calculate_expression | expression=%s", expression)
+
+    if not isinstance(expression, str) or not expression.strip():
+        return {"error": "La expresión no puede estar vacía."}
+
+    expression = expression.strip()
+
+    if len(expression) > MAX_EXPRESSION_LENGTH:
+        return {"error": f"Expresión demasiado larga. Máximo {MAX_EXPRESSION_LENGTH} caracteres.", "expression": expression}
+
     try:
-        # Parsear a AST sin ejecutar
-        arbol = ast.parse(expression.strip(), mode="eval")
+        arbol = ast.parse(expression, mode="eval")
         resultado = _evaluar_nodo(arbol.body)
-        logger.info(f"[TOOL] calculate_expression | result={resultado}")
-        return {"result": float(resultado), "expression": expression}
+        return {
+            "expression": expression,
+            "result": float(resultado),
+            "description": f"{expression} = {resultado}"
+        }
     except ZeroDivisionError:
         return {"error": "División por cero no permitida.", "expression": expression}
-    except ValueError as e:
-        return {"error": f"Expresión inválida o no permitida: {e}", "expression": expression}
-    except SyntaxError as e:
-        return {"error": f"Sintaxis incorrecta en la expresión: {e}", "expression": expression}
+    except SyntaxError as exc:
+        return {"error": f"Sintaxis inválida: {exc}", "expression": expression}
+    except Exception as exc:
+        return {"error": f"Expresión inválida o no permitida: {exc}", "expression": expression}
 
 
-# ─────────────────────────────────────────────
-# HERRAMIENTA 2: Tipos de cambio (Frankfurter)
-# ─────────────────────────────────────────────
+# -------------------------------------------------------------------
+# Herramienta 2: tipo de cambio
+# -------------------------------------------------------------------
 
-FRANKFURTER_URL = "https://api.frankfurter.app/latest"
-BACKUP_URL = "https://open.er-api.com/v6/latest"  # Backup sin API key (limitado)
+FRANKFURTER_PRIMARY_URL = "https://api.frankfurter.dev/v1/latest"
+FRANKFURTER_LEGACY_URL = "https://api.frankfurter.app/latest"
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+FALLBACK_RATES = {
+    ("USD", "EUR"): 0.92,
+    ("EUR", "USD"): 1.09,
+    ("USD", "MXN"): 18.00,
+    ("MXN", "USD"): 0.055,
+    ("USD", "GBP"): 0.79,
+    ("USD", "BRL"): 5.20,
+    ("USD", "COP"): 4000.00,
+}
+
+
+def _validar_moneda(code: str) -> str:
+    code = str(code).upper().strip()
+    if not re.fullmatch(r"[A-Z]{3}", code):
+        raise ValueError(f"Código de moneda inválido: {code!r}")
+    return code
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((requests.RequestException, TimeoutError)),
+    reraise=True,
+)
+def _request_exchange_rate(url: str, base: str, target: str) -> dict:
+    response = requests.get(url, params={"from": base, "to": target}, timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_currency_exchange(base: str, target: str) -> dict:
-    """
-    Consulta el tipo de cambio actual usando Frankfurter API.
-    Retorna dict con tasa, fecha y monedas, o 'error' si falla.
-    """
-    logger.info(f"[TOOL] get_currency_exchange | base={base.upper()}, target={target.upper()}")
-    base = base.upper().strip()
-    target = target.upper().strip()
-    
+    """Obtiene tipo de cambio actual con fallback local."""
     try:
-        resp = requests.get(
-            FRANKFURTER_URL,
-            params={"from": base, "to": target},
-            timeout=10
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        
-        if target not in data.get("rates", {}):
-            return {"error": f"Moneda '{target}' no encontrada. Verifica el código ISO 4217."}
-        
-        tasa = data["rates"][target]
-        resultado = {
+        base = _validar_moneda(base)
+        target = _validar_moneda(target)
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+    logger.info("[TOOL] get_currency_exchange | %s -> %s", base, target)
+
+    if base == target:
+        return {
             "base": base,
             "target": target,
-            "rate": tasa,
-            "date": data.get("date", "N/A"),
-            "description": f"1 {base} = {tasa:.4f} {target}"
+            "rate": 1.0,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "source": "identity",
+            "description": f"1 {base} = 1 {target}"
         }
-        logger.info(f"[TOOL] get_currency_exchange | result={resultado['description']}")
-        return resultado
-    
-    except requests.exceptions.ConnectionError:
-        return {"error": "No se pudo conectar a Frankfurter API. Verifica tu conexión a internet."}
-    except requests.exceptions.HTTPError as e:
-        return {"error": f"Error HTTP {e.response.status_code}: {e}"}
-    except Exception as e:
-        return {"error": f"Error inesperado al consultar tipo de cambio: {e}"}
+
+    for url in (FRANKFURTER_PRIMARY_URL, FRANKFURTER_LEGACY_URL):
+        try:
+            data = _request_exchange_rate(url, base, target)
+            rates = data.get("rates", {})
+            if target not in rates:
+                continue
+            rate = float(rates[target])
+            return {
+                "base": base,
+                "target": target,
+                "rate": rate,
+                "date": data.get("date", "N/A"),
+                "source": url,
+                "description": f"1 {base} = {rate:.4f} {target}"
+            }
+        except Exception as exc:
+            logger.warning("[TOOL] exchange endpoint failed | url=%s | error=%s", url, exc)
+
+    if USE_OFFLINE_FALLBACKS and (base, target) in FALLBACK_RATES:
+        rate = FALLBACK_RATES[(base, target)]
+        return {
+            "base": base,
+            "target": target,
+            "rate": rate,
+            "date": "fallback-reference",
+            "source": "offline_fallback",
+            "warning": "Tasa local de referencia. Verifica una fuente oficial para decisiones reales.",
+            "description": f"1 {base} ≈ {rate:.4f} {target}"
+        }
+
+    return {"error": f"No se pudo obtener tipo de cambio para {base}->{target}."}
 
 
-# ─────────────────────────────────────────────
-# HERRAMIENTA 3: Estadísticas sobre CSV
-# ─────────────────────────────────────────────
+# -------------------------------------------------------------------
+# Herramienta 3: estadísticas sobre CSV
+# -------------------------------------------------------------------
 
 _DATASETS_CACHE: dict[str, pd.DataFrame] = {}
 
+
 def _cargar_dataset(nombre: str) -> pd.DataFrame:
-    """Carga y cachea un dataset CSV desde la carpeta data/."""
+    nombre = str(nombre).strip().lower()
+    if nombre not in {"ventas", "temperaturas"}:
+        raise ValueError("Dataset no permitido. Usa: ventas o temperaturas.")
+
     if nombre not in _DATASETS_CACHE:
         ruta = os.path.join("data", f"{nombre}.csv")
         if not os.path.exists(ruta):
-            raise FileNotFoundError(f"Dataset '{nombre}' no encontrado en {ruta}")
+            raise FileNotFoundError(f"Dataset no encontrado: {ruta}")
         _DATASETS_CACHE[nombre] = pd.read_csv(ruta)
-        logger.info(f"[CACHE] Dataset '{nombre}' cargado desde {ruta}")
+
     return _DATASETS_CACHE[nombre]
 
 
 def query_statistics(dataset_name: str, operation: str, column: str) -> dict:
-    """
-    Aplica una operación estadística sobre una columna de un dataset CSV.
-    """
-    logger.info(f"[TOOL] query_statistics | dataset={dataset_name}, op={operation}, col={column}")
-    
-    operaciones_validas = {"mean", "median", "std", "max", "min"}
-    if operation not in operaciones_validas:
-        return {"error": f"Operación '{operation}' no válida. Usa: {operaciones_validas}"}
-    
+    """Calcula estadísticas sobre datasets CSV locales."""
+    operation = str(operation).strip().lower()
+    column = str(column).strip()
+
+    operaciones = {"mean", "median", "std", "max", "min", "sum", "count"}
+    if operation not in operaciones:
+        return {"error": f"Operación no permitida: {operation}. Usa: {sorted(operaciones)}"}
+
     try:
         df = _cargar_dataset(dataset_name)
-        
+
         if column not in df.columns:
-            cols_disponibles = [c for c in df.columns if df[c].dtype in ["float64", "int64"]]
+            columnas_numericas = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             return {
-                "error": f"Columna '{column}' no existe en '{dataset_name}'.",
-                "columnas_disponibles": cols_disponibles
+                "error": f"La columna '{column}' no existe en el dataset '{dataset_name}'.",
+                "available_columns": list(df.columns),
+                "numeric_columns": columnas_numericas
             }
-        
+
+        if not pd.api.types.is_numeric_dtype(df[column]):
+            return {
+                "error": f"La columna '{column}' no es numérica.",
+                "available_columns": list(df.columns)
+            }
+
         serie = df[column].dropna()
-        resultado_num = getattr(serie, operation)()
-        
-        resultado = {
+        if operation == "count":
+            result = int(serie.count())
+        else:
+            result = float(getattr(serie, operation)())
+
+        return {
             "dataset": dataset_name,
             "column": column,
             "operation": operation,
-            "result": float(resultado_num),
-            "n_rows": len(serie),
-            "description": f"{operation}({dataset_name}.{column}) = {resultado_num:.4f}"
+            "result": result,
+            "n_rows": int(serie.count()),
+            "description": f"{operation}({dataset_name}.{column}) = {result}"
         }
-        logger.info(f"[TOOL] query_statistics | result={resultado['description']}")
-        return resultado
-    
-    except FileNotFoundError as e:
-        return {"error": str(e)}
-    except Exception as e:
-        return {"error": f"Error al calcular estadística: {e}"}
+    except Exception as exc:
+        return {"error": f"Error al calcular estadística: {exc}"}
 
 
-# ─────────────────────────────────────────────
-# HERRAMIENTA 4: Búsqueda en Wikipedia
-# ─────────────────────────────────────────────
+# -------------------------------------------------------------------
+# Herramienta 4: Wikipedia con fallback
+# -------------------------------------------------------------------
 
 _WIKI_CLIENTS: dict[str, wikipediaapi.Wikipedia] = {}
 
+LOCAL_WIKI_SUMMARIES = {
+    "pi": {
+        "title": "Pi",
+        "summary": "Pi es una constante matemática que representa la relación entre la longitud de una circunferencia y su diámetro. Su valor aproximado es 3.14159265.",
+        "url": "offline://pi"
+    },
+    "inteligencia artificial": {
+        "title": "Inteligencia artificial",
+        "summary": "La inteligencia artificial es un campo de la informática que busca crear sistemas capaces de realizar tareas que normalmente requieren inteligencia humana, como razonamiento, aprendizaje y percepción.",
+        "url": "offline://inteligencia-artificial"
+    },
+    "react": {
+        "title": "ReAct",
+        "summary": "ReAct es un patrón de agentes que combina razonamiento y acción, permitiendo que un modelo decida cuándo usar herramientas y cómo integrar sus resultados.",
+        "url": "offline://react"
+    }
+}
+
+
 def _get_wiki_client(language: str) -> wikipediaapi.Wikipedia:
-    """Retorna (y cachea) un cliente de Wikipedia para el idioma dado."""
+    language = language if language in {"es", "en"} else "es"
     if language not in _WIKI_CLIENTS:
         _WIKI_CLIENTS[language] = wikipediaapi.Wikipedia(
             language=language,
-            user_agent="math_data_agent/1.0 (lab08@curso-genai.edu)"
+            user_agent="genai-intermedio-lab08/1.0 (training; contact: instructor)"
         )
     return _WIKI_CLIENTS[language]
 
 
 def search_wikipedia_summary(query: str, language: str = "es") -> dict:
-    """
-    Busca el resumen de un artículo en Wikipedia.
-    """
-    logger.info(f"[TOOL] search_wikipedia_summary | query='{query}', lang={language}")
-    
+    """Busca resumen en Wikipedia o fallback local."""
+    query = str(query).strip()
+    language = language if language in {"es", "en"} else "es"
+
+    if not query:
+        return {"error": "La consulta de Wikipedia no puede estar vacía."}
+
+    logger.info("[TOOL] search_wikipedia_summary | query=%s | language=%s", query, language)
+
     try:
         wiki = _get_wiki_client(language)
-        pagina = wiki.page(query)
-        
-        if not pagina.exists():
-            # Intentar con el idioma alternativo
-            lang_alt = "en" if language == "es" else "es"
-            wiki_alt = _get_wiki_client(lang_alt)
-            pagina = wiki_alt.page(query)
-            if not pagina.exists():
-                return {"error": f"No se encontró artículo para '{query}' en Wikipedia ({language}/{lang_alt})."}
-            language = lang_alt
-        
-        # Limitar el resumen a los primeros 500 caracteres para no saturar el contexto
-        resumen = pagina.summary[:500] + ("..." if len(pagina.summary) > 500 else "")
-        
-        resultado = {
-            "title": pagina.title,
-            "summary": resumen,
-            "url": pagina.fullurl,
-            "language": language
-        }
-        logger.info(f"[TOOL] search_wikipedia_summary | found='{pagina.title}'")
-        return resultado
-    
-    except Exception as e:
-        return {"error": f"Error al consultar Wikipedia: {e}"}
+        page = wiki.page(query)
+        if page.exists():
+            summary = page.summary[:700]
+            if len(page.summary) > 700:
+                summary += "..."
+            return {
+                "title": page.title,
+                "summary": summary,
+                "url": page.fullurl,
+                "language": language,
+                "source": "wikipedia"
+            }
+    except Exception as exc:
+        logger.warning("[TOOL] Wikipedia failed | error=%s", exc)
+
+    key = query.lower()
+    if USE_OFFLINE_FALLBACKS:
+        for local_key, value in LOCAL_WIKI_SUMMARIES.items():
+            if local_key in key or key in local_key:
+                return {
+                    **value,
+                    "language": language,
+                    "source": "offline_fallback",
+                    "warning": "Resumen local de referencia. Verifica Wikipedia para información actual."
+                }
+
+    return {"error": f"No se encontró información para '{query}'."}
 
 
-# ─────────────────────────────────────────────
-# HERRAMIENTA 5: Generar reporte Markdown
-# ─────────────────────────────────────────────
-
-def create_calculation_report(title: str, calculations: List[dict]) -> dict:
-    """
-    Genera y guarda en disco un reporte Markdown con los cálculos realizados.
-    ⚠️ EFECTO SECUNDARIO: escribe un archivo en la carpeta reports/.
-    """
-    logger.info(f"[TOOL] create_calculation_report | title='{title}', n_calcs={len(calculations)}")
-    
-    try:
-        os.makedirs("reports", exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        nombre_archivo = f"reports/reporte_{timestamp}.md"
-        
-        lineas = [
-            f"# {title}",
-            f"\n**Generado:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"\n**Total de cálculos:** {len(calculations)}",
-            "\n---\n",
-            "## Resultados\n"
-        ]
-        
-        for i, calc in enumerate(calculations, 1):
-            desc = calc.get("description", "Sin descripción")
-            res = calc.get("result", "N/A")
-            lineas.append(f"### {i}. {desc}")
-            lineas.append(f"\n**Resultado:** `{res}`\n")
-        
-        lineas.append("\n---\n*Reporte generado por math_data_agent v1.0*\n")
-        
-        contenido = "\n".join(lineas)
-        with open(nombre_archivo, "w", encoding="utf-8") as f:
-            f.write(contenido)
-        
-        resultado = {
-            "status": "success",
-            "file_path": nombre_archivo,
-            "title": title,
-            "calculations_count": len(calculations),
-            "message": f"Reporte guardado exitosamente en '{nombre_archivo}'"
-        }
-        logger.info(f"[TOOL] create_calculation_report | saved={nombre_archivo}")
-        return resultado
-    
-    except Exception as e:
-        return {"error": f"Error al generar el reporte: {e}"}
+# -------------------------------------------------------------------
+# Herramienta 5: reporte Markdown con sanitización
+# -------------------------------------------------------------------
 
 
-# Mapa de nombre → función para el dispatcher del agente
+def _safe_markdown_text(text: Any, max_len: int = 500) -> str:
+    text = str(text).replace("\x00", "").strip()
+    text = re.sub(r"[\r\n]{3,}", "\n\n", text)
+    return text[:max_len]
+
+
+def create_calculation_report(title: str, calculations: list[dict]) -> dict:
+    """Genera un reporte Markdown. Requiere confirmación desde el agente."""
+    title = _safe_markdown_text(title, max_len=120) or "Reporte de cálculos"
+
+    if not isinstance(calculations, list) or not calculations:
+        return {"error": "Debes proporcionar al menos un cálculo para el reporte."}
+
+    os.makedirs("reports", exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_path = os.path.join("reports", f"reporte_{timestamp}.md")
+
+    lines = [
+        f"# {title}",
+        "",
+        f"**Generado:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"**Total de resultados:** {len(calculations)}",
+        "",
+        "---",
+        "",
+        "## Resultados",
+        ""
+    ]
+
+    for index, item in enumerate(calculations, start=1):
+        description = _safe_markdown_text(item.get("description", "Sin descripción"), max_len=300)
+        result = _safe_markdown_text(item.get("result", "N/A"), max_len=300)
+        lines.append(f"### {index}. {description}")
+        lines.append("")
+        lines.append(f"**Resultado:** `{result}`")
+        lines.append("")
+
+    lines.append("---")
+    lines.append("")
+    lines.append("*Reporte generado por el agente del Laboratorio 8.*")
+    lines.append("")
+
+    with open(file_path, "w", encoding="utf-8") as file:
+        file.write("\n".join(lines))
+
+    return {
+        "status": "success",
+        "file_path": file_path,
+        "title": title,
+        "calculations_count": len(calculations),
+        "message": f"Reporte guardado en {file_path}"
+    }
+
+
 TOOL_FUNCTIONS = {
     "calculate_expression": calculate_expression,
     "get_currency_exchange": get_currency_exchange,
@@ -632,853 +1147,1066 @@ TOOL_FUNCTIONS = {
     "search_wikipedia_summary": search_wikipedia_summary,
     "create_calculation_report": create_calculation_report,
 }
-```
-
-#### Salida esperada
-
-```bash
-# Prueba rápida de cada herramienta
-python - << 'EOF'
-from tools_impl import (calculate_expression, get_currency_exchange,
-                        query_statistics, search_wikipedia_summary)
-
-print(calculate_expression("(100 - 20) / 4 + 2 ** 3"))
-print(get_currency_exchange("USD", "EUR"))
-print(query_statistics("ventas", "mean", "ventas"))
-print(search_wikipedia_summary("Inteligencia artificial", "es"))
 EOF
 ```
 
-#### Verificación
+**✅ Validación del paso:**
 
-Debes ver salidas similares a:
+```bash
+python -m py_compile tools_impl.py
 ```
-{'result': 28.0, 'expression': '(100 - 20) / 4 + 2 ** 3'}
-{'base': 'USD', 'target': 'EUR', 'rate': 0.9234, 'date': '2024-...', 'description': '1 USD = 0.9234 EUR'}
-{'dataset': 'ventas', 'column': 'ventas', 'operation': 'mean', 'result': 20233.3333, ...}
-{'title': 'Inteligencia artificial', 'summary': '...', 'url': '...'}
+
+**📌 Resultado esperado:**
+
+El comando no debe mostrar errores.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20por%20qu%C3%A9%20una%20herramienta%20matem%C3%A1tica%20puede%20ser%20insegura%20aunque%20no%20use%20eval%28%29%2C%20y%20qu%C3%A9%20controles%20debo%20aplicar%20para%20evitar%20c%C3%A1lculos%20costosos%20o%20entradas%20maliciosas.)
+
+---
+
+# 🧩 Tarea 5. Probar herramientas sin agente
+
+## 🎯 Objetivo de la tarea
+
+Validar cada herramienta de forma aislada antes de conectarla al modelo.
+
+---
+
+### ✅ Paso 5.1. Crear `test_tools.py`
+
+**📝 Descripción del paso:**
+
+Crea el archivo `test_tools.py` en la raíz del proyecto y ejecútalo. Este script valida las herramientas de forma aislada, antes de conectarlas al agente y al modelo, para detectar errores de implementación sin depender de Function Calling.
+
+```bash
+cat > test_tools.py << 'EOF'
+from tools_schema import TOOLS
+from tools_impl import (
+    TOOL_FUNCTIONS,
+    calculate_expression,
+    get_currency_exchange,
+    query_statistics,
+    search_wikipedia_summary,
+)
+
+
+def check(condition: bool, message: str) -> None:
+    if condition:
+        print(f"✅ {message}")
+    else:
+        raise AssertionError(message)
+
+
+print("=== Validación de herramientas ===")
+
+schema_names = {tool["function"]["name"] for tool in TOOLS}
+impl_names = set(TOOL_FUNCTIONS.keys())
+check(schema_names == impl_names, "Los schemas coinciden con las funciones implementadas")
+
+math_ok = calculate_expression("(100 - 20) / 4 + 2 ** 3")
+check("result" in math_ok and math_ok["result"] == 28.0, "Cálculo matemático válido")
+
+math_danger = calculate_expression('__import__("os").system("dir")')
+check("error" in math_danger, "Expresión peligrosa rechazada")
+
+math_expensive = calculate_expression("999999 ** 999")
+check("error" in math_expensive, "Cálculo costoso rechazado")
+
+stats_sum = query_statistics("ventas", "sum", "ventas")
+check("result" in stats_sum and stats_sum["result"] > 0, "Estadística sum sobre ventas")
+
+stats_count = query_statistics("temperaturas", "count", "temp_max")
+check("result" in stats_count and stats_count["result"] == 5, "Estadística count sobre temperaturas")
+
+exchange = get_currency_exchange("USD", "MXN")
+check("rate" in exchange or "error" in exchange, "Tipo de cambio responde con tasa o error controlado")
+
+wiki = search_wikipedia_summary("Pi", "es")
+check("summary" in wiki or "error" in wiki, "Wikipedia responde con resumen o error controlado")
+
+print("\nTodas las herramientas fueron validadas correctamente.")
+EOF
+```
+```bash
+python test_tools.py
+```
+
+**📌 Resultado esperado:**
+
+```text
+Todas las herramientas fueron validadas correctamente.
 ```
 
 ---
 
-### Paso 3 — Implementar el bucle agentico con control de flujo
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Objetivo:** Crear el archivo principal `math_data_agent.py` con el bucle ReAct completo, incluyendo: manejo de múltiples `tool_calls` en paralelo, límite de 10 iteraciones, confirmación humana para `create_calculation_report` y logging detallado.
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20por%20qu%C3%A9%20debo%20probar%20las%20herramientas%20de%20un%20agente%20de%20forma%20aislada%20antes%20de%20conectarlas%20al%20modelo.)
 
-#### Instrucciones
+---
 
-3. Crea el archivo `math_data_agent.py`:
+# 🧩 Tarea 6. Implementar el agente con Function Calling
 
-```python
-# math_data_agent.py
+## 🎯 Objetivo de la tarea
+
+Construir `math_data_agent.py` con el bucle agentico, dispatcher, trazabilidad, límite de iteraciones y confirmación humana.
+
+---
+
+### ✅ Paso 6.1. Crear `math_data_agent.py`
+
+**📝 Descripción del paso:**
+
+Crea el archivo `math_data_agent.py` en la raíz del proyecto. Este será el archivo principal del laboratorio y contendrá el bucle agentico, el cliente de OpenAI, el dispatcher de herramientas, la trazabilidad y la confirmación humana. Implementas el agente completo con:
+
+- cliente OpenAI,
+- mensajes `system` y `user`,
+- `tools`,
+- ejecución de tool calls,
+- resultados con rol `tool`,
+- límite de iteraciones,
+- trazabilidad,
+- ejecución paralela para herramientas seguras,
+- confirmación humana para reportes.
+
+
+```bash
+cat > math_data_agent.py << 'EOF'
 """
-Agente conversacional con Function Calling de OpenAI.
-Implementa el bucle ReAct: Observar → Pensar (LLM) → Actuar (Tools) → repetir.
-
-Herramientas disponibles:
-  - calculate_expression: evaluación matemática segura (sin eval)
-  - get_currency_exchange: tipos de cambio en tiempo real (Frankfurter)
-  - query_statistics: estadísticas sobre datasets CSV locales
-  - search_wikipedia_summary: resúmenes de Wikipedia
-  - create_calculation_report: genera reporte Markdown (requiere confirmación)
-
-Controles de seguridad:
-  - Máximo 10 iteraciones del bucle agentico
-  - Confirmación humana antes de ejecutar create_calculation_report
-  - Logging de cada tool_call con argumentos y resultado
+Agente conversacional con Function Calling.
+Implementa herramientas, trazabilidad, límite de iteraciones y Human-in-the-Loop.
 """
+
+from __future__ import annotations
 
 import json
 import logging
 import os
 import sys
-from typing import Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Any
 
 from dotenv import load_dotenv
-from openai import OpenAI, APIError, RateLimitError
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, RateLimitError
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from tools_schema import TOOLS
 from tools_impl import TOOL_FUNCTIONS
+from tools_schema import TOOLS
 
-# ─────────────────────────────────────────────
-# Configuración de logging
-# ─────────────────────────────────────────────
+load_dotenv()
+
 os.makedirs("logs", exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     handlers=[
         logging.FileHandler("logs/agent.log", encoding="utf-8"),
-        logging.StreamHandler(sys.stdout)
-    ]
+        logging.StreamHandler(sys.stdout),
+    ],
 )
+
 logger = logging.getLogger("math_data_agent")
 
-# ─────────────────────────────────────────────
-# Constantes del agente
-# ─────────────────────────────────────────────
-MAX_ITERACIONES = 10
-MODELO = "gpt-4o-mini"  # Cambiar a "gpt-4o" para mayor capacidad (mayor costo)
-HERRAMIENTAS_CON_CONFIRMACION = {"create_calculation_report"}
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+MAX_ITERATIONS = 10
+TOOLS_REQUIRING_CONFIRMATION = {"create_calculation_report"}
 
-PROMPT_SISTEMA = """Eres un agente asistente especializado en análisis matemático y consulta de datos.
-Tienes acceso a las siguientes herramientas:
+SYSTEM_PROMPT = """Eres un agente asistente especializado en análisis matemático y consulta de datos.
 
-1. calculate_expression: evalúa expresiones matemáticas de forma segura
-2. get_currency_exchange: consulta tipos de cambio en tiempo real
-3. query_statistics: realiza estadísticas sobre datasets CSV (ventas, temperaturas)
-4. search_wikipedia_summary: busca información en Wikipedia
-5. create_calculation_report: genera un reporte Markdown (⚠️ escribe en disco, solo si el usuario lo pide)
+Tienes acceso a herramientas para:
+- calcular expresiones matemáticas seguras,
+- consultar tipos de cambio,
+- calcular estadísticas sobre CSV locales,
+- buscar resúmenes en Wikipedia,
+- crear reportes Markdown cuando el usuario lo pida explícitamente.
 
-Instrucciones de comportamiento:
-- Usa las herramientas necesarias para responder con precisión.
-- Si necesitas múltiples datos, puedes solicitar varias herramientas en paralelo.
-- Cuando hagas cálculos, muestra los pasos intermedios.
-- Para create_calculation_report: SOLO úsala si el usuario pide explícitamente guardar o exportar.
-- Si una herramienta retorna un error, informa al usuario y sugiere alternativas.
-- Responde siempre en español, de forma clara y estructurada."""
+Instrucciones:
+- Usa herramientas solo cuando aporten precisión o datos necesarios.
+- Si necesitas varios datos independientes, puedes solicitarlos en la misma iteración.
+- Explica los pasos principales de forma clara.
+- Si una herramienta devuelve error, informa el problema y sugiere alternativa.
+- No inventes resultados numéricos si pueden calcularse con una herramienta.
+- No uses create_calculation_report salvo que el usuario pida guardar, exportar o generar un reporte.
+- Responde siempre en español.
+"""
 
 
-# ─────────────────────────────────────────────
-# Función: solicitar confirmación humana
-# ─────────────────────────────────────────────
+@dataclass
+class AgentRunResult:
+    answer: str
+    tools_used: list[str] = field(default_factory=list)
+    iterations: int = 0
+    tool_trace: list[dict] = field(default_factory=list)
 
-def _solicitar_confirmacion(nombre_tool: str, argumentos: dict) -> bool:
-    """
-    Implementa el patrón Human-in-the-Loop para herramientas con efectos secundarios.
-    Retorna True si el usuario confirma, False si cancela.
-    """
-    print("\n" + "="*60)
-    print(f"⚠️  CONFIRMACIÓN REQUERIDA")
-    print(f"El agente quiere ejecutar: '{nombre_tool}'")
-    print(f"Argumentos:")
-    print(json.dumps(argumentos, indent=2, ensure_ascii=False))
-    print("Esta acción ESCRIBIRÁ un archivo en disco.")
-    print("="*60)
-    
+
+def _parse_tool_arguments(raw_arguments: str) -> dict:
+    try:
+        return json.loads(raw_arguments or "{}")
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Argumentos JSON inválidos: {exc}") from exc
+
+
+def _request_human_confirmation(tool_name: str, arguments: dict) -> bool:
+    print("\n" + "=" * 70)
+    print("⚠️  CONFIRMACIÓN REQUERIDA")
+    print(f"El agente quiere ejecutar la herramienta: {tool_name}")
+    print("Argumentos:")
+    print(json.dumps(arguments, indent=2, ensure_ascii=False))
+    print("Esta acción puede escribir archivos en disco.")
+    print("=" * 70)
+
     while True:
-        respuesta = input("¿Confirmas la ejecución? [s/n]: ").strip().lower()
-        if respuesta in ("s", "si", "sí", "y", "yes"):
-            logger.info(f"[HUMAN-IN-THE-LOOP] Usuario CONFIRMÓ ejecución de '{nombre_tool}'")
+        response = input("¿Confirmas la ejecución? [s/n]: ").strip().lower()
+        if response in {"s", "si", "sí", "y", "yes"}:
+            logger.info("[HITL] Usuario confirmó herramienta %s", tool_name)
             return True
-        elif respuesta in ("n", "no"):
-            logger.info(f"[HUMAN-IN-THE-LOOP] Usuario CANCELÓ ejecución de '{nombre_tool}'")
+        if response in {"n", "no"}:
+            logger.info("[HITL] Usuario canceló herramienta %s", tool_name)
             return False
-        print("Por favor responde 's' (sí) o 'n' (no).")
+        print("Responde con 's' o 'n'.")
 
 
-# ─────────────────────────────────────────────
-# Función: ejecutar una tool_call individual
-# ─────────────────────────────────────────────
+def _execute_tool_call(tool_call: Any, require_confirmation: bool = True) -> tuple[str, str, dict]:
+    tool_name = tool_call.function.name
 
-def _ejecutar_tool_call(tool_call) -> str:
-    """
-    Ejecuta una tool_call del modelo, aplicando confirmación si es necesario.
-    Retorna el resultado serializado como string JSON.
-    """
-    nombre = tool_call.function.name
-    
     try:
-        argumentos = json.loads(tool_call.function.arguments)
-    except json.JSONDecodeError as e:
-        logger.error(f"[TOOL] Error al parsear argumentos de '{nombre}': {e}")
-        return json.dumps({"error": f"Argumentos inválidos: {e}"})
-    
-    logger.info(f"[TOOL_CALL] id={tool_call.id} | name={nombre} | args={argumentos}")
-    
-    # Verificar si requiere confirmación humana
-    if nombre in HERRAMIENTAS_CON_CONFIRMACION:
-        confirmado = _solicitar_confirmacion(nombre, argumentos)
-        if not confirmado:
-            resultado = {
+        arguments = _parse_tool_arguments(tool_call.function.arguments)
+    except ValueError as exc:
+        result = {"error": str(exc)}
+        return tool_call.id, tool_name, result
+
+    logger.info("[TOOL_CALL] id=%s | name=%s | args=%s", tool_call.id, tool_name, arguments)
+
+    if tool_name not in TOOL_FUNCTIONS:
+        return tool_call.id, tool_name, {"error": f"Herramienta no registrada: {tool_name}"}
+
+    if require_confirmation and tool_name in TOOLS_REQUIRING_CONFIRMATION:
+        if not _request_human_confirmation(tool_name, arguments):
+            return tool_call.id, tool_name, {
                 "status": "cancelled",
-                "message": "El usuario canceló la ejecución de esta herramienta."
+                "message": "El usuario canceló la ejecución de la herramienta."
             }
-            logger.info(f"[TOOL_CALL] '{nombre}' CANCELADA por el usuario.")
-            return json.dumps(resultado, ensure_ascii=False)
-    
-    # Verificar que la función existe
-    if nombre not in TOOL_FUNCTIONS:
-        resultado = {"error": f"Herramienta '{nombre}' no registrada en el agente."}
-        logger.error(f"[TOOL_CALL] Herramienta desconocida: '{nombre}'")
-        return json.dumps(resultado, ensure_ascii=False)
-    
-    # Ejecutar la función
+
     try:
-        resultado = TOOL_FUNCTIONS[nombre](**argumentos)
-        logger.info(f"[TOOL_RESULT] id={tool_call.id} | name={nombre} | result={str(resultado)[:200]}")
-        return json.dumps(resultado, ensure_ascii=False, default=str)
-    except TypeError as e:
-        resultado = {"error": f"Argumentos incorrectos para '{nombre}': {e}"}
-        logger.error(f"[TOOL_CALL] TypeError en '{nombre}': {e}")
-        return json.dumps(resultado, ensure_ascii=False)
-    except Exception as e:
-        resultado = {"error": f"Error inesperado en '{nombre}': {e}"}
-        logger.error(f"[TOOL_CALL] Exception en '{nombre}': {e}", exc_info=True)
-        return json.dumps(resultado, ensure_ascii=False)
+        result = TOOL_FUNCTIONS[tool_name](**arguments)
+        logger.info("[TOOL_RESULT] id=%s | name=%s | result=%s", tool_call.id, tool_name, str(result)[:300])
+        return tool_call.id, tool_name, result
+    except TypeError as exc:
+        return tool_call.id, tool_name, {"error": f"Argumentos incorrectos para {tool_name}: {exc}"}
+    except Exception as exc:
+        logger.exception("[TOOL_ERROR] id=%s | name=%s", tool_call.id, tool_name)
+        return tool_call.id, tool_name, {"error": f"Error inesperado en {tool_name}: {exc}"}
 
 
-# ─────────────────────────────────────────────
-# Función principal: llamada al LLM con reintentos
-# ─────────────────────────────────────────────
+def _execute_tool_calls(tool_calls: list[Any]) -> list[tuple[str, str, dict]]:
+    """Ejecuta tool calls. Las herramientas con confirmación se ejecutan secuencialmente."""
+    results: list[tuple[str, str, dict]] = []
+
+    confirmation_calls = [tc for tc in tool_calls if tc.function.name in TOOLS_REQUIRING_CONFIRMATION]
+    safe_calls = [tc for tc in tool_calls if tc.function.name not in TOOLS_REQUIRING_CONFIRMATION]
+
+    if safe_calls:
+        with ThreadPoolExecutor(max_workers=min(4, len(safe_calls))) as executor:
+            futures = [executor.submit(_execute_tool_call, tool_call, False) for tool_call in safe_calls]
+            for future in as_completed(futures):
+                results.append(future.result())
+
+    for tool_call in confirmation_calls:
+        results.append(_execute_tool_call(tool_call, True))
+
+    return results
+
 
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=30),
-    retry=retry_if_exception_type(RateLimitError)
+    retry=retry_if_exception_type((RateLimitError, APIConnectionError, APITimeoutError, APIStatusError)),
+    reraise=True,
 )
-def _llamar_llm(cliente: OpenAI, mensajes: list) -> object:
-    """Llama al LLM con reintentos automáticos en caso de RateLimitError."""
-    return cliente.chat.completions.create(
-        model=MODELO,
-        messages=mensajes,
+def _call_llm(client: OpenAI, messages: list[dict]) -> Any:
+    return client.chat.completions.create(
+        model=MODEL,
+        messages=messages,
         tools=TOOLS,
         tool_choice="auto",
-        temperature=0.1,  # Baja temperatura para respuestas más deterministas
-        max_tokens=2048
+        temperature=0.1,
+        max_tokens=1600,
     )
 
 
-# ─────────────────────────────────────────────
-# Bucle agentico principal (ReAct Loop)
-# ─────────────────────────────────────────────
-
-def ejecutar_agente(pregunta: str, cliente: OpenAI) -> str:
-    """
-    Ejecuta el bucle agentico completo para responder una pregunta.
-    
-    Ciclo ReAct:
-    1. Enviar mensajes al LLM
-    2. Si el modelo retorna tool_calls → ejecutar todas en paralelo
-    3. Agregar resultados al historial
-    4. Repetir hasta respuesta final o MAX_ITERACIONES
-    
-    Args:
-        pregunta: La consulta del usuario en lenguaje natural.
-        cliente: Instancia del cliente OpenAI.
-    
-    Returns:
-        La respuesta final del agente como string.
-    
-    Raises:
-        RuntimeError: Si se supera MAX_ITERACIONES sin respuesta final.
-    """
-    logger.info(f"[AGENTE] Nueva consulta: '{pregunta[:100]}...' " if len(pregunta) > 100 else f"[AGENTE] Nueva consulta: '{pregunta}'")
-    
-    mensajes = [
-        {"role": "system", "content": PROMPT_SISTEMA},
-        {"role": "user", "content": pregunta}
+def run_agent(user_query: str, client: OpenAI) -> AgentRunResult:
+    messages: list[Any] = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_query},
     ]
-    
-    for iteracion in range(1, MAX_ITERACIONES + 1):
-        logger.info(f"[AGENTE] Iteración {iteracion}/{MAX_ITERACIONES}")
-        
-        try:
-            respuesta = _llamar_llm(cliente, mensajes)
-        except APIError as e:
-            logger.error(f"[AGENTE] Error de API en iteración {iteracion}: {e}")
-            return f"Error al comunicarse con el modelo: {e}"
-        
-        mensaje_asistente = respuesta.choices[0].message
-        finish_reason = respuesta.choices[0].finish_reason
-        
-        logger.info(f"[AGENTE] finish_reason={finish_reason} | tool_calls={len(mensaje_asistente.tool_calls or [])}")
-        
-        # Agregar el mensaje del asistente al historial
-        mensajes.append(mensaje_asistente)
-        
-        # ── Caso 1: El modelo retorna una respuesta final (sin tool_calls) ──
-        if finish_reason == "stop" or not mensaje_asistente.tool_calls:
-            respuesta_final = mensaje_asistente.content or "El agente completó la tarea sin generar texto."
-            logger.info(f"[AGENTE] Respuesta final generada en iteración {iteracion}.")
-            return respuesta_final
-        
-        # ── Caso 2: El modelo solicita una o más herramientas (paralelo) ──
-        if finish_reason == "tool_calls":
-            n_tools = len(mensaje_asistente.tool_calls)
-            logger.info(f"[AGENTE] Procesando {n_tools} tool_call(s) en paralelo...")
-            
-            # Ejecutar todas las tool_calls solicitadas (pueden ser múltiples)
-            for tool_call in mensaje_asistente.tool_calls:
-                resultado_str = _ejecutar_tool_call(tool_call)
-                
-                # Agregar el resultado al historial con el formato correcto de OpenAI
-                mensajes.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": resultado_str
-                })
-            
-            # Continuar al siguiente ciclo del bucle
-            continue
-        
-        # ── Caso 3: finish_reason inesperado ──
-        logger.warning(f"[AGENTE] finish_reason inesperado: '{finish_reason}'. Deteniendo.")
-        break
-    
-    # Si se agotaron las iteraciones sin respuesta final
-    logger.error(f"[AGENTE] Se alcanzó el límite de {MAX_ITERACIONES} iteraciones sin respuesta final.")
-    raise RuntimeError(
-        f"El agente no alcanzó una respuesta final en {MAX_ITERACIONES} iteraciones. "
-        "Considera simplificar la consulta o aumentar MAX_ITERACIONES."
-    )
+
+    tools_used: list[str] = []
+    tool_trace: list[dict] = []
+
+    logger.info("[AGENT] Nueva consulta: %s", user_query)
+
+    for iteration in range(1, MAX_ITERATIONS + 1):
+        logger.info("[AGENT] Iteración %d/%d", iteration, MAX_ITERATIONS)
+
+        response = _call_llm(client, messages)
+        assistant_message = response.choices[0].message
+        finish_reason = response.choices[0].finish_reason
+
+        messages.append(assistant_message)
+
+        tool_calls = assistant_message.tool_calls or []
+        logger.info("[AGENT] finish_reason=%s | tool_calls=%d", finish_reason, len(tool_calls))
+
+        if not tool_calls:
+            answer = assistant_message.content or "El agente terminó sin texto final."
+            return AgentRunResult(
+                answer=answer,
+                tools_used=tools_used,
+                iterations=iteration,
+                tool_trace=tool_trace,
+            )
+
+        execution_results = _execute_tool_calls(tool_calls)
+
+        for tool_call_id, tool_name, result in execution_results:
+            tools_used.append(tool_name)
+            tool_trace.append({
+                "tool_call_id": tool_call_id,
+                "tool_name": tool_name,
+                "result_preview": str(result)[:300],
+            })
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "content": json.dumps(result, ensure_ascii=False, default=str),
+            })
+
+    raise RuntimeError(f"El agente excedió el límite de {MAX_ITERATIONS} iteraciones.")
 
 
-# ─────────────────────────────────────────────
-# Interfaz de línea de comandos (CLI)
-# ─────────────────────────────────────────────
+def run_agent_text(user_query: str, client: OpenAI) -> str:
+    return run_agent(user_query, client).answer
 
-def main():
-    load_dotenv()
+
+def main() -> None:
     api_key = os.getenv("OPENAI_API_KEY")
-    
-    if not api_key:
-        print("❌ ERROR: No se encontró OPENAI_API_KEY en el archivo .env")
-        sys.exit(1)
-    
-    cliente = OpenAI(api_key=api_key)
-    
-    print("\n" + "="*65)
-    print("  🤖 Math & Data Agent — Agente con Function Calling")
-    print("  Modelo:", MODELO)
-    print("  Herramientas:", len(TOOLS))
-    print("  Max iteraciones:", MAX_ITERACIONES)
-    print("="*65)
-    print("Escribe tu consulta o 'salir' para terminar.\n")
-    
+    if not api_key or api_key.startswith("pega_aqui"):
+        print("ERROR: configura OPENAI_API_KEY en el archivo .env")
+        raise SystemExit(1)
+
+    client = OpenAI(api_key=api_key)
+
+    print("\n" + "=" * 72)
+    print("🤖 Math & Data Agent — Function Calling")
+    print(f"Modelo: {MODEL}")
+    print(f"Herramientas: {len(TOOLS)}")
+    print(f"Máximo de iteraciones: {MAX_ITERATIONS}")
+    print("Comandos: salir | exit | quit")
+    print("=" * 72)
+
     while True:
         try:
-            consulta = input("🧑 Tú: ").strip()
-        except (KeyboardInterrupt, EOFError):
-            print("\n👋 Hasta luego.")
+            query = input("\nTú: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nHasta luego.")
             break
-        
-        if not consulta:
+
+        if not query:
             continue
-        if consulta.lower() in ("salir", "exit", "quit"):
-            print("👋 Hasta luego.")
+
+        if query.lower() in {"salir", "exit", "quit"}:
+            print("Hasta luego.")
             break
-        
-        print("\n🤖 Agente procesando...\n")
-        
+
         try:
-            respuesta = ejecutar_agente(consulta, cliente)
-            print(f"🤖 Agente: {respuesta}\n")
-            print("-"*65 + "\n")
-        except RuntimeError as e:
-            print(f"⚠️  {e}\n")
-        except Exception as e:
-            logger.error(f"Error inesperado: {e}", exc_info=True)
-            print(f"❌ Error inesperado: {e}\n")
+            result = run_agent(query, client)
+            print("\nAgente:")
+            print(result.answer)
+            print("\nTrazabilidad:")
+            print(f"- Iteraciones: {result.iterations}")
+            print(f"- Herramientas usadas: {result.tools_used if result.tools_used else 'ninguna'}")
+        except Exception as exc:
+            logger.exception("Error ejecutando agente")
+            print(f"Error: {exc}")
 
 
 if __name__ == "__main__":
     main()
+EOF
 ```
 
-#### Salida esperada
+**✅ Validación del paso:**
 
-El agente debe iniciar sin errores:
-
+```bash
+python -m py_compile math_data_agent.py
 ```
-=================================================================
-  🤖 Math & Data Agent — Agente con Function Calling
-  Modelo: gpt-4o-mini
-  Herramientas: 5
-  Max iteraciones: 10
-=================================================================
-Escribe tu consulta o 'salir' para terminar.
-
-🧑 Tú:
+```bash
+python math_data_agent.py
 ```
 
-#### Verificación
+Escribe:
+
+```text
+salir
+```
+
+**📌 Resultado esperado:**
+
+El agente debe iniciar y salir sin errores.
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20el%20ciclo%20completo%20de%20Function%20Calling%3A%20mensaje%20del%20usuario%2C%20tool_calls%20del%20asistente%2C%20ejecuci%C3%B3n%20de%20herramienta%2C%20mensaje%20tool%20y%20respuesta%20final.)
+
+---
+
+# 🧩 Tarea 7. Ejecutar consultas interactivas
+
+## 🎯 Objetivo de la tarea
+
+Probar manualmente que el agente decide cuándo usar herramientas.
+
+---
+
+### ✅ Paso 7.1. Ejecutar el agente
+
+**📝 Descripción del paso:**
+
+Ejecuta el archivo principal `math_data_agent.py` desde Git Bash. Esto abre la consola interactiva del agente para que puedas escribir consultas en lenguaje natural y observar qué herramientas decide usar.
 
 ```bash
 python math_data_agent.py
-# Escribe 'salir' para salir inmediatamente y verificar que carga sin errores
+```
+
+### ✅ Paso 7.2. Consulta matemática simple
+
+**📝 Descripción del paso:**
+
+Con el agente abierto en la terminal, escribe la siguiente consulta como entrada del usuario. No debes crear ni editar archivos en este paso; solo probarás si el agente decide usar la herramienta matemática.
+
+Escribe:
+
+```text
+¿Cuánto es (100 - 20) / 4 + 2 ** 3?
+```
+
+**📌 Resultado esperado:**
+
+El agente debe usar `calculate_expression` y responder que el resultado es `28`.
+
+---
+
+### ✅ Paso 7.3. Consulta de datos locales
+
+**📝 Descripción del paso:**
+
+Mantén abierto el agente en la terminal y escribe la siguiente consulta. El agente deberá leer los CSV que generaste en la carpeta `data/` mediante la herramienta `query_statistics`.
+
+Escribe:
+
+```text
+Del dataset de ventas, calcula la suma total de ventas y el promedio de costos. Explica el resultado.
+```
+
+**📌 Resultado esperado:**
+
+El agente debe usar `query_statistics`, posiblemente más de una vez, y devolver suma de ventas y promedio de costos.
+
+---
+
+### ✅ Paso 7.4. Consulta con herramientas combinadas
+
+**📝 Descripción del paso:**
+
+Mantén abierto `math_data_agent.py` y escribe la consulta indicada. En este paso no editas código; validas que el agente combine datos locales, tipo de cambio y cálculo matemático en una misma respuesta.
+
+Escribe:
+
+```text
+Convierte la suma total de ventas del dataset ventas de USD a MXN usando el tipo de cambio actual. Explica los pasos.
+```
+
+**📌 Resultado esperado:**
+
+El agente debe usar:
+
+- `query_statistics`
+- `get_currency_exchange`
+- `calculate_expression`
+
+---
+
+### ✅ Paso 7.5. Consulta con Wikipedia y cálculo
+
+**📝 Descripción del paso:**
+
+Con el agente en ejecución, escribe la consulta indicada. El agente deberá consultar información contextual con `search_wikipedia_summary` y calcular el área con `calculate_expression`.
+
+Escribe:
+
+```text
+Busca qué es Pi y calcula el área de un círculo con radio 7.5 usando Pi = 3.14159265.
+```
+
+**📌 Resultado esperado:**
+
+El agente debe usar:
+
+- `search_wikipedia_summary`
+- `calculate_expression`
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20por%20qu%C3%A9%20las%20herramientas%20con%20efectos%20secundarios%20deben%20requerir%20confirmaci%C3%B3n%20humana%20en%20sistemas%20agenticos.)
+
+---
+
+
+# 🧩 Tarea 8. Probar Human-in-the-Loop
+
+## 🎯 Objetivo de la tarea
+
+Validar que el agente solicita confirmación antes de escribir un archivo.
+
+---
+
+### ✅ Paso 8.1. Solicitar reporte
+
+**📝 Descripción del paso:**
+
+Ejecuta `math_data_agent.py` desde Git Bash y escribe la consulta indicada en la terminal interactiva. El agente debe calcular el área y después intentar usar `create_calculation_report`. Como esa herramienta escribe un archivo Markdown dentro de `reports/`, debe pedir confirmación antes de continuar.
+
+Ejecuta el agente:
+
+```bash
+python math_data_agent.py
+```
+
+Escribe:
+
+```text
+Calcula el área de un círculo con radio 5 usando Pi = 3.14159. Luego guarda un reporte con ese cálculo.
+```
+
+### Validación 1 — Cancelar
+
+Cuando pregunte:
+
+```text
+¿Confirmas la ejecución? [s/n]:
+```
+
+Responde:
+
+```text
+n
+```
+
+**📌 Resultado esperado:**
+
+El agente debe informar que el cálculo se realizó, pero que el reporte no fue guardado porque cancelaste la operación.
+
+---
+
+### Validación 2 — Confirmar
+
+Repite la consulta y responde:
+
+```text
+s
+```
+
+**✅ Validación del paso:**
+
+```bash
+ls -la reports
+```
+
+**📌 Resultado esperado:**
+
+Debe existir un archivo parecido a:
+
+```text
+reporte_YYYYMMDD_HHMMSS.md
 ```
 
 ---
 
-### Paso 4 — Ejecutar las cinco queries de prueba complejas
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Objetivo:** Verificar que el agente encadena múltiples herramientas correctamente para resolver consultas complejas que ninguna herramienta individual puede responder sola.
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20por%20qu%C3%A9%20una%20prueba%20de%20agente%20debe%20validar%20las%20herramientas%20usadas%20y%20no%20solo%20el%20texto%20final%20de%20la%20respuesta.)
 
-#### Instrucciones
+---
 
-4. Crea el script de prueba automatizado `test_agent_queries.py`:
+# 🧩 Tarea 9. Crear suite de pruebas con trazabilidad
 
-```python
-# test_agent_queries.py
-"""
-Suite de pruebas para math_data_agent.
-Ejecuta 5 queries complejas que requieren encadenar múltiples herramientas.
-Verifica que el agente produce respuestas coherentes y usa las herramientas correctas.
-"""
+## 🎯 Objetivo de la tarea
 
+Validar no solo la respuesta final, sino también las herramientas que el agente decidió usar.
+
+---
+
+### ✅ Paso 9.1. Crear `test_agent_queries.py`
+
+**📝 Descripción del paso:**
+
+Crea el archivo `test_agent_queries.py` en la raíz del proyecto. Esta prueba valida comportamiento real: respuesta generada y herramientas utilizadas. Esto evita falsos positivos donde el agente responde sin usar las herramientas necesarias.
+
+
+```bash
+cat > test_agent_queries.py << 'EOF'
 import os
-import sys
-import logging
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# Suprimir logs en las pruebas para salida más limpia
-logging.getLogger("math_data_agent").setLevel(logging.WARNING)
-logging.getLogger("tools_impl").setLevel(logging.WARNING)
+from math_data_agent import run_agent
 
 load_dotenv()
-from math_data_agent import ejecutar_agente
 
-QUERIES_PRUEBA = [
+TEST_QUERIES = [
     {
         "id": 1,
-        "descripcion": "Cálculo matemático + tipo de cambio (2 herramientas)",
-        "query": (
-            "Si tengo 5,000 USD y quiero convertirlos a Euros, "
-            "¿cuántos euros obtengo? Calcula también cuánto sería "
-            "el 15% de ese monto en euros como comisión."
-        ),
-        "herramientas_esperadas": ["get_currency_exchange", "calculate_expression"],
-        "verificacion": lambda r: "euro" in r.lower() or "eur" in r.lower()
+        "name": "Matemática simple",
+        "query": "Calcula (100 - 20) / 4 + 2 ** 3.",
+        "expected_tools": {"calculate_expression"},
+        "must_contain": ["28"],
     },
     {
         "id": 2,
-        "descripcion": "Estadísticas + cálculo (2 herramientas)",
-        "query": (
-            "Del dataset de ventas, calcula la media de ventas y la media de costos. "
-            "Luego calcula el margen de ganancia promedio como porcentaje: "
-            "((ventas_media - costos_media) / ventas_media) * 100"
-        ),
-        "herramientas_esperadas": ["query_statistics", "calculate_expression"],
-        "verificacion": lambda r: "%" in r or "margen" in r.lower() or "porcentaje" in r.lower()
+        "name": "Tipo de cambio y cálculo",
+        "query": "Si tengo 5000 USD, conviértelos a EUR y calcula el 15% de ese monto en EUR.",
+        "expected_tools": {"get_currency_exchange", "calculate_expression"},
+        "must_contain": ["EUR"],
     },
     {
         "id": 3,
-        "descripcion": "Wikipedia + cálculo (2 herramientas)",
-        "query": (
-            "¿Qué es el número Pi según Wikipedia? "
-            "Luego calcula el área de un círculo con radio 7.5 usando Pi = 3.14159265."
-        ),
-        "herramientas_esperadas": ["search_wikipedia_summary", "calculate_expression"],
-        "verificacion": lambda r: "pi" in r.lower() or "área" in r.lower() or "area" in r.lower()
+        "name": "Estadísticas y cálculo",
+        "query": "Del dataset ventas calcula la media de ventas, la media de costos y el margen promedio como porcentaje.",
+        "expected_tools": {"query_statistics", "calculate_expression"},
+        "must_contain": ["margen"],
     },
     {
         "id": 4,
-        "descripcion": "Múltiples estadísticas en paralelo (3 herramientas)",
-        "query": (
-            "Necesito un análisis completo: "
-            "1) La temperatura máxima promedio de las ciudades en el dataset de temperaturas. "
-            "2) La temperatura mínima promedio. "
-            "3) Calcula la diferencia entre ambas. "
-            "Presenta los resultados de forma clara."
-        ),
-        "herramientas_esperadas": ["query_statistics", "calculate_expression"],
-        "verificacion": lambda r: "temperatura" in r.lower() or "°" in r or "grado" in r.lower()
+        "name": "Wikipedia y cálculo",
+        "query": "Busca qué es Pi y calcula el área de un círculo de radio 7.5 usando Pi = 3.14159265.",
+        "expected_tools": {"search_wikipedia_summary", "calculate_expression"},
+        "must_contain": ["área", "Pi"],
     },
     {
         "id": 5,
-        "descripcion": "Conversión de moneda + estadística + cálculo (3 herramientas)",
-        "query": (
-            "Las ventas totales del dataset de ventas suman cierta cantidad en USD. "
-            "Primero calcula la suma total de ventas (max * número de meses aproximado). "
-            "Luego, ¿cuánto sería esa suma convertida a Pesos Mexicanos (MXN)? "
-            "Usa el tipo de cambio actual USD→MXN."
-        ),
-        "herramientas_esperadas": ["query_statistics", "get_currency_exchange", "calculate_expression"],
-        "verificacion": lambda r: "mxn" in r.lower() or "peso" in r.lower() or "mexicano" in r.lower()
-    }
+        "name": "Datos, moneda y cálculo",
+        "query": "Suma las ventas del dataset ventas y convierte ese total de USD a MXN.",
+        "expected_tools": {"query_statistics", "get_currency_exchange", "calculate_expression"},
+        "must_contain": ["MXN"],
+    },
 ]
 
 
-def ejecutar_pruebas():
-    """Ejecuta todas las queries de prueba y reporta resultados."""
+def main() -> int:
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("❌ OPENAI_API_KEY no encontrada.")
-        sys.exit(1)
-    
-    cliente = OpenAI(api_key=api_key)
-    
-    print("\n" + "="*70)
-    print("  🧪 Suite de Pruebas — math_data_agent")
-    print("="*70)
-    
-    resultados = []
-    
-    for prueba in QUERIES_PRUEBA:
-        print(f"\n📋 Query {prueba['id']}: {prueba['descripcion']}")
-        print(f"   Consulta: {prueba['query'][:80]}...")
-        print(f"   Herramientas esperadas: {prueba['herramientas_esperadas']}")
-        
-        try:
-            respuesta = ejecutar_agente(prueba["query"], cliente)
-            
-            # Verificar que la respuesta contiene elementos esperados
-            es_valida = prueba["verificacion"](respuesta)
-            tiene_contenido = len(respuesta.strip()) > 50
-            
-            exito = es_valida and tiene_contenido
-            estado = "✅ PASS" if exito else "⚠️  PARTIAL"
-            
-            print(f"   Estado: {estado}")
-            print(f"   Respuesta (primeros 200 chars): {respuesta[:200]}...")
-            
-            resultados.append({
-                "id": prueba["id"],
-                "exito": exito,
-                "respuesta_len": len(respuesta)
-            })
-        
-        except RuntimeError as e:
-            print(f"   Estado: ❌ FAIL — {e}")
-            resultados.append({"id": prueba["id"], "exito": False, "respuesta_len": 0})
-        except Exception as e:
-            print(f"   Estado: ❌ ERROR — {e}")
-            resultados.append({"id": prueba["id"], "exito": False, "respuesta_len": 0})
-        
-        print()
-    
-    # Resumen final
-    exitosos = sum(1 for r in resultados if r["exito"])
-    print("="*70)
-    print(f"  📊 RESUMEN: {exitosos}/{len(QUERIES_PRUEBA)} queries exitosas")
-    
-    if exitosos >= 4:
-        print("  ✅ El agente supera el umbral mínimo de 4/5 queries correctas.")
-    else:
-        print("  ⚠️  El agente no alcanzó el umbral mínimo. Revisa los logs en logs/agent.log")
-    print("="*70 + "\n")
-    
-    return exitosos
+    if not api_key or api_key.startswith("pega_aqui"):
+        print("Configura OPENAI_API_KEY en .env antes de ejecutar pruebas.")
+        return 1
+
+    client = OpenAI(api_key=api_key)
+
+    print("\n=== Suite de pruebas del agente ===")
+
+    passed = 0
+    rows = []
+
+    for test in TEST_QUERIES:
+        print(f"\n[{test['id']}] {test['name']}")
+        result = run_agent(test["query"], client)
+
+        tools_used = set(result.tools_used)
+        expected_tools = test["expected_tools"]
+        missing_tools = expected_tools - tools_used
+        contains_expected = any(term.lower() in result.answer.lower() for term in test["must_contain"])
+        ok = not missing_tools and contains_expected and len(result.answer.strip()) > 40
+
+        if ok:
+            passed += 1
+            status = "PASS"
+        else:
+            status = "PARTIAL"
+
+        print(f"Estado: {status}")
+        print(f"Herramientas esperadas: {sorted(expected_tools)}")
+        print(f"Herramientas usadas:    {result.tools_used}")
+        print(f"Iteraciones: {result.iterations}")
+        print(f"Respuesta: {result.answer[:250]}...")
+
+        rows.append({
+            "id": test["id"],
+            "consulta": test["name"],
+            "esperadas": ", ".join(sorted(expected_tools)),
+            "usadas": ", ".join(result.tools_used),
+            "estado": status,
+        })
+
+    with open("matriz_evaluacion.md", "w", encoding="utf-8") as file:
+        file.write("# Matriz de evaluación — Laboratorio 8\n\n")
+        file.write("| ID | Consulta | Herramientas esperadas | Herramientas usadas | Estado | Observaciones |\n")
+        file.write("|---|---|---|---|---|---|\n")
+        for row in rows:
+            file.write(
+                f"| {row['id']} | {row['consulta']} | {row['esperadas']} | {row['usadas']} | {row['estado']} |  |\n"
+            )
+
+    print("\n=== Resumen ===")
+    print(f"Pruebas exitosas: {passed}/{len(TEST_QUERIES)}")
+    print("Matriz generada: matriz_evaluacion.md")
+
+    return 0 if passed >= 4 else 1
 
 
 if __name__ == "__main__":
-    n = ejecutar_pruebas()
-    sys.exit(0 if n >= 4 else 1)
+    raise SystemExit(main())
+EOF
 ```
 
-5. Ejecuta las pruebas:
+### ✅ Paso 9.2. Ejecutar pruebas
+
+**📝 Descripción del paso:**
+
+Ejecuta el archivo `test_agent_queries.py` desde Git Bash. Este script enviará varias consultas al agente y generará `matriz_evaluacion.md` con las herramientas esperadas y las herramientas realmente usadas.
 
 ```bash
 python test_agent_queries.py
 ```
 
-#### Salida esperada
+**📌 Resultado esperado:**
 
-```
-======================================================================
-  🧪 Suite de Pruebas — math_data_agent
-======================================================================
+Debes obtener al menos:
 
-📋 Query 1: Cálculo matemático + tipo de cambio (2 herramientas)
-   Consulta: Si tengo 5,000 USD y quiero convertirlos a Euros...
-   Herramientas esperadas: ['get_currency_exchange', 'calculate_expression']
-   Estado: ✅ PASS
-   Respuesta (primeros 200 chars): Con el tipo de cambio actual de 1 USD = 0.9234 EUR...
-
-📋 Query 2: Estadísticas + cálculo (2 herramientas)
-   ...
-   Estado: ✅ PASS
-
-[... 3 queries más ...]
-
-======================================================================
-  📊 RESUMEN: 5/5 queries exitosas
-  ✅ El agente supera el umbral mínimo de 4/5 queries correctas.
-======================================================================
-```
-
-#### Verificación
-
-```bash
-# Verificar que se generaron logs detallados
-cat logs/agent.log | grep "\[TOOL_CALL\]" | head -20
+```text
+Pruebas exitosas: 4/5
+Matriz generada: matriz_evaluacion.md
 ```
 
 ---
 
-### Paso 5 — Probar el mecanismo Human-in-the-Loop
+## 💬 Prompt de apoyo para explicar lo realizado
 
-**Objetivo:** Verificar que el agente solicita confirmación antes de ejecutar `create_calculation_report` y que cancela correctamente si el usuario dice "no".
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Expl%C3%ADcame%20por%20qu%C3%A9%20una%20prueba%20de%20agente%20debe%20validar%20las%20herramientas%20usadas%20y%20no%20solo%20el%20texto%20final%20de%20la%20respuesta.)
 
-#### Instrucciones
+---
 
-6. Inicia el agente en modo interactivo:
+# 🧩 Tarea 10. Comparar agente vs. workflow
+
+## 🎯 Objetivo de la tarea
+
+Documentar cuándo conviene usar un agente y cuándo un workflow estructurado.
+
+---
+
+### ✅ Paso 10.1. Abrir matriz de evaluación
+
+**📝 Descripción del paso:**
+
+Abre o visualiza el archivo `matriz_evaluacion.md`, generado por la suite de pruebas. Puedes verlo rápidamente desde Git Bash con `cat` o abrirlo en VS Code para editarlo con más comodidad.
+
+```bash
+cat matriz_evaluacion.md
+```
+
+### ✅ Paso 10.2. Completar observaciones
+
+**📝 Descripción del paso:**
+
+Abre `matriz_evaluacion.md` en VS Code y edita únicamente la columna **Observaciones**. En esta parte documentarás si el agente eligió bien las herramientas, si hubo sobreuso o si el caso pudo resolverse con un workflow fijo.
+
+Edita `matriz_evaluacion.md` en VS Code y completa la columna **Observaciones**.
+
+Usa esta guía:
+
+| Pregunta | Criterio |
+|---|---|
+| ¿La herramienta elegida fue correcta? | Evalúa selección dinámica |
+| ¿El agente usó demasiadas herramientas? | Detecta sobreuso |
+| ¿Pudo resolverse con workflow fijo? | Compara enfoques |
+| ¿Hubo errores externos? | Evalúa resiliencia |
+| ¿La respuesta fue clara? | Evalúa utilidad final |
+
+---
+
+### ✅ Paso 10.3. Agregar conclusión final
+
+**📝 Descripción del paso:**
+
+Edita el archivo `matriz_evaluacion.md` en VS Code y agrega la conclusión al final del documento. Esta conclusión funciona como cierre técnico de la comparación entre agente y workflow.
+
+Agrega al final de `matriz_evaluacion.md`:
+
+```markdown
+## Conclusión
+
+En este laboratorio observé que un agente es útil cuando la consulta puede requerir diferentes herramientas y el orden no siempre es predecible. Sin embargo, un workflow puede ser preferible cuando el proceso es repetitivo, regulado o requiere máxima determinismo.
+```
+
+**📌 Resultado esperado:**
+
+Debes tener una matriz documentada con evidencia de herramientas esperadas, herramientas usadas y observaciones.
+
+
+---
+
+## 💬 Prompt de apoyo para explicar lo realizado
+
+[Explicar esta tarea en ChatGPT](https://chatgpt.com/?q=Ay%C3%BAdame%20a%20comparar%20cu%C3%A1ndo%20conviene%20un%20agente%20y%20cu%C3%A1ndo%20conviene%20un%20workflow%20para%20tareas%20empresariales%20con%20IA%20Generativa.)
+
+---
+
+# ✅ Validación final del laboratorio
+
+Ejecuta esta secuencia completa:
+
+```bash
+python -m py_compile tools_schema.py
+python -m py_compile tools_impl.py
+python -m py_compile math_data_agent.py
+python -m py_compile test_tools.py
+python -m py_compile test_agent_queries.py
+python test_tools.py
+python test_agent_queries.py
+ls -la logs
+ls -la data
+```
+
+## Resultado esperado
+
+Debes confirmar:
+
+| Validación | Resultado esperado |
+|---|---|
+| Compilación de scripts | Sin errores |
+| Herramientas aisladas | Todas pasan |
+| Pruebas del agente | Al menos 4/5 exitosas |
+| Logs | `logs/agent.log` creado |
+| Matriz | `matriz_evaluacion.md` creada |
+| Reporte opcional | Solo si confirmaste Human-in-the-Loop |
+
+---
+
+# 📦 Entregables del laboratorio
+
+Entrega estos archivos:
+
+| Archivo | Obligatorio | Descripción |
+|---|---|---|
+| `tools_schema.py` | Sí | Esquemas JSON Schema de herramientas |
+| `tools_impl.py` | Sí | Implementación de herramientas |
+| `math_data_agent.py` | Sí | Agente principal |
+| `test_tools.py` | Sí | Pruebas unitarias de herramientas |
+| `test_agent_queries.py` | Sí | Pruebas con trazabilidad |
+| `matriz_evaluacion.md` | Sí | Evaluación agente vs workflow |
+| `reports/*.md` | Opcional | Reporte generado si confirmaste HITL |
+
+No entregues:
+
+```text
+.env
+.venv/
+logs/
+data/*.csv si contienen datos sensibles
+```
+
+---
+
+# 📊 Criterios de evaluación
+
+| Criterio | Peso |
+|---|---:|
+| Proyecto local y entorno correctamente configurados | 10% |
+| Schemas JSON definidos correctamente | 10% |
+| Herramientas implementadas con validaciones | 15% |
+| Evaluación matemática segura sin `eval()` | 10% |
+| Agente con bucle Function Calling funcional | 20% |
+| Human-in-the-Loop implementado correctamente | 10% |
+| Pruebas con trazabilidad de herramientas usadas | 15% |
+| Matriz agente vs workflow documentada | 10% |
+
+---
+
+# ⚠️ Errores comunes y solución
+
+## Error 1 — `OPENAI_API_KEY` no encontrada
+
+### Síntoma
+
+```text
+ERROR: configura OPENAI_API_KEY en el archivo .env
+```
+
+### Solución
+
+Edita `.env`:
+
+```env
+OPENAI_API_KEY=tu_api_key_real
+OPENAI_MODEL=gpt-4o-mini
+USE_OFFLINE_FALLBACKS=true
+```
+
+Luego ejecuta:
 
 ```bash
 python math_data_agent.py
 ```
 
-7. Escribe la siguiente consulta que debería activar la herramienta de reporte:
+---
 
-```
-Calcula el área de un círculo con radio 5 usando Pi = 3.14159. 
-Luego guarda un reporte con ese cálculo.
-```
+## Error 2 — El modelo no usa la herramienta esperada
 
-8. Cuando aparezca la confirmación, primero responde `n` (cancelar) y observa el comportamiento. Luego repite la consulta y responde `s` para confirmar.
+### Posibles causas
 
-#### Salida esperada (respuesta `n` — cancelar):
+- La consulta es ambigua.
+- El modelo cree que puede responder sin herramienta.
+- La descripción del schema no es suficientemente clara.
 
-```
-==============================================================
-⚠️  CONFIRMACIÓN REQUERIDA
-El agente quiere ejecutar: 'create_calculation_report'
-Argumentos:
-{
-  "title": "Cálculo de Área de Círculo",
-  "calculations": [
-    {
-      "description": "Área de círculo radio=5",
-      "result": "78.53975"
-    }
-  ]
-}
-Esta acción ESCRIBIRÁ un archivo en disco.
-==============================================================
-¿Confirmas la ejecución? [s/n]: n
+### Solución
 
-🤖 Agente: Entendido. El cálculo del área del círculo con radio 5 es 
-78.54 unidades cuadradas (π × 5² = 78.53975). El reporte no fue 
-guardado ya que cancelaste la operación. ¿Deseas que lo guarde ahora?
-```
+Reformula la consulta:
 
-#### Salida esperada (respuesta `s` — confirmar):
-
-```bash
-# Verificar que el archivo fue creado
-ls -la reports/
-# Debe mostrar: reporte_YYYYMMDD_HHMMSS.md
-
-cat reports/reporte_*.md
+```text
+Usa el dataset ventas para calcular la suma de la columna ventas y después convierte ese resultado a MXN.
 ```
 
 ---
 
-## 7. Validación y Pruebas
+## Error 3 — Frankfurter o Wikipedia no responden
 
-### Lista de verificación final
+### Síntoma
 
-Ejecuta cada verificación y confirma que todas pasan:
-
-```bash
-# ── Verificación 1: Herramientas definidas correctamente ──
-python -c "
-from tools_schema import TOOLS
-from tools_impl import TOOL_FUNCTIONS
-assert len(TOOLS) == 5, f'Se esperaban 5 tools, hay {len(TOOLS)}'
-assert len(TOOL_FUNCTIONS) == 5, f'Se esperaban 5 funciones, hay {len(TOOL_FUNCTIONS)}'
-nombres_schema = {t['function']['name'] for t in TOOLS}
-nombres_impl = set(TOOL_FUNCTIONS.keys())
-assert nombres_schema == nombres_impl, f'Mismatch: {nombres_schema ^ nombres_impl}'
-print('✅ Verificación 1 PASS: 5 herramientas correctamente definidas e implementadas')
-"
-
-# ── Verificación 2: Evaluación matemática segura ──
-python -c "
-from tools_impl import calculate_expression
-# Debe funcionar
-r1 = calculate_expression('2 ** 10')
-assert r1['result'] == 1024.0, f'Esperado 1024, obtenido {r1}'
-
-# Debe rechazar código peligroso
-r2 = calculate_expression('__import__(\"os\").system(\"ls\")')
-assert 'error' in r2, 'Debería rechazar importaciones'
-
-r3 = calculate_expression('open(\"/etc/passwd\").read()')
-assert 'error' in r3, 'Debería rechazar acceso a archivos'
-
-print('✅ Verificación 2 PASS: Evaluación matemática segura funciona correctamente')
-"
-
-# ── Verificación 3: Estadísticas sobre datasets ──
-python -c "
-from tools_impl import query_statistics
-r = query_statistics('ventas', 'mean', 'ventas')
-assert 'result' in r, f'Error: {r}'
-assert r['result'] > 0, 'La media de ventas debe ser positiva'
-
-# Columna inexistente debe retornar error descriptivo
-r2 = query_statistics('ventas', 'mean', 'columna_inexistente')
-assert 'error' in r2, 'Columna inexistente debe retornar error'
-assert 'columnas_disponibles' in r2, 'Debe sugerir columnas disponibles'
-
-print(f'✅ Verificación 3 PASS: Estadísticas OK (mean ventas = {r[\"result\"]:.2f})')
-"
-
-# ── Verificación 4: Logs generados ──
-python -c "
-import os
-assert os.path.exists('logs/agent.log'), 'Archivo de log no encontrado'
-with open('logs/agent.log') as f:
-    contenido = f.read()
-assert '[TOOL]' in contenido or '[AGENTE]' in contenido, 'Logs no contienen entradas del agente'
-print('✅ Verificación 4 PASS: Sistema de logging funcionando')
-"
-
-# ── Verificación 5: Suite de pruebas ──
-python test_agent_queries.py
-echo "Exit code: $?"
+```text
+No se pudo obtener tipo de cambio
 ```
 
-### Prueba de estrés: límite de iteraciones
+### Solución
+
+Verifica que `.env` tenga:
+
+```env
+USE_OFFLINE_FALLBACKS=true
+```
+
+El laboratorio podrá usar tasas o resúmenes locales de referencia.
+
+---
+
+## Error 4 — Cálculo rechazado
+
+### Síntoma
+
+```text
+Expresión inválida o no permitida
+```
+
+### Causa
+
+La herramienta rechaza expresiones peligrosas o costosas, por ejemplo:
 
 ```python
-# test_max_iterations.py — Verifica que el agente no entra en loop infinito
-import os
-from dotenv import load_dotenv
-from openai import OpenAI
+999999 ** 999
+__import__("os").system("dir")
+```
 
-load_dotenv()
-from math_data_agent import ejecutar_agente, MAX_ITERACIONES
+### Solución
 
-cliente = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+Usa expresiones matemáticas simples:
 
-# Una consulta normal debe responder bien antes del límite
-respuesta = ejecutar_agente("¿Cuánto es 2 + 2?", cliente)
-assert "4" in respuesta, f"Respuesta inesperada: {respuesta}"
-print(f"✅ Consulta simple resuelta: {respuesta[:50]}")
-print(f"✅ MAX_ITERACIONES configurado en: {MAX_ITERACIONES}")
+```text
+(100 - 20) / 4 + 2 ** 3
 ```
 
 ---
 
-## 8. Resolución de Problemas
+## Error 5 — La prueba marca `PARTIAL`
 
-### Problema 1: `JSONDecodeError` al parsear argumentos de una tool_call
+### Causa
 
-**Síntoma:**
-```
-[TOOL] Error al parsear argumentos de 'calculate_expression': 
-Expecting value: line 1 column 1 (char 0)
-```
-El agente registra el error pero no detiene la ejecución. En la respuesta final, el modelo indica que no pudo ejecutar la herramienta.
+La respuesta puede ser correcta, pero el modelo no usó todas las herramientas esperadas.
 
-**Causa:**
-El modelo generó una respuesta con `tool_calls` pero el campo `arguments` llegó vacío o malformado. Esto ocurre ocasionalmente con `gpt-4o-mini` cuando la consulta es ambigua o la expresión matemática contiene caracteres especiales (comillas tipográficas `"` en lugar de `"`).
+### Solución
 
-**Solución:**
-1. Reformula la consulta evitando comillas tipográficas o caracteres especiales en las expresiones matemáticas.
-2. Si el problema persiste, agrega validación en `_ejecutar_tool_call`:
-
-```python
-# Reemplaza en _ejecutar_tool_call:
-try:
-    argumentos = json.loads(tool_call.function.arguments)
-except json.JSONDecodeError as e:
-    # Intentar limpiar el string antes de parsear
-    args_limpio = tool_call.function.arguments.strip()
-    if not args_limpio or args_limpio == "null":
-        args_limpio = "{}"
-    try:
-        argumentos = json.loads(args_limpio)
-    except json.JSONDecodeError:
-        logger.error(f"[TOOL] Argumentos irrecuperables: '{args_limpio}'")
-        return json.dumps({"error": f"Argumentos inválidos: {e}"})
-```
-
----
-
-### Problema 2: `ConnectionError` en `get_currency_exchange` durante la sesión
-
-**Síntoma:**
-```
-[TOOL] get_currency_exchange | result={'error': 'No se pudo conectar a Frankfurter API...'}
-```
-El agente responde que no pudo obtener el tipo de cambio y no puede completar la consulta.
-
-**Causa:**
-La API pública de Frankfurter (`api.frankfurter.app`) puede estar temporalmente no disponible. Esto ocurre con baja frecuencia pero puede suceder durante sesiones de clase. El decorador `@retry` de `tenacity` reintentará 3 veces, pero si el servicio está caído, todos los intentos fallarán.
-
-**Solución:**
-Activa el backup con Open Exchange Rates (plan gratuito, requiere registro en `openexchangerates.org`):
-
-```python
-# En tools_impl.py, modifica get_currency_exchange:
-def get_currency_exchange(base: str, target: str) -> dict:
-    # ... código existente ...
-    
-    # Si Frankfurter falla, intentar con valor hardcodeado de referencia
-    # (solo para demostración en clase cuando la API no está disponible)
-    TASAS_FALLBACK = {
-        ("USD", "EUR"): 0.92, ("USD", "MXN"): 17.15,
-        ("USD", "COP"): 3900.0, ("EUR", "USD"): 1.09,
-        ("USD", "GBP"): 0.79, ("USD", "BRL"): 4.95,
-    }
-    clave = (base.upper(), target.upper())
-    if clave in TASAS_FALLBACK:
-        tasa = TASAS_FALLBACK[clave]
-        logger.warning(f"[FALLBACK] Usando tasa de referencia para {clave}: {tasa}")
-        return {
-            "base": base, "target": target, "rate": tasa,
-            "date": "fallback-reference",
-            "description": f"1 {base} ≈ {tasa} {target} (tasa de referencia, API no disponible)",
-            "warning": "Dato de referencia. Verifica en fuente oficial."
-        }
-    return {"error": f"API no disponible y no hay tasa de fallback para {base}→{target}"}
-```
-
----
-
-## 9. Limpieza del Entorno
+Revisa:
 
 ```bash
-# 1. Salir del agente (si está ejecutándose): escribe 'salir' o Ctrl+C
+cat logs/agent.log
+cat matriz_evaluacion.md
+```
 
-# 2. Revisar archivos generados
-ls -la reports/   # Reportes Markdown generados
-ls -la logs/      # Archivos de log
+Evalúa si faltó una herramienta o si la consulta podía resolverse de otra manera.
 
-# 3. (Opcional) Eliminar archivos generados durante las pruebas
+---
+
+# 🧹 Limpieza del entorno
+
+Cuando termines, puedes limpiar archivos generados:
+
+```bash
 rm -rf reports/
 rm -f logs/agent.log
-
-# 4. Desactivar el entorno virtual
-deactivate
-
-# 5. (Opcional) Eliminar el entorno virtual completo
-# Windows:
-# rmdir /s /q venv_lab08
-# macOS/Linux:
-# rm -rf venv_lab08
-
-# 6. Verificar que .env NO está en el repositorio
-git status  # .env debe aparecer como "ignored" o no aparecer
-git diff --cached  # No debe mostrar API keys
+rm -f crear_datasets.py
 ```
 
-> ⚠️ **Importante:** Nunca elimines el archivo `.env` con `git rm` si ya fue rastreado accidentalmente. En ese caso, usa `git rm --cached .env` y confirma que está en `.gitignore`.
+Para salir del entorno virtual:
+
+```bash
+deactivate
+```
+
+Para eliminar el entorno completo:
+
+```bash
+rm -rf .venv/
+```
+
+Antes de subir a Git:
+
+```bash
+git status
+grep -r "sk-" . --include="*.py" --include="*.md" --include="*.txt" 2>/dev/null || echo "Sin API keys detectadas"
+```
 
 ---
 
-## 10. Resumen
+# 🏁 Resultado final esperado
 
-En este laboratorio construiste un **agente conversacional completo** basado en el paradigma ReAct (Observar → Pensar → Actuar) de la Lección 8.1. Los logros principales fueron:
+Al finalizar, habrás construido un agente que:
 
-| Componente | Implementado |
-|---|---|
-| 5 herramientas con esquemas JSON Schema | ✅ |
-| Evaluación matemática segura (sin `eval`) | ✅ |
-| Consulta de API externa con reintentos | ✅ |
-| Estadísticas sobre CSV con pandas | ✅ |
-| Búsqueda en Wikipedia | ✅ |
-| Bucle ReAct con límite de 10 iteraciones | ✅ |
-| Múltiples `tool_calls` en paralelo | ✅ |
-| Human-in-the-Loop para herramientas destructivas | ✅ |
-| Logging estructurado de cada tool_call | ✅ |
-| Suite de pruebas con 5 queries complejas | ✅ |
-
-La diferencia clave entre este agente y un workflow es que **el LLM decide dinámicamente** qué herramientas invocar y en qué orden, sin que el programador haya anticipado cada combinación posible. Esto es exactamente el paradigma que distingue a los agentes de los workflows estructurados, tal como se estudió en la Lección 8.1.
-
-### Recursos adicionales
-
-- [OpenAI Function Calling Documentation](https://platform.openai.com/docs/guides/function-calling)
-- [JSON Schema Reference](https://json-schema.org/understanding-json-schema/)
-- [Frankfurter API Documentation](https://www.frankfurter.app/docs/)
-- [Wikipedia-API Python Package](https://pypi.org/project/Wikipedia-API/)
-- [ReAct: Synergizing Reasoning and Acting in Language Models (paper)](https://arxiv.org/abs/2210.03629)
-- [Tenacity — Retry library for Python](https://tenacity.readthedocs.io/)
+- Recibe consultas en lenguaje natural.
+- Decide qué herramientas necesita.
+- Ejecuta herramientas seguras.
+- Usa datos locales y fuentes externas.
+- Controla acciones con efecto secundario.
+- Registra trazabilidad.
+- Devuelve respuestas en español.
+- Permite evaluar si el comportamiento fue agentico o si bastaba un workflow.
 
 ---
+
+# 📚 Cierre conceptual
+
+En este laboratorio construiste un agente práctico con Function Calling. El valor principal no está solo en conectar funciones, sino en diseñar controles alrededor del agente:
+
+- límites de iteración,
+- validación de herramientas,
+- manejo de errores,
+- fallbacks,
+- Human-in-the-Loop,
+- trazabilidad,
+- evaluación de herramientas usadas.
+
+Ese conjunto de controles es lo que convierte una demostración de agente en una base más cercana a una solución empresarial.
