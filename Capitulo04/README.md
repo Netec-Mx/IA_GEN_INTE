@@ -115,7 +115,6 @@ Antes de iniciar, asegúrate de cumplir con lo siguiente:
 | Duración estimada | 40 minutos |
 | Complejidad | Intermedia - Alta |
 | Nivel de Bloom | Aplicar, analizar, evaluar y crear |
-| Ubicación recomendada | Después de la lección de revisión de código y prompting especializado |
 | Modalidad | Individual o equipos de 2 personas |
 | Sistema operativo | Windows |
 | Editor | Visual Studio Code |
