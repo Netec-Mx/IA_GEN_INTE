@@ -117,7 +117,6 @@ Antes de iniciar, asegúrate de cumplir con lo siguiente:
 | Duración estimada | 45 minutos |
 | Complejidad | Intermedia |
 | Nivel de Bloom | Aplicar, analizar, evaluar y justificar |
-| Capítulo | Capítulo 1 |
 | Modalidad | Individual o equipos de 2 personas |
 | Sistema operativo | Windows |
 | Editor | Visual Studio Code |
@@ -2084,11 +2083,3 @@ En este laboratorio construiste una comparación técnica aplicada entre OpenAI,
 El resultado más importante no es solo el costo mensual estimado, sino la capacidad de justificar una decisión técnica considerando caso de uso, privacidad, ventana de contexto, operación, calidad observada y dependencia del proveedor.
 
 Esta práctica te prepara para tomar decisiones arquitectónicas más sólidas antes de implementar soluciones de IA generativa en escenarios reales.
-
-
----
-
-<div align="center">
-<strong>Fin del Laboratorio 1</strong><br>
-IA Generativa · Selección técnica de modelos · OpenAI · Gemini · Claude
-</div>
