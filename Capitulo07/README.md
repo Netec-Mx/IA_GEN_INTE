@@ -115,7 +115,6 @@ Antes de iniciar, asegúrate de cumplir con lo siguiente:
 | Duración estimada | 50 minutos |
 | Complejidad | Intermedia |
 | Nivel de Bloom | Aplicar, analizar, evaluar y crear |
-| Ubicación recomendada | Después de la lección conceptual de Fine-Tuning vs. RAG |
 | Modalidad | Individual o equipos de 2 personas |
 | Sistema operativo | Windows |
 | Editor | Visual Studio Code |
