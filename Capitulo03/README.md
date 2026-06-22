@@ -28,12 +28,6 @@
 
 ## 🧭 Sección 1. Información general de la práctica
 
-### 🏷️ Título de la práctica
-
-**Implementar un cliente LLM asíncrono con respuestas estructuradas, validación Pydantic y reintentos exponenciales**
-
----
-
 ### 📌 Descripción general
 
 En esta práctica vas a construir un cliente Python de nivel intermedio para interactuar con un modelo de lenguaje desde una aplicación real. El caso de uso consiste en recibir descripciones de incidentes técnicos escritas en texto libre y convertirlas en reportes estructurados con campos como severidad, sistemas afectados, causa raíz, acciones recomendadas y tiempo estimado de resolución.
@@ -136,7 +130,6 @@ Antes de iniciar, asegúrate de cumplir con lo siguiente:
 | Duración estimada | 50 minutos |
 | Complejidad | Intermedia - Alta |
 | Nivel de Bloom | Aplicar y analizar |
-| Ubicación recomendada | Después de revisar SDKs, clientes robustos y respuestas estructuradas |
 | Modalidad | Individual o equipos de 2 personas |
 | Sistema operativo | Windows |
 | Editor | Visual Studio Code |
