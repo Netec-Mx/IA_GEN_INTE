@@ -84,7 +84,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Implementar un cliente Python asíncrono con Pydantic](Capitulo03/README.md) |
 | **Descripción** | Implementarás un cliente asíncrono que fuerza respuestas estructuradas, valida salidas con Pydantic y maneja reintentos exponenciales. |
 | **Resultado** | Cliente robusto para llamadas LLM con validación, retries y control de errores. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 50 min |
 
 ---
 
@@ -95,7 +95,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Configurar un pipeline de revisión automática de seguridad](Capitulo04/README.md) |
 | **Descripción** | Configurarás un pipeline que utiliza un LLM para auditar commits o fragmentos de código Python e identificar riesgos técnicos. |
 | **Resultado** | Flujo automatizado de revisión con clasificación de severidad y reporte. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 40 min |
 
 ---
 
@@ -106,7 +106,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Construir un pipeline de ingesta con Semantic Chunking](Capitulo05/README.md) |
 | **Descripción** | Crearás un pipeline de ingesta para documentos técnicos, aplicando segmentación semántica y preparación de datos para recuperación aumentada. |
 | **Resultado** | Base documental procesada, chunks validados y estructura lista para búsqueda semántica. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 58 min |
 
 ---
 
@@ -117,7 +117,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Integrar ChromaDB para memoria y recuperación de contexto](Capitulo06/README.md) |
 | **Descripción** | Desarrollarás una aplicación que persiste conversaciones, genera embeddings y recupera contexto relevante mediante búsquedas semánticas. |
 | **Resultado** | Aplicación con memoria semántica persistente y consultas contextualizadas. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 50 min |
 
 ---
 
@@ -128,7 +128,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Preparar un dataset validado para fine-tuning](Capitulo07/README.md) |
 | **Descripción** | Crearás un script de preprocesamiento que transforma una base de preguntas y respuestas en un dataset limpio, validado y listo para entrenamiento o ajuste. |
 | **Resultado** | Dataset estructurado, validado y documentado para procesos de fine-tuning. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 50 min |
 
 ---
 
@@ -139,7 +139,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Implementar un agente con Function Calling](Capitulo08/README.md) |
 | **Descripción** | Construirás un agente que invoca funciones locales para resolver tareas matemáticas o consultar datos mediante herramientas controladas. |
 | **Resultado** | Agente funcional con herramientas, validación de argumentos y respuestas estructuradas. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 58 min |
 
 ---
 
@@ -150,7 +150,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Desarrollar un servidor MCP seguro para sistema de archivos](Capitulo09/README.md) |
 | **Descripción** | Implementarás un servidor MCP que expone herramientas, recursos y prompts para interactuar de forma segura con un sandbox de archivos. |
 | **Resultado** | Servidor MCP con sandbox, auditoría, validaciones de seguridad y cliente de prueba. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 50 min |
 
 ---
 
@@ -161,7 +161,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Evaluar la fidelidad de respuestas contra un Golden Dataset](Capitulo10/README.md) |
 | **Descripción** | Crearás un framework de evaluación para comparar respuestas de un chatbot contra referencias usando métricas léxicas y evaluación semántica. |
 | **Resultado** | Reporte de calidad con métricas, análisis de divergencias y resultados exportables. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 40 min |
 
 ---
 
@@ -172,7 +172,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Instrumentar un agente con LangSmith](Capitulo11/README.md) |
 | **Descripción** | Instrumentarás un agente para analizar trazas, latencia, uso de herramientas, consistencia y regresiones entre versiones. |
 | **Resultado** | Sistema observado con trazas, evaluación, comparación v1/v2 y pruebas de regresión. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 40 min |
 
 ---
 
@@ -183,7 +183,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Crear un Dockerfile seguro para una solución GenAI](Capitulo12/README.md) |
 | **Descripción** | Contenerizarás una aplicación GenAI con Docker multi-stage, usuario no-root, gestión de secretos, controles de seguridad y Docker Compose. |
 | **Resultado** | Imagen segura, Compose funcional, controles de seguridad y documentación de despliegue. |
-| **Duración estimada** | 120 min |
+| **Duración estimada** | 50 min |
 
 ---
 
@@ -194,7 +194,7 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 | **Laboratorio** | [Desarrollar un sistema GenAI completo con API, RAG, agente, evaluación, UI y Docker](Capitulo13/README.md) |
 | **Descripción** | Construirás un proyecto final guiado que integra API segura, RAG híbrido, agente con herramientas, UI minimalista, evaluación, contenedores y documentación técnica. |
 | **Resultado** | Sistema GenAI Capstone listo para demostración técnica y entrega final. |
-| **Duración estimada** | 180 min |
+| **Duración estimada** | 179 min |
 
 ---
 
@@ -204,17 +204,17 @@ La ruta está organizada de forma progresiva. Cada laboratorio refuerza una capa
 |---:|---|---:|---|
 | 1 | Costos entre proveedores | 45 min | Comparador de costos |
 | 2 | Router de modelos | 45 min | API de enrutamiento |
-| 3 | Cliente asíncrono estructurado | 120 min | Cliente LLM robusto |
-| 4 | Auditoría de seguridad | 120 min | Pipeline de revisión |
-| 5 | Semantic Chunking | 120 min | Pipeline de ingesta |
-| 6 | Memoria semántica | 120 min | App con ChromaDB |
-| 7 | Dataset para fine-tuning | 120 min | Dataset validado |
-| 8 | Function Calling | 120 min | Agente con herramientas |
-| 9 | Servidor MCP seguro | 120 min | Servidor MCP + cliente |
-| 10 | Golden Dataset | 120 min | Evaluador de fidelidad |
-| 11 | LangSmith | 120 min | Observabilidad y regresión |
-| 12 | Docker y seguridad | 120 min | Imagen y Compose seguros |
-| 13 | Capstone GenAI | 180 min | Sistema completo |
+| 3 | Cliente asíncrono estructurado | 50 min | Cliente LLM robusto |
+| 4 | Auditoría de seguridad | 40 min | Pipeline de revisión |
+| 5 | Semantic Chunking | 58 min | Pipeline de ingesta |
+| 6 | Memoria semántica | 50 min | App con ChromaDB |
+| 7 | Dataset para fine-tuning | 50 min | Dataset validado |
+| 8 | Function Calling | 58 min | Agente con herramientas |
+| 9 | Servidor MCP seguro | 50 min | Servidor MCP + cliente |
+| 10 | Golden Dataset | 40 min | Evaluador de fidelidad |
+| 11 | LangSmith | 40 min | Observabilidad y regresión |
+| 12 | Docker y seguridad | 50 min | Imagen y Compose seguros |
+| 13 | Capstone GenAI | 179 min | Sistema completo |
 
 ---
 
