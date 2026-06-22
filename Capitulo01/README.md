@@ -4,8 +4,6 @@
 
 ## Selección técnica de modelo y estimación de costo, latencia y contexto
 
-**IA Generativa · Nivel Intermedio · Capítulo 1**
-
 ![Nivel](https://img.shields.io/badge/Nivel-Intermedio-2563EB?style=flat-square)
 ![Sistema](https://img.shields.io/badge/Sistema-Windows-0F766E?style=flat-square)
 ![Editor](https://img.shields.io/badge/Editor-VS%20Code-7C3AED?style=flat-square)
